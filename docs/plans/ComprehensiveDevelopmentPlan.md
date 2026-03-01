@@ -25,6 +25,36 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Part 1: Renderer Development
 
+### Phase 6: Performance Optimization
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-02
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Frustum culling | ✅ | KFrustum class with plane extraction from VP matrix |
+| Instanced rendering | ✅ | KInstancedRenderer for batch rendering |
+| GPU query timers | ✅ | KGPUTimer with timestamp queries |
+| Occlusion culling | 🔲 | Pending (future optimization) |
+| Command buffer optimization | 🔲 | Pending (future optimization) |
+
+#### Implementation Notes
+
+- **KFrustum**: 6-plane frustum extraction, sphere/box intersection tests
+- **KInstancedRenderer**: Dynamic instance buffer (default 1024 instances)
+- **KGPUTimer**: GPU timestamp queries, frame stats tracking
+
+#### New Files
+
+- `Engine/Graphics/Culling/Frustum.h/cpp`
+- `Engine/Graphics/Instanced/InstancedRenderer.h/cpp`
+- `Engine/Graphics/Performance/GPUTimer.h/cpp`
+
+---
+
 ### Phase 5: Post-Processing
 
 **Status**: ✅ Completed
@@ -587,9 +617,21 @@ Engine/
 │   ├── Shadow/
 │   │   ├── ShadowMap.h/cpp
 │   │   └── ShadowRenderer.h/cpp
-│   └── Deferred/
-│       ├── GBuffer.h/cpp
-│       └── DeferredRenderer.h/cpp
+│   ├── Deferred/
+│   │   ├── GBuffer.h/cpp
+│   │   └── DeferredRenderer.h/cpp
+│   ├── IBL/
+│   │   └── IBLSystem.h/cpp
+│   ├── PostProcess/
+│   │   └── PostProcessor.h/cpp
+│   ├── Culling/
+│   │   └── Frustum.h/cpp
+│   ├── Instanced/
+│   │   └── InstancedRenderer.h/cpp
+│   ├── Performance/
+│   │   └── GPUTimer.h/cpp
+│   ├── Material.h/cpp
+│   └── ...
 ├── Assets/
 │   ├── StaticMesh.h/cpp
 │   ├── SkeletalMesh.h/cpp

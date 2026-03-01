@@ -110,6 +110,9 @@
     <ClInclude Include="Graphics\Deferred\DeferredRenderer.h" />
     <ClInclude Include="Graphics\IBL\IBLSystem.h" />
     <ClInclude Include="Graphics\PostProcess\PostProcessor.h" />
+    <ClInclude Include="Graphics\Culling\Frustum.h" />
+    <ClInclude Include="Graphics\Instanced\InstancedRenderer.h" />
+    <ClInclude Include="Graphics\Performance\GPUTimer.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Serialization\BinaryArchive.h" />
@@ -133,6 +136,9 @@
     <ClCompile Include="Graphics\Deferred\DeferredRenderer.cpp" />
     <ClCompile Include="Graphics\IBL\IBLSystem.cpp" />
     <ClCompile Include="Graphics\PostProcess\PostProcessor.cpp" />
+    <ClCompile Include="Graphics\Culling\Frustum.cpp" />
+    <ClCompile Include="Graphics\Instanced\InstancedRenderer.cpp" />
+    <ClCompile Include="Graphics\Performance\GPUTimer.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Serialization\BinaryArchive.cpp" />

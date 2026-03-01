@@ -12,6 +12,9 @@
 #include "Shadow/ShadowRenderer.h"
 #include "Deferred/DeferredRenderer.h"
 #include "PostProcess/PostProcessor.h"
+#include "Culling/Frustum.h"
+#include "Instanced/InstancedRenderer.h"
+#include "Performance/GPUTimer.h"
 
 enum class ERenderPath
 {
@@ -25,6 +28,8 @@ struct FRenderObject
     std::shared_ptr<KShaderProgram> Shader;
     std::shared_ptr<KTexture> Texture;
     XMMATRIX WorldMatrix = XMMatrixIdentity();
+    FBoundingBox Bounds;
+    bool bUseFrustumCulling = true;
     
     FRenderObject(std::shared_ptr<KMesh> InMesh, std::shared_ptr<KShaderProgram> InShader, std::shared_ptr<KTexture> InTexture = nullptr)
         : Mesh(InMesh), Shader(InShader), Texture(InTexture) {}
@@ -109,6 +114,19 @@ public:
     std::shared_ptr<KMesh> CreateCubeMesh();
     std::shared_ptr<KMesh> CreateSphereMesh(UINT32 Slices = 16, UINT32 Stacks = 16);
 
+    void SetFrustumCullingEnabled(bool bEnabled) { bFrustumCullingEnabled = bEnabled; }
+    bool IsFrustumCullingEnabled() const { return bFrustumCullingEnabled; }
+    KFrustum* GetFrustum() { return &Frustum; }
+    bool IsVisibleInFrustum(const FBoundingSphere& Sphere) const;
+    bool IsVisibleInFrustum(const FBoundingBox& Box) const;
+
+    KInstancedRenderer* GetInstancedRenderer() { return &InstancedRenderer; }
+    KGPUTimer* GetGPUTimer() { return &GPUTimer; }
+    
+    const FFrameStats& GetFrameStats() const { return GPUTimer.GetFrameStats(); }
+    void BeginGPUTimer(const std::string& Name);
+    void EndGPUTimer(const std::string& Name);
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -152,4 +170,9 @@ private:
     bool bDebugDrawEnabled = false;
     bool bDebugDrawPointLightVolumes = false;
     bool bDebugDrawSpotLightVolumes = false;
+    bool bFrustumCullingEnabled = true;
+
+    KFrustum Frustum;
+    KInstancedRenderer InstancedRenderer;
+    KGPUTimer GPUTimer;
 }; 

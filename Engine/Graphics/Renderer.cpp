@@ -35,6 +35,11 @@ void KRenderer::BeginFrame(KCamera* InCamera, const float ClearColor[4])
 
     CurrentCamera->UpdateMatrices();
 
+    XMMATRIX viewProjection = CurrentCamera->GetViewMatrix() * CurrentCamera->GetProjectionMatrix();
+    Frustum.UpdateFromMatrix(viewProjection);
+
+    GPUTimer.BeginFrame(GraphicsDevice->GetContext());
+
     if (bShadowsEnabled && ShadowRenderer.IsInitialized())
     {
         ShadowRenderer.BeginShadowPass(
@@ -62,6 +67,8 @@ void KRenderer::EndFrame(bool bVSync)
     {
         return;
     }
+
+    GPUTimer.EndFrame(GraphicsDevice->GetContext());
 
     GraphicsDevice->EndFrame(bVSync);
 
@@ -314,6 +321,8 @@ void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
+    GPUTimer.Cleanup();
+    InstancedRenderer.Cleanup();
     PostProcessor.Cleanup();
     DeferredRenderer.Cleanup();
     ShadowRenderer.Cleanup();
@@ -555,6 +564,30 @@ HRESULT KRenderer::InitializeDefaultResources()
         LOG_INFO("PostProcessor initialized successfully");
     }
 
+    hr = InstancedRenderer.Initialize(Device, 1024);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Instanced renderer initialization failed");
+    }
+    else
+    {
+        LOG_INFO("Instanced renderer initialized successfully");
+    }
+
+    hr = GPUTimer.Initialize(Device, 16);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("GPU timer initialization failed");
+    }
+    else
+    {
+        GPUTimer.CreateTimer("Frame");
+        GPUTimer.CreateTimer("ShadowPass");
+        GPUTimer.CreateTimer("GeometryPass");
+        GPUTimer.CreateTimer("LightingPass");
+        LOG_INFO("GPU timer initialized successfully");
+    }
+
     LOG_INFO("Default resources initialized successfully");
     return S_OK;
 }
@@ -758,4 +791,38 @@ void KRenderer::EndHDRPass()
     }
 
     PostProcessor.ApplyPostProcessing(GraphicsDevice->GetContext(), GraphicsDevice->GetRenderTargetView());
+}
+
+bool KRenderer::IsVisibleInFrustum(const FBoundingSphere& Sphere) const
+{
+    if (!bFrustumCullingEnabled)
+    {
+        return true;
+    }
+    return Frustum.ContainsSphere(Sphere);
+}
+
+bool KRenderer::IsVisibleInFrustum(const FBoundingBox& Box) const
+{
+    if (!bFrustumCullingEnabled)
+    {
+        return true;
+    }
+    return Frustum.ContainsBox(Box);
+}
+
+void KRenderer::BeginGPUTimer(const std::string& Name)
+{
+    if (GPUTimer.IsInitialized() && GPUTimer.HasTimer(Name))
+    {
+        GPUTimer.StartTimer(GraphicsDevice->GetContext(), Name);
+    }
+}
+
+void KRenderer::EndGPUTimer(const std::string& Name)
+{
+    if (GPUTimer.IsInitialized() && GPUTimer.HasTimer(Name))
+    {
+        GPUTimer.EndTimer(GraphicsDevice->GetContext(), Name);
+    }
 } 
