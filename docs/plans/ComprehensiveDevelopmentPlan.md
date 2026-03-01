@@ -99,12 +99,23 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 | Task | Status | Description |
 |------|--------|-------------|
-| Shadow map render target | 🔲 | Create depth-only render target for shadows |
-| Shadow shader | 🔲 | Depth-only vertex/pixel shader |
-| Shadow pass renderer | 🔲 | Render scene from light's perspective |
-| PCF filtering | 🔲 | Percentage Closer Filtering |
-| Shadow constant buffer | 🔲 | Shadow transformation matrices |
-| Shadow bias configuration | 🔲 | Reduce shadow acne |
+| Shadow map render target | ✅ | KShadowMap class with depth texture |
+| Shadow shader | ✅ | Depth-only vertex/pixel shader |
+| Shadow pass renderer | ✅ | KShadowRenderer with scene bounds |
+| PCF filtering | ✅ | 3x3 PCF in pixel shader |
+| Shadow constant buffer | ✅ | FShadowBuffer (b2) |
+| Shadow bias configuration | ✅ | Configurable depth and slope bias |
+
+#### Implementation Notes
+
+- **KShadowMap**: Depth-only render target (2048x2048 default)
+- **KShadowRenderer**: Shadow pass coordination with automatic scene bounds
+- **FShadowBuffer**: Light view-projection, shadow map size, depth bias, PCF kernel
+
+#### New Files
+
+- `Engine/Graphics/Shadow/ShadowMap.h/cpp`
+- `Engine/Graphics/Shadow/ShadowRenderer.h/cpp`
 
 #### Technical Specification
 
@@ -448,10 +459,10 @@ private:
    - ✅ Object selection via picking (raycast)
 
 2. **Scene Hierarchy** (Complete)
-   - ✅ Tree view of actors
-   - ✅ Add/Remove actors (via ViewModel)
-   - ✅ Actor selection sync with Properties panel
-   - 🔲 Drag-and-drop reordering
+    - ✅ Tree view of actors
+    - ✅ Add/Remove actors (via ViewModel)
+    - ✅ Actor selection sync with Properties panel
+    - ✅ Drag-and-drop reordering
 
 3. **Properties Panel** (Complete)
    - ✅ Transform properties (Position, Rotation, Scale)
@@ -459,10 +470,10 @@ private:
    - ✅ General properties (Name, Visibility)
 
 4. **Material Editor** (Complete)
-   - ✅ PBR material parameters (Albedo, Metallic, Roughness, AO)
-   - ✅ Material presets (Default, Metal, Plastic, Rubber, Gold, Silver, Copper)
-   - ✅ Texture slot management
-   - 🔲 Texture file picker
+    - ✅ PBR material parameters (Albedo, Metallic, Roughness, AO)
+    - ✅ Material presets (Default, Metal, Plastic, Rubber, Gold, Silver, Copper)
+    - ✅ Texture slot management
+    - ✅ Texture file picker
 
 5. **Content Browser** (Partial)
    - ✅ Asset browser with folder tree view

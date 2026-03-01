@@ -16,8 +16,19 @@
             <TextBlock Text="Scene Hierarchy" FontWeight="Bold" FontSize="12"/>
         </Border>
 
-        <TreeView Grid.Row="1" ItemsSource="{Binding SceneViewModel.Actors}"
-                  SelectedItemChanged="TreeView_SelectedItemChanged">
+        <TreeView Grid.Row="1" x:Name="ActorTreeView" 
+                   ItemsSource="{Binding SceneViewModel.Actors}"
+                   SelectedItemChanged="TreeView_SelectedItemChanged"
+                   AllowDrop="True"
+                   PreviewMouseLeftButtonDown="TreeView_PreviewMouseLeftButtonDown"
+                  PreviewMouseMove="TreeView_PreviewMouseMove"
+                  Drop="TreeView_Drop"
+                  DragOver="TreeView_DragOver">
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="{x:Type TreeViewItem}">
+                    <Setter Property="AllowDrop" Value="True"/>
+                </Style>
+            </TreeView.ItemContainerStyle>
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate>
                     <StackPanel Orientation="Horizontal">

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using KojeomEditor.ViewModels;
+using Microsoft.Win32;
 
 namespace KojeomEditor.Views;
 
@@ -20,6 +21,63 @@ public partial class MaterialEditorControl : UserControl
     {
         InitializeComponent();
         MaterialViewModel = new MaterialViewModel();
+    }
+
+    private string? BrowseTextureFile()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Select Texture File",
+            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.dds;*.tif;*.tiff|All Files|*.*",
+            CheckFileExists = true,
+            CheckPathExists = true
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            return dialog.FileName;
+        }
+        return null;
+    }
+
+    private void OnBrowseAlbedoTexture(object sender, RoutedEventArgs e)
+    {
+        if (MaterialViewModel == null) return;
+        var path = BrowseTextureFile();
+        if (path != null)
+            MaterialViewModel.AlbedoTexturePath = path;
+    }
+
+    private void OnBrowseNormalTexture(object sender, RoutedEventArgs e)
+    {
+        if (MaterialViewModel == null) return;
+        var path = BrowseTextureFile();
+        if (path != null)
+            MaterialViewModel.NormalTexturePath = path;
+    }
+
+    private void OnBrowseMetallicTexture(object sender, RoutedEventArgs e)
+    {
+        if (MaterialViewModel == null) return;
+        var path = BrowseTextureFile();
+        if (path != null)
+            MaterialViewModel.MetallicTexturePath = path;
+    }
+
+    private void OnBrowseRoughnessTexture(object sender, RoutedEventArgs e)
+    {
+        if (MaterialViewModel == null) return;
+        var path = BrowseTextureFile();
+        if (path != null)
+            MaterialViewModel.RoughnessTexturePath = path;
+    }
+
+    private void OnBrowseAOTexture(object sender, RoutedEventArgs e)
+    {
+        if (MaterialViewModel == null) return;
+        var path = BrowseTextureFile();
+        if (path != null)
+            MaterialViewModel.AOTexturePath = path;
     }
 
     private void OnPresetDefault(object sender, RoutedEventArgs e)

@@ -62,6 +62,18 @@ public class SceneViewModel : ViewModelBase
             SelectedActor = null;
         }
     }
+
+    public void ReorderActors(ActorViewModel draggedActor, ActorViewModel targetActor)
+    {
+        int draggedIndex = Actors.IndexOf(draggedActor);
+        int targetIndex = Actors.IndexOf(targetActor);
+
+        if (draggedIndex < 0 || targetIndex < 0)
+            return;
+
+        Actors.RemoveAt(draggedIndex);
+        Actors.Insert(targetIndex, draggedActor);
+    }
 }
 
 public class ActorViewModel : ViewModelBase
