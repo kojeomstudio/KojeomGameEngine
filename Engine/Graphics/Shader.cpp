@@ -318,14 +318,43 @@ HRESULT KShaderProgram::CreatePhongShader(ID3D11Device* Device)
             matrix Projection;
         }
 
+        #define MAX_POINT_LIGHTS 8
+        #define MAX_SPOT_LIGHTS 4
+
+        struct FPointLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float4 Color;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+            float  Padding1;
+        };
+
+        struct FSpotLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float3 Direction;
+            float  InnerCone;
+            float4 Color;
+            float  OuterCone;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+        };
+
         cbuffer LightBuffer : register(b1)
         {
-            float3 LightDirection;
-            float  Padding0;
-            float4 LightColor;
-            float4 AmbientColor;
             float3 CameraPosition;
-            float  Padding1;
+            int    NumPointLights;
+            float3 DirLightDirection;
+            int    NumSpotLights;
+            float4 DirLightColor;
+            float4 AmbientColor;
+            FPointLightData PointLights[MAX_POINT_LIGHTS];
+            FSpotLightData  SpotLights[MAX_SPOT_LIGHTS];
         }
 
         struct VS_INPUT
@@ -343,6 +372,62 @@ HRESULT KShaderProgram::CreatePhongShader(ID3D11Device* Device)
             float3 WorldPos : TEXCOORD0;
         };
 
+        float3 CalculatePointLight(FPointLightData light, float3 normal, float3 worldPos, float3 viewDir)
+        {
+            float3 lightDir = light.Position - worldPos;
+            float  distance = length(lightDir);
+            
+            if (distance > light.Radius)
+                return float3(0, 0, 0);
+            
+            lightDir = normalize(lightDir);
+            
+            float attenuation = 1.0f / (1.0f + light.Falloff * distance * distance);
+            attenuation *= light.Intensity;
+            
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * light.Color.rgb;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * light.Color.rgb * 0.3f;
+            
+            return (diffuse + specular) * attenuation;
+        }
+
+        float3 CalculateSpotLight(FSpotLightData light, float3 normal, float3 worldPos, float3 viewDir)
+        {
+            float3 lightDir = light.Position - worldPos;
+            float  distance = length(lightDir);
+            
+            if (distance > light.Radius)
+                return float3(0, 0, 0);
+            
+            lightDir = normalize(lightDir);
+            
+            float3 spotDir = normalize(-light.Direction);
+            float cosAngle = dot(lightDir, spotDir);
+            float cosInner = cos(light.InnerCone);
+            float cosOuter = cos(light.OuterCone);
+            
+            if (cosAngle < cosOuter)
+                return float3(0, 0, 0);
+            
+            float spotFactor = saturate((cosAngle - cosOuter) / (cosInner - cosOuter));
+            
+            float attenuation = 1.0f / (1.0f + light.Falloff * distance * distance);
+            attenuation *= light.Intensity * spotFactor;
+            
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * light.Color.rgb;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * light.Color.rgb * 0.3f;
+            
+            return (diffuse + specular) * attenuation;
+        }
+
         PS_INPUT VS(VS_INPUT input)
         {
             PS_INPUT output = (PS_INPUT)0;
@@ -358,22 +443,35 @@ HRESULT KShaderProgram::CreatePhongShader(ID3D11Device* Device)
         float4 PS(PS_INPUT input) : SV_Target
         {
             float3 normal   = normalize(input.Normal);
-            float3 lightDir = normalize(-LightDirection);
-
-            // Ambient
-            float4 ambient  = AmbientColor * input.Color;
-
-            // Diffuse (Lambert)
-            float  diff     = max(dot(normal, lightDir), 0.0f);
-            float4 diffuse  = diff * LightColor * input.Color;
-
-            // Specular (Blinn-Phong)
             float3 viewDir  = normalize(CameraPosition - input.WorldPos);
-            float3 halfDir  = normalize(lightDir + viewDir);
-            float  spec     = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
-            float4 specular = spec * LightColor * 0.4f;
-
-            return saturate(ambient + diffuse + specular);
+            
+            float3 ambient  = AmbientColor.rgb * input.Color.rgb;
+            
+            float3 lightDir = normalize(-DirLightDirection);
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * DirLightColor.rgb * input.Color.rgb;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * DirLightColor.rgb * 0.4f;
+            
+            float3 result = ambient + diffuse + specular;
+            
+            [unroll]
+            for (int i = 0; i < MAX_POINT_LIGHTS; ++i)
+            {
+                if (i >= NumPointLights) break;
+                result += CalculatePointLight(PointLights[i], normal, input.WorldPos, viewDir) * input.Color.rgb;
+            }
+            
+            [unroll]
+            for (int j = 0; j < MAX_SPOT_LIGHTS; ++j)
+            {
+                if (j >= NumSpotLights) break;
+                result += CalculateSpotLight(SpotLights[j], normal, input.WorldPos, viewDir) * input.Color.rgb;
+            }
+            
+            return saturate(float4(result, input.Color.a));
         }
     )";
 
@@ -398,7 +496,7 @@ HRESULT KShaderProgram::CreatePhongShader(ID3D11Device* Device)
     hr = CreateInputLayout(Device, Layout, ARRAYSIZE(Layout));
     if (FAILED(hr)) return hr;
 
-    LOG_INFO("Phong shader creation completed");
+    LOG_INFO("Phong shader with multiple lights creation completed");
     return S_OK;
 }
 

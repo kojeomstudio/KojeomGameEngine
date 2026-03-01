@@ -1,4 +1,4 @@
-﻿#include "Renderer.h"
+#include "Renderer.h"
 
 HRESULT KRenderer::Initialize(KGraphicsDevice* InGraphicsDevice)
 {
@@ -12,7 +12,6 @@ HRESULT KRenderer::Initialize(KGraphicsDevice* InGraphicsDevice)
 
     LOG_INFO("Initializing Renderer...");
 
-    // Initialize default resources
     HRESULT hr = InitializeDefaultResources();
     if (FAILED(hr))
     {
@@ -34,27 +33,11 @@ void KRenderer::BeginFrame(KCamera* InCamera, const float ClearColor[4])
     CurrentCamera = InCamera;
     bInFrame = true;
 
-    // Update camera matrices
     CurrentCamera->UpdateMatrices();
 
-    // Begin frame on graphics device
     GraphicsDevice->BeginFrame(ClearColor);
 
-    // Upload light constant buffer to PS slot b1
-    if (LightConstantBuffer)
-    {
-        FLightBuffer LightData;
-        LightData.LightDirection  = DirectionalLight.Direction;
-        LightData.Padding0        = 0.0f;
-        LightData.LightColor      = DirectionalLight.Color;
-        LightData.AmbientColor    = DirectionalLight.AmbientColor;
-        LightData.CameraPosition  = CurrentCamera->GetPosition();
-        LightData.Padding1        = 0.0f;
-
-        ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
-        Context->UpdateSubresource(LightConstantBuffer.Get(), 0, nullptr, &LightData, 0, 0);
-        Context->PSSetConstantBuffers(1, 1, LightConstantBuffer.GetAddressOf());
-    }
+    UpdateLightBuffer();
 }
 
 void KRenderer::EndFrame(bool bVSync)
@@ -64,7 +47,6 @@ void KRenderer::EndFrame(bool bVSync)
         return;
     }
 
-    // End frame on graphics device
     GraphicsDevice->EndFrame(bVSync);
 
     bInFrame = false;
@@ -85,16 +67,13 @@ void KRenderer::RenderObject(const FRenderObject& RenderObject)
 
     ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
 
-    // Bind shader program
     RenderObject.Shader->Bind(Context);
 
-    // Bind texture if available
     if (RenderObject.Texture)
     {
         RenderObject.Texture->Bind(Context, 0);
     }
 
-    // Update mesh constant buffer with matrices
     RenderObject.Mesh->UpdateConstantBuffer(
         Context,
         RenderObject.WorldMatrix,
@@ -102,16 +81,13 @@ void KRenderer::RenderObject(const FRenderObject& RenderObject)
         CurrentCamera->GetProjectionMatrix()
     );
 
-    // Render mesh
     RenderObject.Mesh->Render(Context);
 
-    // Unbind texture
     if (RenderObject.Texture)
     {
         RenderObject.Texture->Unbind(Context, 0);
     }
 
-    // Unbind shader program
     RenderObject.Shader->Unbind(Context);
 }
 
@@ -147,15 +123,90 @@ void KRenderer::RenderMeshLit(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
     KRenderer::RenderObject(RO);
 }
 
+void KRenderer::AddPointLight(const FPointLight& Light)
+{
+    if (PointLights.size() < MAX_POINT_LIGHTS)
+    {
+        PointLights.push_back(Light);
+    }
+    else
+    {
+        LOG_WARNING("Maximum point lights reached");
+    }
+}
+
+void KRenderer::RemovePointLight(UINT32 Index)
+{
+    if (Index < PointLights.size())
+    {
+        PointLights.erase(PointLights.begin() + Index);
+    }
+}
+
+void KRenderer::ClearPointLights()
+{
+    PointLights.clear();
+}
+
+void KRenderer::SetPointLight(UINT32 Index, const FPointLight& Light)
+{
+    if (Index < PointLights.size())
+    {
+        PointLights[Index] = Light;
+    }
+}
+
+void KRenderer::AddSpotLight(const FSpotLight& Light)
+{
+    if (SpotLights.size() < MAX_SPOT_LIGHTS)
+    {
+        SpotLights.push_back(Light);
+    }
+    else
+    {
+        LOG_WARNING("Maximum spot lights reached");
+    }
+}
+
+void KRenderer::RemoveSpotLight(UINT32 Index)
+{
+    if (Index < SpotLights.size())
+    {
+        SpotLights.erase(SpotLights.begin() + Index);
+    }
+}
+
+void KRenderer::ClearSpotLights()
+{
+    SpotLights.clear();
+}
+
+void KRenderer::SetSpotLight(UINT32 Index, const FSpotLight& Light)
+{
+    if (Index < SpotLights.size())
+    {
+        SpotLights[Index] = Light;
+    }
+}
+
+void KRenderer::ClearAllLights()
+{
+    ClearPointLights();
+    ClearSpotLights();
+}
+
 void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
-    // Cleanup resources
     LightConstantBuffer.Reset();
+    WireframeRasterizerState.Reset();
+    DebugSphereMesh.reset();
     LightShader.reset();
     BasicShader.reset();
     TextureManager.Cleanup();
+
+    ClearAllLights();
 
     GraphicsDevice = nullptr;
     CurrentCamera = nullptr;
@@ -204,11 +255,52 @@ std::shared_ptr<KMesh> KRenderer::CreateSphereMesh(UINT32 Slices, UINT32 Stacks)
     return KMesh::CreateSphere(GraphicsDevice->GetDevice(), Slices, Stacks);
 }
 
+void KRenderer::UpdateLightBuffer()
+{
+    if (!LightConstantBuffer || !CurrentCamera)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
+
+    FMultipleLightBuffer LightData = {};
+    LightData.CameraPosition = CurrentCamera->GetPosition();
+    LightData.NumPointLights = static_cast<int32>(PointLights.size() > MAX_POINT_LIGHTS ? MAX_POINT_LIGHTS : PointLights.size());
+    LightData.DirLightDirection = DirectionalLight.Direction;
+    LightData.NumSpotLights = static_cast<int32>(SpotLights.size() > MAX_SPOT_LIGHTS ? MAX_SPOT_LIGHTS : SpotLights.size());
+    LightData.DirLightColor = DirectionalLight.Color;
+    LightData.AmbientColor = DirectionalLight.AmbientColor;
+
+    for (size_t i = 0; i < LightData.NumPointLights; ++i)
+    {
+        LightData.PointLights[i].Position  = PointLights[i].Position;
+        LightData.PointLights[i].Intensity = PointLights[i].Intensity;
+        LightData.PointLights[i].Color     = PointLights[i].Color;
+        LightData.PointLights[i].Radius    = PointLights[i].Radius;
+        LightData.PointLights[i].Falloff   = PointLights[i].Falloff;
+    }
+
+    for (size_t i = 0; i < LightData.NumSpotLights; ++i)
+    {
+        LightData.SpotLights[i].Position   = SpotLights[i].Position;
+        LightData.SpotLights[i].Intensity  = SpotLights[i].Intensity;
+        LightData.SpotLights[i].Direction  = SpotLights[i].Direction;
+        LightData.SpotLights[i].InnerCone  = SpotLights[i].InnerCone;
+        LightData.SpotLights[i].Color      = SpotLights[i].Color;
+        LightData.SpotLights[i].OuterCone  = SpotLights[i].OuterCone;
+        LightData.SpotLights[i].Radius     = SpotLights[i].Radius;
+        LightData.SpotLights[i].Falloff    = SpotLights[i].Falloff;
+    }
+
+    Context->UpdateSubresource(LightConstantBuffer.Get(), 0, nullptr, &LightData, 0, 0);
+    Context->PSSetConstantBuffers(1, 1, LightConstantBuffer.GetAddressOf());
+}
+
 HRESULT KRenderer::InitializeDefaultResources()
 {
     ID3D11Device* Device = GraphicsDevice->GetDevice();
 
-    // Create basic shader program
     BasicShader = std::make_shared<KShaderProgram>();
     HRESULT hr = BasicShader->CreateBasicColorShader(Device);
     if (FAILED(hr))
@@ -217,7 +309,6 @@ HRESULT KRenderer::InitializeDefaultResources()
         return hr;
     }
 
-    // Create Phong lighting shader program
     LightShader = std::make_shared<KShaderProgram>();
     hr = LightShader->CreatePhongShader(Device);
     if (FAILED(hr))
@@ -226,10 +317,9 @@ HRESULT KRenderer::InitializeDefaultResources()
         return hr;
     }
 
-    // Create light constant buffer (register b1)
     D3D11_BUFFER_DESC LightCBDesc = {};
     LightCBDesc.Usage          = D3D11_USAGE_DEFAULT;
-    LightCBDesc.ByteWidth      = sizeof(FLightBuffer);
+    LightCBDesc.ByteWidth      = sizeof(FMultipleLightBuffer);
     LightCBDesc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
     LightCBDesc.CPUAccessFlags = 0;
 
@@ -240,7 +330,6 @@ HRESULT KRenderer::InitializeDefaultResources()
         return hr;
     }
 
-    // Initialize texture manager
     hr = TextureManager.CreateDefaultTextures(Device);
     if (FAILED(hr))
     {
@@ -248,6 +337,99 @@ HRESULT KRenderer::InitializeDefaultResources()
         return hr;
     }
 
+    hr = CreateDebugResources();
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Debug resources creation failed, debug drawing will be disabled");
+    }
+
     LOG_INFO("Default resources initialized successfully");
     return S_OK;
+}
+
+HRESULT KRenderer::CreateDebugResources()
+{
+    ID3D11Device* Device = GraphicsDevice->GetDevice();
+
+    D3D11_RASTERIZER_DESC WireframeDesc = {};
+    WireframeDesc.FillMode = D3D11_FILL_WIREFRAME;
+    WireframeDesc.CullMode = D3D11_CULL_NONE;
+    WireframeDesc.FrontCounterClockwise = FALSE;
+    WireframeDesc.DepthClipEnable = TRUE;
+
+    HRESULT hr = Device->CreateRasterizerState(&WireframeDesc, &WireframeRasterizerState);
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Wireframe rasterizer state creation failed");
+        return hr;
+    }
+
+    DebugSphereMesh = KMesh::CreateSphere(Device, 16, 16);
+    if (!DebugSphereMesh)
+    {
+        LOG_ERROR("Debug sphere mesh creation failed");
+        return E_FAIL;
+    }
+
+    LOG_INFO("Debug resources created successfully");
+    return S_OK;
+}
+
+void KRenderer::DebugDrawLightVolumes()
+{
+    if (!bDebugDrawEnabled || !GraphicsDevice || !CurrentCamera || !BasicShader)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
+    ComPtr<ID3D11RasterizerState> OldRasterizerState;
+    Context->RSGetState(&OldRasterizerState);
+
+    if (WireframeRasterizerState)
+    {
+        Context->RSSetState(WireframeRasterizerState.Get());
+    }
+
+    if (bDebugDrawPointLightVolumes && DebugSphereMesh)
+    {
+        for (const auto& PointLight : PointLights)
+        {
+            XMMATRIX WorldMatrix = XMMatrixScaling(PointLight.Radius, PointLight.Radius, PointLight.Radius) *
+                                   XMMatrixTranslation(PointLight.Position.x, PointLight.Position.y, PointLight.Position.z);
+            
+            DebugSphereMesh->UpdateConstantBuffer(
+                Context,
+                WorldMatrix,
+                CurrentCamera->GetViewMatrix(),
+                CurrentCamera->GetProjectionMatrix()
+            );
+
+            BasicShader->Bind(Context);
+            DebugSphereMesh->Render(Context);
+            BasicShader->Unbind(Context);
+        }
+    }
+
+    if (bDebugDrawSpotLightVolumes && DebugSphereMesh)
+    {
+        for (const auto& SpotLight : SpotLights)
+        {
+            XMMATRIX WorldMatrix = XMMatrixScaling(SpotLight.Radius, SpotLight.Radius, SpotLight.Radius) *
+                                   XMMatrixTranslation(SpotLight.Position.x, SpotLight.Position.y, SpotLight.Position.z);
+            
+            DebugSphereMesh->UpdateConstantBuffer(
+                Context,
+                WorldMatrix,
+                CurrentCamera->GetViewMatrix(),
+                CurrentCamera->GetProjectionMatrix()
+            );
+
+            BasicShader->Bind(Context);
+            DebugSphereMesh->Render(Context);
+            BasicShader->Unbind(Context);
+        }
+    }
+
+    Context->RSSetState(OldRasterizerState.Get());
 } 

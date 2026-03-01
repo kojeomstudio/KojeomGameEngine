@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../Utils/Common.h"
 #include "../Utils/Logger.h"
@@ -9,9 +9,6 @@
 #include "Texture.h"
 #include "Light.h"
 
-/**
- * @brief Render object containing all rendering components
- */
 struct FRenderObject
 {
     std::shared_ptr<KMesh> Mesh;
@@ -23,117 +20,88 @@ struct FRenderObject
         : Mesh(InMesh), Shader(InShader), Texture(InTexture) {}
 };
 
-/**
- * @brief Main renderer class
- * 
- * Manages all graphics components in an integrated manner
- * and provides a unified rendering pipeline.
- */
 class KRenderer
 {
 public:
     KRenderer() = default;
     ~KRenderer() = default;
 
-    // Prevent copying and moving
     KRenderer(const KRenderer&) = delete;
     KRenderer& operator=(const KRenderer&) = delete;
 
-    /**
-     * @brief Initialize renderer
-     * @param InGraphicsDevice Graphics device
-     * @return S_OK on success
-     */
     HRESULT Initialize(KGraphicsDevice* InGraphicsDevice);
 
-    /**
-     * @brief Begin rendering frame
-     * @param InCamera Camera
-     * @param ClearColor Clear color
-     */
     void BeginFrame(KCamera* InCamera, const float ClearColor[4] = Colors::CornflowerBlue);
-
-    /**
-     * @brief End rendering frame
-     * @param bVSync Use V-Sync
-     */
     void EndFrame(bool bVSync = true);
 
-    /**
-     * @brief Render object
-     * @param RenderObject Object to render
-     */
     void RenderObject(const FRenderObject& RenderObject);
 
-    /**
-     * @brief Render mesh (simple version)
-     * @param InMesh Mesh
-     * @param WorldMatrix World matrix
-     * @param InTexture Texture (optional)
-     */
     void RenderMesh(std::shared_ptr<KMesh> InMesh, const XMMATRIX& WorldMatrix, 
                    std::shared_ptr<KTexture> InTexture = nullptr);
 
-    /**
-     * @brief Render mesh with basic shader
-     * @param InMesh Mesh
-     * @param WorldMatrix World matrix
-     */
     void RenderMeshBasic(std::shared_ptr<KMesh> InMesh, const XMMATRIX& WorldMatrix);
 
-    /**
-     * @brief Render mesh with Phong lighting shader
-     * @param InMesh Mesh
-     * @param WorldMatrix World matrix
-     * @param InTexture Texture (optional)
-     */
     void RenderMeshLit(std::shared_ptr<KMesh> InMesh, const XMMATRIX& WorldMatrix,
                        std::shared_ptr<KTexture> InTexture = nullptr);
 
-    /**
-     * @brief Set directional light for lit rendering
-     * @param Light Directional light
-     */
     void SetDirectionalLight(const FDirectionalLight& Light) { DirectionalLight = Light; }
 
-    // Getters
-    KShaderProgram* GetLightShader() const { return LightShader.get(); }
+    void AddPointLight(const FPointLight& Light);
+    void RemovePointLight(UINT32 Index);
+    void ClearPointLights();
+    void SetPointLight(UINT32 Index, const FPointLight& Light);
+    UINT32 GetNumPointLights() const { return static_cast<UINT32>(PointLights.size()); }
+    const FPointLight& GetPointLight(UINT32 Index) const { return PointLights[Index]; }
 
-    /**
-     * @brief Cleanup resources
-     */
+    void AddSpotLight(const FSpotLight& Light);
+    void RemoveSpotLight(UINT32 Index);
+    void ClearSpotLights();
+    void SetSpotLight(UINT32 Index, const FSpotLight& Light);
+    UINT32 GetNumSpotLights() const { return static_cast<UINT32>(SpotLights.size()); }
+    const FSpotLight& GetSpotLight(UINT32 Index) const { return SpotLights[Index]; }
+
+    void ClearAllLights();
+
+    void DebugDrawPointLightVolumes(bool bDraw) { bDebugDrawPointLightVolumes = bDraw; }
+    void DebugDrawSpotLightVolumes(bool bDraw) { bDebugDrawSpotLightVolumes = bDraw; }
+    void SetDebugDrawEnabled(bool bEnabled) { bDebugDrawEnabled = bEnabled; }
+    bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
+    void DebugDrawLightVolumes();
+
+    KShaderProgram* GetLightShader() const { return LightShader.get(); }
     void Cleanup();
 
-    // Getters
     KShaderProgram* GetBasicShader() const { return BasicShader.get(); }
     KTextureManager* GetTextureManager() { return &TextureManager; }
 
-    // Basic mesh factory methods
     std::shared_ptr<KMesh> CreateTriangleMesh();
     std::shared_ptr<KMesh> CreateQuadMesh();
     std::shared_ptr<KMesh> CreateCubeMesh();
     std::shared_ptr<KMesh> CreateSphereMesh(UINT32 Slices = 16, UINT32 Stacks = 16);
 
 private:
-    /**
-     * @brief Initialize default resources
-     */
     HRESULT InitializeDefaultResources();
+    void UpdateLightBuffer();
+    HRESULT CreateDebugResources();
 
 private:
-    // Core components
     KGraphicsDevice* GraphicsDevice = nullptr;
     KCamera* CurrentCamera = nullptr;
 
-    // Rendering resources
     std::shared_ptr<KShaderProgram> BasicShader;
     std::shared_ptr<KShaderProgram> LightShader;
     KTextureManager TextureManager;
 
-    // Lighting
     FDirectionalLight DirectionalLight;
+    std::vector<FPointLight> PointLights;
+    std::vector<FSpotLight> SpotLights;
     ComPtr<ID3D11Buffer> LightConstantBuffer;
 
-    // Current frame state
+    ComPtr<ID3D11RasterizerState> WireframeRasterizerState;
+    std::shared_ptr<KMesh> DebugSphereMesh;
+
     bool bInFrame = false;
+    bool bDebugDrawEnabled = false;
+    bool bDebugDrawPointLightVolumes = false;
+    bool bDebugDrawSpotLightVolumes = false;
 }; 
