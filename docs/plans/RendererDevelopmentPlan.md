@@ -4,8 +4,8 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 1 Completed
-- **Base Commit**: dd9ad0f
+- **Status**: Phase 3 Completed
+- **Base Commit**: 2e13736
 - **Last Updated**: 2026-03-02
 
 ## Overview
@@ -113,27 +113,45 @@ This document outlines the development plan for enhancing the DirectX 11 rendere
 
 ### Phase 3: Deferred Rendering
 
-**Status**: 🔲 Not Started  
-**Target Completion**: TBD  
-**Commit Hash**: (Fill when starting)
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
+**Commit Hash**: (pending commit)
 
 #### Tasks
 
 | Task | Status | Commit Hash | Notes |
 |------|--------|-------------|-------|
-| G-Buffer design | 🔲 | | |
-| G-Buffer render targets | 🔲 | | |
-| Geometry pass | 🔲 | | |
-| Lighting pass | 🔲 | | |
-| Forward+ transparency | 🔲 | | |
+| G-Buffer design | ✅ | | KGBuffer class with 3 render targets |
+| G-Buffer render targets | ✅ | | RT0: Albedo+Metallic, RT1: Normal+Roughness, RT2: Position+AO |
+| Geometry pass | ✅ | | KDeferredRenderer::BeginGeometryPass/RenderGeometry/EndGeometryPass |
+| Lighting pass | ✅ | | Full-screen quad deferred lighting shader |
+| Forward+ transparency | 🔲 | | Pending |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/Deferred/GBuffer.h/cpp` - G-Buffer management with multiple render targets
+- `Engine/Graphics/Deferred/DeferredRenderer.h/cpp` - Deferred rendering pipeline
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Added deferred rendering support and render path switching
+
+**Features:**
+- KGBuffer class with 3 render targets (AlbedoMetallic, NormalRoughness, PositionAO)
+- Separate depth texture with shader resource view access
+- Geometry pass shader writing to multiple render targets
+- Deferred lighting pass with full-screen quad
+- Support for directional, point, and spot lights in deferred pass
+- Render path switching between Forward and Deferred modes
+- ERenderPath enum for render path selection
 
 #### Technical Details
 
 **G-Buffer Layout**:
-- RT0: Albedo (RGB) + Metallic (A)
-- RT1: Normal (RGB) + Roughness (A)
-- RT2: Position (RGB) + AO (A)
-- Depth: 24-bit depth + 8-bit stencil
+- RT0: Albedo (RGB) + Metallic (A) - R8G8B8A8_UNORM
+- RT1: Normal (RGB) + Roughness (A) - R8G8B8A8_UNORM
+- RT2: Position (RGB) + AO (A) - R16G16B16A16_FLOAT
+- Depth: 24-bit depth + 8-bit stencil (R24G8_TYPELESS)
 
 ---
 
@@ -306,11 +324,14 @@ Engine/Graphics/
 ├── Mesh.h/cpp                  # Mesh geometry
 ├── Texture.h/cpp               # Texture management
 ├── Light.h                     # Light structures
-├── PostProcess/                # (Planned) Post-processing
-│   ├── PostProcessor.h/cpp
-│   ├── BloomEffect.h/cpp
-│   └── Tonemapper.h/cpp
-└── Deferred/                   # (Planned) Deferred rendering
-    ├── GBuffer.h/cpp
-    └── DeferredLighting.h/cpp
+├── Shadow/                     # Shadow mapping system
+│   ├── ShadowMap.h/cpp
+│   └── ShadowRenderer.h/cpp
+├── Deferred/                   # Deferred rendering (Implemented)
+│   ├── GBuffer.h/cpp
+│   └── DeferredRenderer.h/cpp
+└── PostProcess/                # (Planned) Post-processing
+    ├── PostProcessor.h/cpp
+    ├── BloomEffect.h/cpp
+    └── Tonemapper.h/cpp
 ```

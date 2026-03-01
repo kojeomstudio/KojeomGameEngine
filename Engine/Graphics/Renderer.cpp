@@ -230,6 +230,7 @@ void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
+    DeferredRenderer.Cleanup();
     ShadowRenderer.Cleanup();
     ShadowConstantBuffer.Reset();
     ShadowSamplerState.Reset();
@@ -423,6 +424,17 @@ HRESULT KRenderer::InitializeDefaultResources()
         LOG_WARNING("Shadow system initialization failed, shadows will be disabled");
     }
 
+    hr = DeferredRenderer.Initialize(GraphicsDevice->GetDevice(), GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Deferred renderer initialization failed, deferred rendering will be disabled");
+    }
+    else
+    {
+        DeferredRenderer.SetDirectionalLight(DirectionalLight);
+        LOG_INFO("Deferred renderer initialized successfully");
+    }
+
     LOG_INFO("Default resources initialized successfully");
     return S_OK;
 }
@@ -580,4 +592,30 @@ void KRenderer::UpdateShadowBuffer()
     }
 
     ShadowRenderer.BindShadowMap(Context, 3);
+}
+
+void KRenderer::SetRenderPath(ERenderPath Path)
+{
+    if (Path == ERenderPath::Deferred && !DeferredRenderer.IsInitialized())
+    {
+        LOG_WARNING("Cannot switch to deferred rendering: deferred renderer not initialized");
+        return;
+    }
+    
+    CurrentRenderPath = Path;
+    
+    if (Path == ERenderPath::Deferred)
+    {
+        DeferredRenderer.SetDirectionalLight(DirectionalLight);
+        for (const auto& Light : PointLights)
+        {
+            DeferredRenderer.AddPointLight(Light);
+        }
+        for (const auto& Light : SpotLights)
+        {
+            DeferredRenderer.AddSpotLight(Light);
+        }
+    }
+    
+    LOG_INFO("Render path changed");
 } 

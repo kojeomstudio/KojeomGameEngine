@@ -9,6 +9,13 @@
 #include "Texture.h"
 #include "Light.h"
 #include "Shadow/ShadowRenderer.h"
+#include "Deferred/DeferredRenderer.h"
+
+enum class ERenderPath
+{
+    Forward,
+    Deferred
+};
 
 struct FRenderObject
 {
@@ -74,6 +81,11 @@ public:
     KShadowRenderer* GetShadowRenderer() { return &ShadowRenderer; }
     void SetShadowSceneBounds(const XMFLOAT3& Center, float Radius);
 
+    void SetRenderPath(ERenderPath Path);
+    ERenderPath GetRenderPath() const { return CurrentRenderPath; }
+    bool IsDeferredEnabled() const { return DeferredRenderer.IsInitialized(); }
+    KDeferredRenderer* GetDeferredRenderer() { return &DeferredRenderer; }
+
     KShaderProgram* GetLightShader() const { return LightShader.get(); }
     void Cleanup();
 
@@ -108,11 +120,14 @@ private:
     ComPtr<ID3D11Buffer> LightConstantBuffer;
 
     KShadowRenderer ShadowRenderer;
+    KDeferredRenderer DeferredRenderer;
     ComPtr<ID3D11Buffer> ShadowConstantBuffer;
     ComPtr<ID3D11SamplerState> ShadowSamplerState;
     XMFLOAT3 ShadowSceneCenter = { 0.0f, 0.0f, 0.0f };
     float ShadowSceneRadius = 50.0f;
     bool bShadowsEnabled = false;
+
+    ERenderPath CurrentRenderPath = ERenderPath::Forward;
 
     ComPtr<ID3D11RasterizerState> WireframeRasterizerState;
     std::shared_ptr<KMesh> DebugSphereMesh;

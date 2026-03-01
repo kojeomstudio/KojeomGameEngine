@@ -67,18 +67,24 @@ struct FShadowBuffer
 
 ### Phase 3: Deferred Rendering
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Completed
 **Priority**: High
 
 #### Tasks
 
 | Task | Status | Description |
 |------|--------|-------------|
-| G-Buffer design | 🔲 | Position, Normal, Albedo+Material buffers |
-| G-Buffer render targets | 🔲 | Multiple render target setup |
-| Geometry pass | 🔲 | Fill G-Buffer |
-| Lighting pass | 🔲 | Deferred lighting calculation |
-| Forward+ transparency | 🔲 | Alpha blending support |
+| G-Buffer design | ✅ | KGBuffer class with AlbedoMetallic, NormalRoughness, PositionAO |
+| G-Buffer render targets | ✅ | Multiple render target setup (3 RTs + Depth) |
+| Geometry pass | ✅ | Fill G-Buffer via KDeferredRenderer |
+| Lighting pass | ✅ | Full-screen quad deferred lighting calculation |
+| Forward+ transparency | 🔲 | Alpha blending support (pending) |
+
+#### Implementation Notes
+
+- KGBuffer: Manages 3 render targets with RTV and SRV
+- KDeferredRenderer: Geometry pass and lighting pass coordination
+- KRenderer: Added ERenderPath enum and SetRenderPath() for switching
 
 ---
 

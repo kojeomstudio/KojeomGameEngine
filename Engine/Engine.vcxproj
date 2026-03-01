@@ -105,6 +105,8 @@
     <ClInclude Include="Graphics\Shader.h" />
     <ClInclude Include="Graphics\Shadow\ShadowMap.h" />
     <ClInclude Include="Graphics\Shadow\ShadowRenderer.h" />
+    <ClInclude Include="Graphics\Deferred\GBuffer.h" />
+    <ClInclude Include="Graphics\Deferred\DeferredRenderer.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Serialization\BinaryArchive.h" />
@@ -123,6 +125,8 @@
     <ClCompile Include="Graphics\Shader.cpp" />
     <ClCompile Include="Graphics\Shadow\ShadowMap.cpp" />
     <ClCompile Include="Graphics\Shadow\ShadowRenderer.cpp" />
+    <ClCompile Include="Graphics\Deferred\GBuffer.cpp" />
+    <ClCompile Include="Graphics\Deferred\DeferredRenderer.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Serialization\BinaryArchive.cpp" />
