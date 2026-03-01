@@ -132,6 +132,21 @@ HRESULT KMesh::CreateConstantBuffer(ID3D11Device* Device)
     return Device->CreateBuffer(&BufferDesc, nullptr, &ConstantBuffer);
 }
 
+HRESULT KMesh::InitializeFromBuffer(ID3D11Buffer* InVertexBuffer, UINT32 InVertexCount, UINT32 InVertexStride)
+{
+    if (!InVertexBuffer || InVertexCount == 0)
+    {
+        LOG_ERROR("Invalid vertex buffer parameters");
+        return E_INVALIDARG;
+    }
+
+    VertexBuffer = InVertexBuffer;
+    VertexCount = InVertexCount;
+    IndexCount = 0;
+
+    return S_OK;
+}
+
 // Static factory methods implementation
 
 std::unique_ptr<KMesh> KMesh::CreateTriangle(ID3D11Device* Device)

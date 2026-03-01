@@ -11,6 +11,7 @@
 #include "Material.h"
 #include "Shadow/ShadowRenderer.h"
 #include "Deferred/DeferredRenderer.h"
+#include "PostProcess/PostProcessor.h"
 
 enum class ERenderPath
 {
@@ -90,6 +91,12 @@ public:
     bool IsDeferredEnabled() const { return DeferredRenderer.IsInitialized(); }
     KDeferredRenderer* GetDeferredRenderer() { return &DeferredRenderer; }
 
+    void SetPostProcessEnabled(bool bEnabled) { bPostProcessEnabled = bEnabled; }
+    bool IsPostProcessEnabled() const { return bPostProcessEnabled && PostProcessor.IsInitialized(); }
+    KPostProcessor* GetPostProcessor() { return &PostProcessor; }
+    void BeginHDRPass();
+    void EndHDRPass();
+
     KShaderProgram* GetLightShader() const { return LightShader.get(); }
     KShaderProgram* GetPBRShader() const { return PBRShader.get(); }
     void Cleanup();
@@ -127,12 +134,14 @@ private:
 
     KShadowRenderer ShadowRenderer;
     KDeferredRenderer DeferredRenderer;
+    KPostProcessor PostProcessor;
     ComPtr<ID3D11Buffer> ShadowConstantBuffer;
     ComPtr<ID3D11SamplerState> ShadowSamplerState;
     ComPtr<ID3D11SamplerState> MaterialSamplerState;
     XMFLOAT3 ShadowSceneCenter = { 0.0f, 0.0f, 0.0f };
     float ShadowSceneRadius = 50.0f;
     bool bShadowsEnabled = false;
+    bool bPostProcessEnabled = false;
 
     ERenderPath CurrentRenderPath = ERenderPath::Forward;
 

@@ -314,6 +314,7 @@ void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
+    PostProcessor.Cleanup();
     DeferredRenderer.Cleanup();
     ShadowRenderer.Cleanup();
     ShadowConstantBuffer.Reset();
@@ -543,6 +544,17 @@ HRESULT KRenderer::InitializeDefaultResources()
         LOG_INFO("Deferred renderer initialized successfully");
     }
 
+    hr = PostProcessor.Initialize(GraphicsDevice->GetDevice(), GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+    if (FAILED(hr))
+    {
+        LOG_WARNING("PostProcessor initialization failed, post-processing will be disabled");
+    }
+    else
+    {
+        bPostProcessEnabled = true;
+        LOG_INFO("PostProcessor initialized successfully");
+    }
+
     LOG_INFO("Default resources initialized successfully");
     return S_OK;
 }
@@ -726,4 +738,24 @@ void KRenderer::SetRenderPath(ERenderPath Path)
     }
     
     LOG_INFO("Render path changed");
+}
+
+void KRenderer::BeginHDRPass()
+{
+    if (!PostProcessor.IsInitialized() || !bPostProcessEnabled)
+    {
+        return;
+    }
+
+    PostProcessor.BeginHDRPass(GraphicsDevice->GetContext());
+}
+
+void KRenderer::EndHDRPass()
+{
+    if (!PostProcessor.IsInitialized() || !bPostProcessEnabled)
+    {
+        return;
+    }
+
+    PostProcessor.ApplyPostProcessing(GraphicsDevice->GetContext(), GraphicsDevice->GetRenderTargetView());
 } 

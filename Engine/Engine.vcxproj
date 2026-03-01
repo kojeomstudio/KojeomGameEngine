@@ -109,6 +109,7 @@
     <ClInclude Include="Graphics\Deferred\GBuffer.h" />
     <ClInclude Include="Graphics\Deferred\DeferredRenderer.h" />
     <ClInclude Include="Graphics\IBL\IBLSystem.h" />
+    <ClInclude Include="Graphics\PostProcess\PostProcessor.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Serialization\BinaryArchive.h" />
@@ -131,6 +132,7 @@
     <ClCompile Include="Graphics\Deferred\GBuffer.cpp" />
     <ClCompile Include="Graphics\Deferred\DeferredRenderer.cpp" />
     <ClCompile Include="Graphics\IBL\IBLSystem.cpp" />
+    <ClCompile Include="Graphics\PostProcess\PostProcessor.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Serialization\BinaryArchive.cpp" />

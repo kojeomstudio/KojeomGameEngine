@@ -25,6 +25,36 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Part 1: Renderer Development
 
+### Phase 5: Post-Processing
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-02
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Post-process framework | ✅ | KPostProcessor class with HDR pipeline |
+| HDR tonemapping | ✅ | ACES Filmic tonemapper |
+| Bloom effect | ✅ | Bright extraction, Gaussian blur |
+| FXAA | ✅ | Fast approximate anti-aliasing |
+| Color grading | 🔲 | Basic gamma implemented, advanced LUT pending |
+
+#### Implementation Notes
+
+- **KPostProcessor**: Full HDR post-processing pipeline
+- **HDR Render Target**: R16G16B16A16_FLOAT format
+- **Bloom**: Threshold extraction + separable Gaussian blur
+- **Tonemapping**: ACES Filmic curve with exposure control
+- **FXAA**: Standard implementation with configurable parameters
+
+#### New Files
+
+- `Engine/Graphics/PostProcess/PostProcessor.h/cpp`
+
+---
+
 ### Phase 2: Shadow Mapping
 
 **Status**: 🔄 In Progress

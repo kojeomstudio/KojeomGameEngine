@@ -64,6 +64,8 @@ public:
                       const FVertex* Vertices, UINT32 VertexCount,
                       const UINT32* Indices = nullptr, UINT32 IndexCount = 0);
 
+    HRESULT InitializeFromBuffer(ID3D11Buffer* InVertexBuffer, UINT32 InVertexCount, UINT32 InVertexStride);
+
     /**
      * @brief Render the mesh
      * @param Context DirectX 11 device context
