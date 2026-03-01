@@ -94,24 +94,38 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Assets\StaticMesh.h" />
+    <ClInclude Include="Assets\StaticMeshComponent.h" />
     <ClInclude Include="Core\Engine.h" />
     <ClInclude Include="Graphics\Camera.h" />
     <ClInclude Include="Graphics\GraphicsDevice.h" />
+    <ClInclude Include="Graphics\Light.h" />
     <ClInclude Include="Graphics\Mesh.h" />
     <ClInclude Include="Graphics\Renderer.h" />
     <ClInclude Include="Graphics\Shader.h" />
+    <ClInclude Include="Graphics\Shadow\ShadowMap.h" />
+    <ClInclude Include="Graphics\Shadow\ShadowRenderer.h" />
     <ClInclude Include="Graphics\Texture.h" />
+    <ClInclude Include="Scene\Actor.h" />
+    <ClInclude Include="Serialization\BinaryArchive.h" />
     <ClInclude Include="Utils\Common.h" />
     <ClInclude Include="Utils\Logger.h" />
+    <ClInclude Include="Utils\Math.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Assets\StaticMesh.cpp" />
+    <ClCompile Include="Assets\StaticMeshComponent.cpp" />
     <ClCompile Include="Core\Engine.cpp" />
     <ClCompile Include="Graphics\Camera.cpp" />
     <ClCompile Include="Graphics\GraphicsDevice.cpp" />
     <ClCompile Include="Graphics\Mesh.cpp" />
     <ClCompile Include="Graphics\Renderer.cpp" />
     <ClCompile Include="Graphics\Shader.cpp" />
+    <ClCompile Include="Graphics\Shadow\ShadowMap.cpp" />
+    <ClCompile Include="Graphics\Shadow\ShadowRenderer.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
+    <ClCompile Include="Scene\Actor.cpp" />
+    <ClCompile Include="Serialization\BinaryArchive.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

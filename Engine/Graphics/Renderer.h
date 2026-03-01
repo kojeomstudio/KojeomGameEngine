@@ -8,6 +8,7 @@
 #include "Mesh.h"
 #include "Texture.h"
 #include "Light.h"
+#include "Shadow/ShadowRenderer.h"
 
 struct FRenderObject
 {
@@ -68,6 +69,11 @@ public:
     bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
     void DebugDrawLightVolumes();
 
+    void SetShadowEnabled(bool bEnabled);
+    bool IsShadowEnabled() const { return ShadowRenderer.IsInitialized(); }
+    KShadowRenderer* GetShadowRenderer() { return &ShadowRenderer; }
+    void SetShadowSceneBounds(const XMFLOAT3& Center, float Radius);
+
     KShaderProgram* GetLightShader() const { return LightShader.get(); }
     void Cleanup();
 
@@ -81,8 +87,11 @@ public:
 
 private:
     HRESULT InitializeDefaultResources();
+    HRESULT InitializeShadowSystem();
     void UpdateLightBuffer();
+    void UpdateShadowBuffer();
     HRESULT CreateDebugResources();
+    void RenderShadowPass();
 
 private:
     KGraphicsDevice* GraphicsDevice = nullptr;
@@ -90,12 +99,20 @@ private:
 
     std::shared_ptr<KShaderProgram> BasicShader;
     std::shared_ptr<KShaderProgram> LightShader;
+    std::shared_ptr<KShaderProgram> ShadowLitShader;
     KTextureManager TextureManager;
 
     FDirectionalLight DirectionalLight;
     std::vector<FPointLight> PointLights;
     std::vector<FSpotLight> SpotLights;
     ComPtr<ID3D11Buffer> LightConstantBuffer;
+
+    KShadowRenderer ShadowRenderer;
+    ComPtr<ID3D11Buffer> ShadowConstantBuffer;
+    ComPtr<ID3D11SamplerState> ShadowSamplerState;
+    XMFLOAT3 ShadowSceneCenter = { 0.0f, 0.0f, 0.0f };
+    float ShadowSceneRadius = 50.0f;
+    bool bShadowsEnabled = false;
 
     ComPtr<ID3D11RasterizerState> WireframeRasterizerState;
     std::shared_ptr<KMesh> DebugSphereMesh;

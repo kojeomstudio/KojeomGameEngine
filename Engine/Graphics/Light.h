@@ -102,3 +102,14 @@ struct FMultipleLightBuffer
 };
 static_assert(sizeof(FMultipleLightBuffer) % 16 == 0, "FMultipleLightBuffer must be 16-byte aligned");
 static_assert(sizeof(FMultipleLightBuffer) == 704, "FMultipleLightBuffer size mismatch");
+
+struct FShadowDataBuffer
+{
+    XMMATRIX LightViewProjection;
+    XMFLOAT2 ShadowMapSize;
+    float    DepthBias;
+    int32    PCFKernelSize;
+    int32    bShadowEnabled;
+    XMFLOAT3 Padding;
+};
+static_assert(sizeof(FShadowDataBuffer) % 16 == 0, "FShadowDataBuffer must be 16-byte aligned");

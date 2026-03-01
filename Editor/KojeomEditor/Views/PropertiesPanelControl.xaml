@@ -1,0 +1,128 @@
+<UserControl x:Class="KojeomEditor.Views.PropertiesPanelControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="300">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#2D2D30" Padding="8,4">
+            <TextBlock Text="Properties" FontWeight="Bold" FontSize="12"/>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="8">
+                <ContentControl Content="{Binding PropertiesViewModel.SelectedActor}" ContentTemplate="{StaticResource ActorPropertiesTemplate}"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+
+    <UserControl.Resources>
+        <DataTemplate x:Key="ActorPropertiesTemplate" DataType="{x:Type ViewModels:ActorViewModel}">
+            <StackPanel>
+                <TextBlock Text="Transform" FontWeight="Bold" FontSize="12" Margin="0,0,0,8"/>
+                
+                <TextBlock Text="Position" Foreground="#999" FontSize="10" Margin="0,4,0,2"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,2,0">
+                        <TextBlock Text="X" Foreground="#F44" FontSize="9"/>
+                        <TextBox Text="{Binding PositionX, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="2,0">
+                        <TextBlock Text="Y" Foreground="#4F4" FontSize="9"/>
+                        <TextBox Text="{Binding PositionY, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="2,0,0,0">
+                        <TextBlock Text="Z" Foreground="#44F" FontSize="9"/>
+                        <TextBox Text="{Binding PositionZ, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="Rotation" Foreground="#999" FontSize="10" Margin="0,12,0,2"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,2,0">
+                        <TextBlock Text="X" Foreground="#F44" FontSize="9"/>
+                        <TextBox Text="{Binding RotationX, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="2,0">
+                        <TextBlock Text="Y" Foreground="#4F4" FontSize="9"/>
+                        <TextBox Text="{Binding RotationY, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="2,0,0,0">
+                        <TextBlock Text="Z" Foreground="#44F" FontSize="9"/>
+                        <TextBox Text="{Binding RotationZ, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="Scale" Foreground="#999" FontSize="10" Margin="0,12,0,2"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,2,0">
+                        <TextBlock Text="X" Foreground="#F44" FontSize="9"/>
+                        <TextBox Text="{Binding ScaleX, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="2,0">
+                        <TextBlock Text="Y" Foreground="#4F4" FontSize="9"/>
+                        <TextBox Text="{Binding ScaleY, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="2,0,0,0">
+                        <TextBlock Text="Z" Foreground="#44F" FontSize="9"/>
+                        <TextBox Text="{Binding ScaleZ, UpdateSourceTrigger=PropertyChanged}" Padding="2"/>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="General" FontWeight="Bold" FontSize="12" Margin="0,16,0,8"/>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Name: " VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Visible: " VerticalAlignment="Center"/>
+                    <CheckBox Grid.Column="1" IsChecked="{Binding IsVisible}" VerticalAlignment="Center"/>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="EmptySelectionTemplate">
+            <TextBlock Text="No actor selected" Foreground="#666" FontStyle="Italic"/>
+        </DataTemplate>
+
+        <Style TargetType="ContentControl">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding PropertiesViewModel.HasSelection}" Value="False">
+                    <Setter Property="ContentTemplate" Value="{StaticResource EmptySelectionTemplate}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+</UserControl>

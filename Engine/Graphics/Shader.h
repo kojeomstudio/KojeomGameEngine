@@ -121,6 +121,33 @@ public:
     HRESULT CreatePhongShader(ID3D11Device* Device);
 
     /**
+     * @brief Create Phong lighting shader with shadow support
+     * @param Device DirectX 11 device
+     * @return Success: S_OK
+     */
+    HRESULT CreatePhongShadowShader(ID3D11Device* Device);
+
+    /**
+     * @brief Compile shader program from source strings
+     * @param Device DirectX 11 device
+     * @param VSSource Vertex shader source code
+     * @param PSSource Pixel shader source code
+     * @param VSEntry Vertex shader entry point
+     * @param PSEntry Pixel shader entry point
+     * @return Success: S_OK
+     */
+    HRESULT CompileFromSource(ID3D11Device* Device, const std::string& VSSource,
+                             const std::string& PSSource, const std::string& VSEntry,
+                             const std::string& PSEntry);
+
+    /**
+     * @brief Create depth-only shader for shadow mapping
+     * @param Device DirectX 11 device
+     * @return Success: S_OK
+     */
+    HRESULT CreateDepthOnlyShader(ID3D11Device* Device);
+
+    /**
      * @brief Add shader
      * @param Shader Shader to add
      */

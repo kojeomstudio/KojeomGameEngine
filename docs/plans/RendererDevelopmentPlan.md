@@ -77,25 +77,37 @@ This document outlines the development plan for enhancing the DirectX 11 rendere
 
 ### Phase 2: Shadow Mapping
 
-**Status**: 🔲 Not Started  
-**Target Completion**: TBD  
-**Commit Hash**: (Fill when starting)
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
+**Commit Hash**: (pending commit)
 
 #### Tasks
 
 | Task | Status | Commit Hash | Notes |
 |------|--------|-------------|-------|
-| Directional light shadows | 🔲 | | |
-| Shadow map rendering pass | 🔲 | | |
-| PCF filtering | 🔲 | | |
-| Cascade shadow maps | 🔲 | | |
-| Shadow bias configuration | 🔲 | | |
+| Shadow map render target | ✅ | | KShadowMap class with depth texture |
+| Shadow shader | ✅ | | Depth-only vertex/pixel shader |
+| Shadow pass renderer | ✅ | | KShadowRenderer with scene bounds |
+| PCF filtering | ✅ | | 3x3 PCF in pixel shader |
+| Shadow constant buffer | ✅ | | FShadowDataBuffer (b2) |
+| Shadow bias configuration | ✅ | | Configurable depth and slope bias |
 
-#### Technical Details
+#### Implementation Details
 
-- Shadow map resolution: 2048x2048 (configurable)
-- Support for PCF 2x2, 3x3, 5x5 filtering
-- 3-4 cascades for directional shadows
+**New Files:**
+- `Engine/Graphics/Shadow/ShadowMap.h/cpp` - Shadow map depth texture management
+- `Engine/Graphics/Shadow/ShadowRenderer.h/cpp` - Shadow pass coordination
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Shadow system integration
+- `Engine/Graphics/Shader.h/cpp` - Shadow shader and PhongShadowShader
+- `Engine/Graphics/Light.h` - FShadowDataBuffer structure
+
+**Features:**
+- 2048x2048 shadow map resolution (configurable)
+- PCF (Percentage Closer Filtering) with configurable kernel size
+- Automatic shadow scene bounds calculation
+- Shadow sampler state with border color for out-of-bounds
 
 ---
 

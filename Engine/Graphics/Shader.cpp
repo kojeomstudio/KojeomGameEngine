@@ -571,4 +571,328 @@ std::shared_ptr<KShader> KShaderProgram::GetShader(EShaderType Type) const
         }
     }
     return nullptr;
-} 
+}
+
+HRESULT KShaderProgram::CompileFromSource(ID3D11Device* Device, const std::string& VSSource,
+                                          const std::string& PSSource, const std::string& VSEntry,
+                                          const std::string& PSEntry)
+{
+    auto VS = std::make_shared<KShader>();
+    HRESULT hr = VS->CompileFromString(Device, VSSource, VSEntry, EShaderType::Vertex);
+    if (FAILED(hr)) return hr;
+
+    auto PS = std::make_shared<KShader>();
+    hr = PS->CompileFromString(Device, PSSource, PSEntry, EShaderType::Pixel);
+    if (FAILED(hr)) return hr;
+
+    AddShader(VS);
+    AddShader(PS);
+
+    return S_OK;
+}
+
+HRESULT KShaderProgram::CreateDepthOnlyShader(ID3D11Device* Device)
+{
+    const std::string VSSource = R"(
+        cbuffer TransformBuffer : register(b0)
+        {
+            matrix World;
+            matrix LightView;
+            matrix LightProjection;
+        };
+
+        struct VSInput
+        {
+            float3 Position : POSITION;
+        };
+
+        struct PSInput
+        {
+            float4 Position : SV_POSITION;
+            float Depth : TEXCOORD0;
+        };
+
+        PSInput VS_Main(VSInput input)
+        {
+            PSInput output;
+            float4 worldPos = mul(float4(input.Position, 1.0f), World);
+            float4 viewPos = mul(worldPos, LightView);
+            float4 projPos = mul(viewPos, LightProjection);
+            output.Position = projPos;
+            output.Depth = projPos.z / projPos.w;
+            return output;
+        }
+    )";
+
+    const std::string PSSource = R"(
+        struct PSInput
+        {
+            float4 Position : SV_POSITION;
+            float Depth : TEXCOORD0;
+        };
+
+        void PS_Main(PSInput input)
+        {
+        }
+    )";
+
+    HRESULT hr = CompileFromSource(Device, VSSource, PSSource, "VS_Main", "PS_Main");
+    if (FAILED(hr)) return hr;
+
+    D3D11_INPUT_ELEMENT_DESC Layout[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    hr = CreateInputLayout(Device, Layout, ARRAYSIZE(Layout));
+    if (FAILED(hr)) return hr;
+
+    LOG_INFO("Depth-only shader creation completed");
+    return S_OK;
+}
+
+HRESULT KShaderProgram::CreatePhongShadowShader(ID3D11Device* Device)
+{
+    const std::string ShaderSource = R"(
+        cbuffer TransformBuffer : register(b0)
+        {
+            matrix World;
+            matrix View;
+            matrix Projection;
+        }
+
+        #define MAX_POINT_LIGHTS 8
+        #define MAX_SPOT_LIGHTS 4
+
+        struct FPointLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float4 Color;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+            float  Padding1;
+        };
+
+        struct FSpotLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float3 Direction;
+            float  InnerCone;
+            float4 Color;
+            float  OuterCone;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+        };
+
+        cbuffer LightBuffer : register(b1)
+        {
+            float3 CameraPosition;
+            int    NumPointLights;
+            float3 DirLightDirection;
+            int    NumSpotLights;
+            float4 DirLightColor;
+            float4 AmbientColor;
+            FPointLightData PointLights[MAX_POINT_LIGHTS];
+            FSpotLightData  SpotLights[MAX_SPOT_LIGHTS];
+        }
+
+        cbuffer ShadowBuffer : register(b2)
+        {
+            matrix LightViewProjection;
+            float2 ShadowMapSize;
+            float  DepthBias;
+            int    PCFKernelSize;
+            int    bShadowEnabled;
+            float3 Padding;
+        };
+
+        Texture2D ShadowMap : register(t3);
+        SamplerComparisonState ShadowSampler : register(s0);
+
+        struct VS_INPUT
+        {
+            float3 Pos    : POSITION;
+            float4 Color  : COLOR;
+            float3 Normal : NORMAL;
+            float2 TexCoord : TEXCOORD0;
+        };
+
+        struct PS_INPUT
+        {
+            float4 Pos       : SV_POSITION;
+            float4 Color     : COLOR;
+            float3 Normal    : NORMAL;
+            float3 WorldPos  : TEXCOORD0;
+            float4 ShadowPos : TEXCOORD1;
+        };
+
+        float CalculateShadow(float4 shadowPos)
+        {
+            if (bShadowEnabled == 0)
+                return 1.0f;
+
+            float3 projCoords = shadowPos.xyz / shadowPos.w;
+            projCoords.x = projCoords.x * 0.5f + 0.5f;
+            projCoords.y = -projCoords.y * 0.5f + 0.5f;
+
+            if (projCoords.x < 0.0f || projCoords.x > 1.0f ||
+                projCoords.y < 0.0f || projCoords.y > 1.0f ||
+                projCoords.z > 1.0f)
+                return 1.0f;
+
+            float currentDepth = projCoords.z;
+            float shadow = 0.0f;
+            float2 texelSize = 1.0f / ShadowMapSize;
+
+            int kernelSize = max(PCFKernelSize, 1);
+            int halfKernel = kernelSize / 2;
+
+            for (int x = -halfKernel; x <= halfKernel; ++x)
+            {
+                for (int y = -halfKernel; y <= halfKernel; ++y)
+                {
+                    float2 offset = float2(x, y) * texelSize;
+                    shadow += ShadowMap.SampleCmpLevelZero(ShadowSampler, 
+                        projCoords.xy + offset, currentDepth - DepthBias);
+                }
+            }
+
+            shadow /= (float)(kernelSize * kernelSize);
+            return shadow;
+        }
+
+        float3 CalculatePointLight(FPointLightData light, float3 normal, float3 worldPos, float3 viewDir)
+        {
+            float3 lightDir = light.Position - worldPos;
+            float  distance = length(lightDir);
+            
+            if (distance > light.Radius)
+                return float3(0, 0, 0);
+            
+            lightDir = normalize(lightDir);
+            
+            float attenuation = 1.0f / (1.0f + light.Falloff * distance * distance);
+            attenuation *= light.Intensity;
+            
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * light.Color.rgb;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * light.Color.rgb * 0.3f;
+            
+            return (diffuse + specular) * attenuation;
+        }
+
+        float3 CalculateSpotLight(FSpotLightData light, float3 normal, float3 worldPos, float3 viewDir)
+        {
+            float3 lightDir = light.Position - worldPos;
+            float  distance = length(lightDir);
+            
+            if (distance > light.Radius)
+                return float3(0, 0, 0);
+            
+            lightDir = normalize(lightDir);
+            
+            float3 spotDir = normalize(-light.Direction);
+            float cosAngle = dot(lightDir, spotDir);
+            float cosInner = cos(light.InnerCone);
+            float cosOuter = cos(light.OuterCone);
+            
+            if (cosAngle < cosOuter)
+                return float3(0, 0, 0);
+            
+            float spotFactor = saturate((cosAngle - cosOuter) / (cosInner - cosOuter));
+            
+            float attenuation = 1.0f / (1.0f + light.Falloff * distance * distance);
+            attenuation *= light.Intensity * spotFactor;
+            
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * light.Color.rgb;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * light.Color.rgb * 0.3f;
+            
+            return (diffuse + specular) * attenuation;
+        }
+
+        PS_INPUT VS(VS_INPUT input)
+        {
+            PS_INPUT output = (PS_INPUT)0;
+            float4 worldPos  = mul(float4(input.Pos, 1.0f), World);
+            float4 viewPos   = mul(worldPos, View);
+            output.Pos       = mul(viewPos, Projection);
+            output.Color     = input.Color;
+            output.Normal    = mul(input.Normal, (float3x3)World);
+            output.WorldPos  = worldPos.xyz;
+            output.ShadowPos = mul(worldPos, LightViewProjection);
+            return output;
+        }
+
+        float4 PS(PS_INPUT input) : SV_Target
+        {
+            float3 normal   = normalize(input.Normal);
+            float3 viewDir  = normalize(CameraPosition - input.WorldPos);
+            
+            float shadow = CalculateShadow(input.ShadowPos);
+            
+            float3 ambient  = AmbientColor.rgb * input.Color.rgb;
+            
+            float3 lightDir = normalize(-DirLightDirection);
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * DirLightColor.rgb * input.Color.rgb * shadow;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * DirLightColor.rgb * 0.4f * shadow;
+            
+            float3 result = ambient + diffuse + specular;
+            
+            [unroll]
+            for (int i = 0; i < MAX_POINT_LIGHTS; ++i)
+            {
+                if (i >= NumPointLights) break;
+                result += CalculatePointLight(PointLights[i], normal, input.WorldPos, viewDir) * input.Color.rgb;
+            }
+            
+            [unroll]
+            for (int j = 0; j < MAX_SPOT_LIGHTS; ++j)
+            {
+                if (j >= NumSpotLights) break;
+                result += CalculateSpotLight(SpotLights[j], normal, input.WorldPos, viewDir) * input.Color.rgb;
+            }
+            
+            return saturate(float4(result, input.Color.a));
+        }
+    )";
+
+    auto VS = std::make_shared<KShader>();
+    HRESULT hr = VS->CompileFromString(Device, ShaderSource, "VS", EShaderType::Vertex);
+    if (FAILED(hr)) return hr;
+
+    auto PS = std::make_shared<KShader>();
+    hr = PS->CompileFromString(Device, ShaderSource, "PS", EShaderType::Pixel);
+    if (FAILED(hr)) return hr;
+
+    AddShader(VS);
+    AddShader(PS);
+
+    D3D11_INPUT_ELEMENT_DESC Layout[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    hr = CreateInputLayout(Device, Layout, ARRAYSIZE(Layout));
+    if (FAILED(hr)) return hr;
+
+    LOG_INFO("Phong shader with shadows creation completed");
+    return S_OK;
+}

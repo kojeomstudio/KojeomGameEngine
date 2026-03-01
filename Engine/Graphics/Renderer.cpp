@@ -35,9 +35,25 @@ void KRenderer::BeginFrame(KCamera* InCamera, const float ClearColor[4])
 
     CurrentCamera->UpdateMatrices();
 
+    if (bShadowsEnabled && ShadowRenderer.IsInitialized())
+    {
+        ShadowRenderer.BeginShadowPass(
+            GraphicsDevice->GetContext(),
+            DirectionalLight,
+            ShadowSceneCenter,
+            ShadowSceneRadius
+        );
+        ShadowRenderer.ClearShadowCasters();
+    }
+
     GraphicsDevice->BeginFrame(ClearColor);
 
     UpdateLightBuffer();
+    
+    if (bShadowsEnabled)
+    {
+        UpdateShadowBuffer();
+    }
 }
 
 void KRenderer::EndFrame(bool bVSync)
@@ -118,7 +134,22 @@ void KRenderer::RenderMeshLit(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
         return;
     }
 
-    FRenderObject RO(InMesh, LightShader, InTexture);
+    std::shared_ptr<KShaderProgram> ShaderToUse = LightShader;
+    
+    if (bShadowsEnabled && ShadowLitShader)
+    {
+        ShaderToUse = ShadowLitShader;
+        
+        if (ShadowRenderer.IsInitialized())
+        {
+            FShadowCaster Caster;
+            Caster.Mesh = InMesh;
+            Caster.WorldMatrix = WorldMatrix;
+            ShadowRenderer.AddShadowCaster(Caster);
+        }
+    }
+
+    FRenderObject RO(InMesh, ShaderToUse, InTexture);
     RO.WorldMatrix = WorldMatrix;
     KRenderer::RenderObject(RO);
 }
@@ -199,9 +230,13 @@ void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
+    ShadowRenderer.Cleanup();
+    ShadowConstantBuffer.Reset();
+    ShadowSamplerState.Reset();
     LightConstantBuffer.Reset();
     WireframeRasterizerState.Reset();
     DebugSphereMesh.reset();
+    ShadowLitShader.reset();
     LightShader.reset();
     BasicShader.reset();
     TextureManager.Cleanup();
@@ -317,6 +352,14 @@ HRESULT KRenderer::InitializeDefaultResources()
         return hr;
     }
 
+    ShadowLitShader = std::make_shared<KShaderProgram>();
+    hr = ShadowLitShader->CreatePhongShadowShader(Device);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Shadow shader creation failed, shadows will be disabled");
+        ShadowLitShader.reset();
+    }
+
     D3D11_BUFFER_DESC LightCBDesc = {};
     LightCBDesc.Usage          = D3D11_USAGE_DEFAULT;
     LightCBDesc.ByteWidth      = sizeof(FMultipleLightBuffer);
@@ -328,6 +371,37 @@ HRESULT KRenderer::InitializeDefaultResources()
     {
         KLogger::HResultError(hr, "Light constant buffer creation failed");
         return hr;
+    }
+
+    D3D11_BUFFER_DESC ShadowCBDesc = {};
+    ShadowCBDesc.Usage = D3D11_USAGE_DYNAMIC;
+    ShadowCBDesc.ByteWidth = sizeof(FShadowDataBuffer);
+    ShadowCBDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    ShadowCBDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+    hr = Device->CreateBuffer(&ShadowCBDesc, nullptr, &ShadowConstantBuffer);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Shadow constant buffer creation failed");
+    }
+
+    D3D11_SAMPLER_DESC ShadowSamplerDesc = {};
+    ShadowSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    ShadowSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    ShadowSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    ShadowSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    ShadowSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+    ShadowSamplerDesc.BorderColor[0] = 1.0f;
+    ShadowSamplerDesc.BorderColor[1] = 1.0f;
+    ShadowSamplerDesc.BorderColor[2] = 1.0f;
+    ShadowSamplerDesc.BorderColor[3] = 1.0f;
+    ShadowSamplerDesc.MinLOD = 0;
+    ShadowSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    hr = Device->CreateSamplerState(&ShadowSamplerDesc, &ShadowSamplerState);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Shadow sampler state creation failed");
     }
 
     hr = TextureManager.CreateDefaultTextures(Device);
@@ -343,7 +417,32 @@ HRESULT KRenderer::InitializeDefaultResources()
         LOG_WARNING("Debug resources creation failed, debug drawing will be disabled");
     }
 
+    hr = InitializeShadowSystem();
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Shadow system initialization failed, shadows will be disabled");
+    }
+
     LOG_INFO("Default resources initialized successfully");
+    return S_OK;
+}
+
+HRESULT KRenderer::InitializeShadowSystem()
+{
+    FShadowConfig ShadowConfig;
+    ShadowConfig.Resolution = 2048;
+    ShadowConfig.DepthBias = 0.0001f;
+    ShadowConfig.PCFKernelSize = 3;
+
+    HRESULT hr = ShadowRenderer.Initialize(GraphicsDevice->GetDevice(), ShadowConfig);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to initialize shadow renderer");
+        return hr;
+    }
+
+    bShadowsEnabled = true;
+    LOG_INFO("Shadow system initialized successfully");
     return S_OK;
 }
 
@@ -432,4 +531,53 @@ void KRenderer::DebugDrawLightVolumes()
     }
 
     Context->RSSetState(OldRasterizerState.Get());
+}
+
+void KRenderer::SetShadowEnabled(bool bEnabled)
+{
+    if (bEnabled && !ShadowRenderer.IsInitialized())
+    {
+        LOG_WARNING("Cannot enable shadows: shadow system not initialized");
+        return;
+    }
+    bShadowsEnabled = bEnabled;
+}
+
+void KRenderer::SetShadowSceneBounds(const XMFLOAT3& Center, float Radius)
+{
+    ShadowSceneCenter = Center;
+    ShadowSceneRadius = Radius;
+}
+
+void KRenderer::UpdateShadowBuffer()
+{
+    if (!ShadowConstantBuffer || !bShadowsEnabled)
+        return;
+
+    ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
+
+    D3D11_MAPPED_SUBRESOURCE Mapped;
+    HRESULT hr = Context->Map(ShadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
+    if (SUCCEEDED(hr))
+    {
+        FShadowDataBuffer* Buffer = static_cast<FShadowDataBuffer*>(Mapped.pData);
+        Buffer->LightViewProjection = XMMatrixTranspose(ShadowRenderer.GetLightViewProjection());
+        Buffer->ShadowMapSize = XMFLOAT2(
+            static_cast<float>(ShadowRenderer.GetShadowMap()->GetResolution()),
+            static_cast<float>(ShadowRenderer.GetShadowMap()->GetResolution())
+        );
+        Buffer->DepthBias = ShadowRenderer.GetShadowMap()->GetConfig().DepthBias;
+        Buffer->PCFKernelSize = ShadowRenderer.GetShadowMap()->GetConfig().PCFKernelSize;
+        Buffer->bShadowEnabled = bShadowsEnabled ? 1 : 0;
+        Context->Unmap(ShadowConstantBuffer.Get(), 0);
+    }
+
+    Context->PSSetConstantBuffers(2, 1, ShadowConstantBuffer.GetAddressOf());
+
+    if (ShadowSamplerState)
+    {
+        Context->PSSetSamplers(0, 1, ShadowSamplerState.GetAddressOf());
+    }
+
+    ShadowRenderer.BindShadowMap(Context, 3);
 } 
