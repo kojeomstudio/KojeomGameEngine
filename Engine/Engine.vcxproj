@@ -119,6 +119,7 @@
     <ClInclude Include="Graphics\CommandBuffer\CommandBuffer.h" />
     <ClInclude Include="Graphics\Instanced\InstancedRenderer.h" />
     <ClInclude Include="Graphics\Performance\GPUTimer.h" />
+    <ClInclude Include="Graphics\SSAO\SSAO.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Scene\SceneManager.h" />
@@ -153,6 +154,7 @@
     <ClCompile Include="Graphics\CommandBuffer\CommandBuffer.cpp" />
     <ClCompile Include="Graphics\Instanced\InstancedRenderer.cpp" />
     <ClCompile Include="Graphics\Performance\GPUTimer.cpp" />
+    <ClCompile Include="Graphics\SSAO\SSAO.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Scene\SceneManager.cpp" />

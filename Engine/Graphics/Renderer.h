@@ -17,6 +17,7 @@
 #include "CommandBuffer/CommandBuffer.h"
 #include "Instanced/InstancedRenderer.h"
 #include "Performance/GPUTimer.h"
+#include "SSAO/SSAO.h"
 
 enum class ERenderPath
 {
@@ -146,6 +147,11 @@ public:
     void ExecuteCommandBuffer();
     const FCommandBufferStats& GetCommandBufferStats() const { return CommandBuffer.GetStats(); }
 
+    void SetSSAOEnabled(bool bEnabled);
+    bool IsSSAOEnabled() const { return bSSAOEnabled && SSAO.IsInitialized(); }
+    KSSAO* GetSSAO() { return &SSAO; }
+    void ComputeSSAO();
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -196,8 +202,10 @@ private:
     KInstancedRenderer InstancedRenderer;
     KGPUTimer GPUTimer;
     KOcclusionCuller OcclusionCuller;
+    KSSAO SSAO;
     bool bOcclusionCullingEnabled = false;
     bool bCommandBufferEnabled = true;
+    bool bSSAOEnabled = false;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;

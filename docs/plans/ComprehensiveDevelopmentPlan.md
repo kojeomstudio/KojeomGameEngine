@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-6 (Occlusion Culling Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-7 (SSAO Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -24,6 +24,36 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 ---
 
 ## Part 1: Renderer Development
+
+### Phase 7: Screen Space Ambient Occlusion
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-02
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| SSAO kernel generation | ✅ | 64 samples with hemisphere distribution |
+| Noise texture generation | ✅ | 4x4 random rotation texture |
+| SSAO shader | ✅ | SSAO computation with bias and radius |
+| Blur shader | ✅ | Separable Gaussian blur for SSAO |
+| Renderer integration | ✅ | KSSAO class with Deferred rendering support |
+
+#### Implementation Notes
+
+- **KSSAO**: Full SSAO system with configurable parameters
+- **SSAO Kernel**: 64-sample hemisphere distribution with randomization
+- **Noise Texture**: 4x4 rotation texture for random sample rotation
+- **Blur**: Separable Gaussian blur for smooth AO results
+- **Integration**: Works with Deferred rendering pipeline
+
+#### New Files
+
+- `Engine/Graphics/SSAO/SSAO.h/cpp`
+
+---
 
 ### Phase 6: Performance Optimization
 
@@ -645,6 +675,8 @@ Engine/
 │   │   └── InstancedRenderer.h/cpp
 │   ├── Performance/
 │   │   └── GPUTimer.h/cpp
+│   ├── SSAO/
+│   │   └── SSAO.h/cpp
 │   ├── Material.h/cpp
 │   └── ...
 ├── Assets/

@@ -331,6 +331,7 @@ void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
+    SSAO.Cleanup();
     CommandBuffer.Cleanup();
     OcclusionCuller.Cleanup();
     GPUTimer.Cleanup();
@@ -621,6 +622,17 @@ HRESULT KRenderer::InitializeDefaultResources()
         LOG_INFO("Command buffer initialized successfully");
     }
 
+    hr = SSAO.Initialize(Device, GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+    if (FAILED(hr))
+    {
+        LOG_WARNING("SSAO initialization failed");
+    }
+    else
+    {
+        bSSAOEnabled = false;
+        LOG_INFO("SSAO initialized successfully");
+    }
+
     LOG_INFO("Default resources initialized successfully");
     return S_OK;
 }
@@ -908,4 +920,42 @@ void KRenderer::ExecuteCommandBuffer()
     }
     
     CommandBuffer.Clear();
+}
+
+void KRenderer::SetSSAOEnabled(bool bEnabled)
+{
+    if (bEnabled && !SSAO.IsInitialized())
+    {
+        LOG_WARNING("Cannot enable SSAO: SSAO system not initialized");
+        return;
+    }
+    bSSAOEnabled = bEnabled;
+}
+
+void KRenderer::ComputeSSAO()
+{
+    if (!bSSAOEnabled || !SSAO.IsInitialized() || !DeferredRenderer.IsInitialized())
+    {
+        return;
+    }
+
+    if (CurrentRenderPath != ERenderPath::Deferred)
+    {
+        return;
+    }
+
+    KGBuffer* GBuffer = DeferredRenderer.GetGBuffer();
+    if (!GBuffer)
+    {
+        return;
+    }
+
+    SSAO.ComputeSSAO(
+        GraphicsDevice->GetContext(),
+        GBuffer->GetNormalRoughnessSRV(),
+        GBuffer->GetPositionAOSRV(),
+        GBuffer->GetDepthSRV(),
+        CurrentCamera->GetProjectionMatrix(),
+        CurrentCamera->GetViewMatrix()
+    );
 } 

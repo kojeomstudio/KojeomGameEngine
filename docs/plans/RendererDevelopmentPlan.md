@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 6 Completed
+- **Status**: Phase 7 Completed
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-02
 
@@ -347,6 +347,61 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+---
+
+### Phase 7: Screen Space Ambient Occlusion
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| SSAO kernel generation | ✅ | | 64 samples with hemisphere distribution |
+| Noise texture generation | ✅ | | 4x4 random rotation texture |
+| SSAO shader | ✅ | | SSAO computation with bias and radius |
+| Blur shader | ✅ | | Separable Gaussian blur for SSAO |
+| Renderer integration | ✅ | | KSSAO class with Deferred rendering support |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/SSAO/SSAO.h/cpp` - SSAO system with kernel and noise generation
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Added SSAO integration
+- `Engine/Engine.vcxproj` - Added SSAO files
+
+**Features:**
+- 64-sample SSAO kernel with hemisphere distribution
+- 4x4 random rotation noise texture
+- Configurable radius, bias, and power parameters
+- Separable Gaussian blur for smoothing
+- Integration with Deferred rendering pipeline
+- Real-time toggle and parameter adjustment
+
+#### Technical Details
+
+**SSAO Parameters:**
+- Radius: 0.5f (sample search radius)
+- Bias: 0.025f (depth bias to prevent self-shadowing)
+- Power: 2.0f (AO contrast power)
+- KernelSize: 16 (number of samples to use)
+- BlurIterations: 2 (blur pass count)
+
+**Render Targets:**
+- SSAO Texture: R16_FLOAT format
+- Blur Output: R16_FLOAT format (ping-pong)
+
+**Shader Pipeline:**
+1. Compute SSAO using Normal, Position, Depth from G-Buffer
+2. Apply separable Gaussian blur (horizontal + vertical)
+3. Output to lighting pass or apply to final image
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template
@@ -475,6 +530,8 @@ Engine/Graphics/
 │   └── CommandBuffer.h/cpp
 ├── Instanced/                  # Instanced rendering (Implemented)
 │   └── InstancedRenderer.h/cpp
+├── SSAO/                        # Screen Space Ambient Occlusion (Implemented)
+│   └── SSAO.h/cpp
 └── Performance/                # GPU performance (Implemented)
     └── GPUTimer.h/cpp
 ```
