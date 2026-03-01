@@ -277,4 +277,117 @@ extern "C"
         if (vertexCount) *vertexCount = krenderer->GetVertexCount();
         if (frameTime) *frameTime = krenderer->GetFrameTime();
     }
+
+    ENGINEAPI void* Scene_Raycast(void* scene, float originX, float originY, float originZ,
+                                  float dirX, float dirY, float dirZ,
+                                  float* outHitX, float* outHitY, float* outHitZ)
+    {
+        if (!scene) return nullptr;
+        KScene* kscene = static_cast<KScene*>(scene);
+        
+        XMVECTOR origin = XMVectorSet(originX, originY, originZ, 1.0f);
+        XMVECTOR direction = XMVectorSet(dirX, dirY, dirZ, 0.0f);
+        direction = XMVector3Normalize(direction);
+        
+        float closestDistance = FLT_MAX;
+        KActor* closestActor = nullptr;
+        XMVECTOR closestHitPoint = XMVectorZero();
+        
+        const auto& actors = kscene->GetActors();
+        for (const auto& actorPtr : actors)
+        {
+            KActor* actor = actorPtr.get();
+            if (!actor) continue;
+            
+            const FTransform& transform = actor->GetWorldTransform();
+            XMVECTOR actorPos = XMLoadFloat3(&transform.Position);
+            float boundsRadius = std::max({ transform.Scale.x, transform.Scale.y, transform.Scale.z }) * 0.5f;
+            
+            XMVECTOR toActor = actorPos - origin;
+            float t = XMVectorGetX(XMVector3Dot(toActor, direction));
+            
+            if (t < 0) continue;
+            
+            XMVECTOR closestPoint = origin + direction * t;
+            float distanceSq = XMVectorGetX(XMVector3LengthSq(closestPoint - actorPos));
+            float radiusSq = boundsRadius * boundsRadius;
+            
+            if (distanceSq <= radiusSq && t < closestDistance)
+            {
+                closestDistance = t;
+                closestActor = actor;
+                closestHitPoint = closestPoint;
+            }
+        }
+        
+        if (closestActor && outHitX && outHitY && outHitZ)
+        {
+            XMFLOAT3 hitPoint;
+            XMStoreFloat3(&hitPoint, closestHitPoint);
+            *outHitX = hitPoint.x;
+            *outHitY = hitPoint.y;
+            *outHitZ = hitPoint.z;
+        }
+        
+        return closestActor;
+    }
+
+    ENGINEAPI int Scene_GetActorCount(void* scene)
+    {
+        if (!scene) return 0;
+        KScene* kscene = static_cast<KScene*>(scene);
+        return static_cast<int>(kscene->GetActors().size());
+    }
+
+    ENGINEAPI void* Scene_GetActorAt(void* scene, int index)
+    {
+        if (!scene) return nullptr;
+        KScene* kscene = static_cast<KScene*>(scene);
+        const auto& actors = kscene->GetActors();
+        if (index >= 0 && index < static_cast<int>(actors.size()))
+        {
+            return actors[index].get();
+        }
+        return nullptr;
+    }
+
+    ENGINEAPI void Actor_GetComponentCount(void* actor, int* outCount)
+    {
+        if (!actor || !outCount) return;
+        KActor* kactor = static_cast<KActor*>(actor);
+        *outCount = 0;
+    }
+
+    ENGINEAPI const char* Actor_GetComponentName(void* actor, int index)
+    {
+        if (!actor) return "";
+        return "Component";
+    }
+
+    ENGINEAPI int Actor_GetComponentType(void* actor, int index)
+    {
+        if (!actor) return 0;
+        return 0;
+    }
+
+    ENGINEAPI void Material_SetAlbedo(void* material, float r, float g, float b, float a)
+    {
+        if (!material) return;
+        FPBRMaterialParams* mat = static_cast<FPBRMaterialParams*>(material);
+        mat->AlbedoColor = XMFLOAT4(r, g, b, a);
+    }
+
+    ENGINEAPI void Material_SetMetallic(void* material, float value)
+    {
+        if (!material) return;
+        FPBRMaterialParams* mat = static_cast<FPBRMaterialParams*>(material);
+        mat->Metallic = value;
+    }
+
+    ENGINEAPI void Material_SetRoughness(void* material, float value)
+    {
+        if (!material) return;
+        FPBRMaterialParams* mat = static_cast<FPBRMaterialParams*>(material);
+        mat->Roughness = value;
+    }
 }

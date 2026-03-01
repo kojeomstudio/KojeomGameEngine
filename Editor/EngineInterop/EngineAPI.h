@@ -49,4 +49,18 @@ extern "C"
     ENGINEAPI void Renderer_SetRenderPath(void* renderer, int path);
     ENGINEAPI void Renderer_SetDebugMode(void* renderer, bool enabled);
     ENGINEAPI void Renderer_GetStats(void* renderer, int* drawCalls, int* vertexCount, float* frameTime);
+
+    ENGINEAPI void* Scene_Raycast(void* scene, float originX, float originY, float originZ,
+                                  float dirX, float dirY, float dirZ,
+                                  float* outHitX, float* outHitY, float* outHitZ);
+    ENGINEAPI int Scene_GetActorCount(void* scene);
+    ENGINEAPI void* Scene_GetActorAt(void* scene, int index);
+
+    ENGINEAPI void Actor_GetComponentCount(void* actor, int* outCount);
+    ENGINEAPI const char* Actor_GetComponentName(void* actor, int index);
+    ENGINEAPI int Actor_GetComponentType(void* actor, int index);
+
+    ENGINEAPI void Material_SetAlbedo(void* material, float r, float g, float b, float a);
+    ENGINEAPI void Material_SetMetallic(void* material, float value);
+    ENGINEAPI void Material_SetRoughness(void* material, float value);
 }

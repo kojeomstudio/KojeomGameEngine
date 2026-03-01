@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -7,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using KojeomEditor.Services;
+using KojeomEditor.ViewModels;
 
 namespace KojeomEditor.Views;
 
@@ -31,11 +33,33 @@ public partial class ViewportControl : UserControl
         DependencyProperty.Register(nameof(Engine), typeof(EngineInterop), typeof(ViewportControl),
             new PropertyMetadata(null, OnEngineChanged));
 
+    public static readonly DependencyProperty SceneViewModelProperty =
+        DependencyProperty.Register(nameof(SceneViewModel), typeof(SceneViewModel), typeof(ViewportControl),
+            new PropertyMetadata(null));
+
+    public static readonly DependencyProperty PropertiesViewModelProperty =
+        DependencyProperty.Register(nameof(PropertiesViewModel), typeof(PropertiesViewModel), typeof(ViewportControl),
+            new PropertyMetadata(null));
+
     public EngineInterop? Engine
     {
         get => (EngineInterop?)GetValue(EngineProperty);
         set => SetValue(EngineProperty, value);
     }
+
+    public SceneViewModel? SceneViewModel
+    {
+        get => (SceneViewModel?)GetValue(SceneViewModelProperty);
+        set => SetValue(SceneViewModelProperty, value);
+    }
+
+    public PropertiesViewModel? PropertiesViewModel
+    {
+        get => (PropertiesViewModel?)GetValue(PropertiesViewModelProperty);
+        set => SetValue(PropertiesViewModelProperty, value);
+    }
+
+    public event EventHandler<ActorViewModel?>? ActorSelected;
 
     public ViewportControl()
     {
@@ -215,6 +239,10 @@ public partial class ViewportControl : UserControl
             CaptureMouse();
             Keyboard.Focus(this);
         }
+        else if (e.LeftButton == MouseButtonState.Pressed && !_isRightMouseDown)
+        {
+            PerformObjectPicking(e.GetPosition(this));
+        }
     }
 
     private void OnMouseUp(object sender, MouseButtonEventArgs e)
@@ -244,6 +272,120 @@ public partial class ViewportControl : UserControl
         _isRightMouseDown = false;
         _pressedKeys.Clear();
         ReleaseMouseCapture();
+    }
+
+    private void PerformObjectPicking(Point mousePosition)
+    {
+        if (_engine == null || !_engine.IsInitialized) return;
+
+        float ndcX = (float)(2.0 * mousePosition.X / ActualWidth - 1.0);
+        float ndcY = (float)(1.0 - 2.0 * mousePosition.Y / ActualHeight);
+
+        var (viewMatrix, projMatrix) = _engine.GetCameraMatrices();
+        if (viewMatrix == null || projMatrix == null) return;
+
+        var invProj = InvertMatrix4x4(projMatrix);
+        var invView = InvertMatrix4x4(viewMatrix);
+
+        float rayX = ndcX;
+        float rayY = ndcY;
+        float rayZ = 1.0f;
+
+        float x = rayX * invProj[0] + rayY * invProj[4] + rayZ * invProj[8] + invProj[12];
+        float y = rayX * invProj[1] + rayY * invProj[5] + rayZ * invProj[9] + invProj[13];
+        float z = rayX * invProj[2] + rayY * invProj[6] + rayZ * invProj[10] + invProj[14];
+        float w = rayX * invProj[3] + rayY * invProj[7] + rayZ * invProj[11] + invProj[15];
+        
+        if (Math.Abs(w) > 0.0001f)
+        {
+            x /= w; y /= w; z /= w;
+        }
+
+        float dirX = x * invView[0] + y * invView[4] + z * invView[8];
+        float dirY = x * invView[1] + y * invView[5] + z * invView[9];
+        float dirZ = x * invView[2] + y * invView[6] + z * invView[10];
+
+        float length = (float)Math.Sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+        if (length > 0.0001f)
+        {
+            dirX /= length;
+            dirY /= length;
+            dirZ /= length;
+        }
+
+        var (camX, camY, camZ) = _engine.GetCameraPosition();
+
+        var hitActor = _engine.Raycast(camX, camY, camZ, dirX, dirY, dirZ, out _, out _, out _);
+
+        if (hitActor != IntPtr.Zero)
+        {
+            string? actorName = _engine.GetActorName(hitActor);
+            var actorViewModel = FindActorViewModel(actorName);
+            if (actorViewModel != null)
+            {
+                SelectActor(actorViewModel);
+            }
+        }
+        else
+        {
+            SelectActor(null);
+        }
+    }
+
+    private ActorViewModel? FindActorViewModel(string? name)
+    {
+        if (string.IsNullOrEmpty(name) || SceneViewModel == null) return null;
+
+        foreach (var actor in SceneViewModel.Actors)
+        {
+            if (actor.Name == name)
+                return actor;
+        }
+        return null;
+    }
+
+    private void SelectActor(ActorViewModel? actor)
+    {
+        if (SceneViewModel != null)
+        {
+            SceneViewModel.SelectedActor = actor;
+        }
+        if (PropertiesViewModel != null)
+        {
+            PropertiesViewModel.SetSelectedActor(actor);
+        }
+        ActorSelected?.Invoke(this, actor);
+    }
+
+    private static float[] InvertMatrix4x4(float[] m)
+    {
+        float[] inv = new float[16];
+        
+        inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] + m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
+        inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] - m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10];
+        inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] + m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9];
+        inv[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] - m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9];
+        inv[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] - m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10];
+        inv[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] + m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10];
+        inv[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] - m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9];
+        inv[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] + m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9];
+        inv[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] + m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6];
+        inv[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] - m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6];
+        inv[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] + m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5];
+        inv[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] - m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5];
+        inv[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] - m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6];
+        inv[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] + m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6];
+        inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] - m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
+        inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] + m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
+
+        float det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+        if (Math.Abs(det) < 0.0001f) return new float[16];
+
+        det = 1.0f / det;
+        for (int i = 0; i < 16; i++)
+            inv[i] *= det;
+
+        return inv;
     }
 
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)

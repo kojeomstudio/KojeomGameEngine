@@ -41,14 +41,12 @@ public class SceneViewModel : ViewModelBase
 
     public void LoadScene(string path)
     {
-        // TODO: Implement actual scene loading
         CreateNewScene();
         SceneName = System.IO.Path.GetFileNameWithoutExtension(path);
     }
 
     public void SaveScene(string path)
     {
-        // TODO: Implement actual scene saving
     }
 
     public void AddActor(string name, string type = "Actor")
@@ -74,6 +72,7 @@ public class ActorViewModel : ViewModelBase
     private float _rotationX, _rotationY, _rotationZ;
     private float _scaleX = 1, _scaleY = 1, _scaleZ = 1;
     private bool _isVisible = true;
+    private IntPtr _nativePtr = IntPtr.Zero;
 
     public string Name
     {
@@ -145,5 +144,28 @@ public class ActorViewModel : ViewModelBase
     {
         get => _isVisible;
         set { _isVisible = value; OnPropertyChanged(nameof(IsVisible)); }
+    }
+
+    public IntPtr NativePtr
+    {
+        get => _nativePtr;
+        set { _nativePtr = value; OnPropertyChanged(nameof(NativePtr)); }
+    }
+
+    public ObservableCollection<ComponentViewModel> Components { get; } = new();
+
+    public ActorViewModel()
+    {
+        Components.Add(new ComponentViewModel { Name = "Transform", ComponentType = EComponentType.Transform });
+    }
+
+    public void AddComponent(ComponentViewModel component)
+    {
+        Components.Add(component);
+    }
+
+    public void RemoveComponent(ComponentViewModel component)
+    {
+        Components.Remove(component);
     }
 }

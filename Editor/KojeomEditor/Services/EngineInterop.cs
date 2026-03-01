@@ -290,6 +290,88 @@ public class EngineInterop : IDisposable
         return (x, y, z);
     }
 
+    public (float[] matrix, float[] projMatrix) GetCameraMatrices()
+    {
+        var camera = GetMainCamera();
+        var viewMatrix = new float[16];
+        var projMatrix = new float[16];
+        if (camera != IntPtr.Zero)
+        {
+            Camera_GetViewMatrix(camera, viewMatrix);
+            Camera_GetProjectionMatrix(camera, projMatrix);
+        }
+        return (viewMatrix, projMatrix);
+    }
+
+    public IntPtr Raycast(float originX, float originY, float originZ,
+                          float dirX, float dirY, float dirZ,
+                          out float hitX, out float hitY, out float hitZ)
+    {
+        hitX = hitY = hitZ = 0;
+        var scene = GetActiveScene();
+        if (scene == IntPtr.Zero)
+        {
+            return IntPtr.Zero;
+        }
+
+        return Scene_Raycast(scene, originX, originY, originZ, dirX, dirY, dirZ,
+                            out hitX, out hitY, out hitZ);
+    }
+
+    public int GetActorCount()
+    {
+        var scene = GetActiveScene();
+        if (scene == IntPtr.Zero) return 0;
+        return Scene_GetActorCount(scene);
+    }
+
+    public IntPtr GetActorAt(int index)
+    {
+        var scene = GetActiveScene();
+        if (scene == IntPtr.Zero) return IntPtr.Zero;
+        return Scene_GetActorAt(scene, index);
+    }
+
+    public void GetActorRotation(IntPtr actor, out float x, out float y, out float z, out float w)
+    {
+        x = y = z = 0; w = 1;
+        if (actor != IntPtr.Zero)
+        {
+            Actor_GetRotation(actor, ref x, ref y, ref z, ref w);
+        }
+    }
+
+    public void GetActorScale(IntPtr actor, out float x, out float y, out float z)
+    {
+        x = y = z = 1;
+        if (actor != IntPtr.Zero)
+        {
+            Actor_GetScale(actor, ref x, ref y, ref z);
+        }
+    }
+
+    public int GetComponentCount(IntPtr actor)
+    {
+        int count = 0;
+        if (actor != IntPtr.Zero)
+        {
+            Actor_GetComponentCount(actor, ref count);
+        }
+        return count;
+    }
+
+    public string? GetComponentName(IntPtr actor, int index)
+    {
+        if (actor == IntPtr.Zero) return null;
+        return Marshal.PtrToStringAnsi(Actor_GetComponentName(actor, index));
+    }
+
+    public int GetComponentType(IntPtr actor, int index)
+    {
+        if (actor == IntPtr.Zero) return 0;
+        return Actor_GetComponentType(actor, index);
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -395,6 +477,47 @@ public class EngineInterop : IDisposable
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Camera_GetPosition(IntPtr camera, ref float x, ref float y, ref float z);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Camera_GetViewMatrix(IntPtr camera, [Out] float[] matrix);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Camera_GetProjectionMatrix(IntPtr camera, [Out] float[] matrix);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Scene_Raycast(IntPtr scene, float originX, float originY, float originZ,
+                                               float dirX, float dirY, float dirZ,
+                                               out float outHitX, out float outHitY, out float outHitZ);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Scene_GetActorCount(IntPtr scene);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Scene_GetActorAt(IntPtr scene, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Actor_GetRotation(IntPtr actor, ref float x, ref float y, ref float z, ref float w);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Actor_GetScale(IntPtr actor, ref float x, ref float y, ref float z);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Actor_GetComponentCount(IntPtr actor, ref int outCount);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Actor_GetComponentName(IntPtr actor, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Actor_GetComponentType(IntPtr actor, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Material_SetAlbedo(IntPtr material, float r, float g, float b, float a);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Material_SetMetallic(IntPtr material, float value);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Material_SetRoughness(IntPtr material, float value);
 
     #endregion
 }
