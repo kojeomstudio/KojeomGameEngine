@@ -20,10 +20,7 @@ public partial class MainWindow : Window
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
-        if (FindName("ViewportControl") is Views.ViewportControl viewport)
-        {
-            viewport.Engine = _engine;
-        }
+        Viewport.Engine = _engine;
     }
 
     private void OnWindowClosed(object? sender, System.EventArgs e)

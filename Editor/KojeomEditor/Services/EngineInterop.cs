@@ -251,6 +251,45 @@ public class EngineInterop : IDisposable
         return (drawCalls, vertexCount, frameTime);
     }
 
+    public IntPtr GetMainCamera()
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero)
+        {
+            return IntPtr.Zero;
+        }
+        return Camera_GetMain(_enginePtr);
+    }
+
+    public void SetCameraPosition(float x, float y, float z)
+    {
+        var camera = GetMainCamera();
+        if (camera != IntPtr.Zero)
+        {
+            Camera_SetPosition(camera, x, y, z);
+        }
+    }
+
+    public void SetCameraRotation(float pitch, float yaw, float roll)
+    {
+        var camera = GetMainCamera();
+        if (camera != IntPtr.Zero)
+        {
+            Camera_SetRotation(camera, pitch, yaw, roll);
+        }
+    }
+
+    public (float x, float y, float z) GetCameraPosition()
+    {
+        var camera = GetMainCamera();
+        if (camera == IntPtr.Zero)
+        {
+            return (0, 0, 0);
+        }
+        float x = 0, y = 0, z = 0;
+        Camera_GetPosition(camera, ref x, ref y, ref z);
+        return (x, y, z);
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -344,6 +383,18 @@ public class EngineInterop : IDisposable
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Renderer_GetStats(IntPtr renderer, ref int drawCalls, ref int vertexCount, ref float frameTime);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Camera_GetMain(IntPtr engine);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Camera_SetPosition(IntPtr camera, float x, float y, float z);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Camera_SetRotation(IntPtr camera, float pitch, float yaw, float roll);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Camera_GetPosition(IntPtr camera, ref float x, ref float y, ref float z);
 
     #endregion
 }

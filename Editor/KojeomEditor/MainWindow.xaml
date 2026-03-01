@@ -23,7 +23,6 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Menu Bar -->
         <Menu Grid.Row="0" Background="#2D2D30" Foreground="White">
             <MenuItem Header="_File">
                 <MenuItem Header="_New Scene" Click="MenuItem_NewScene_Click" InputGestureText="Ctrl+N"/>
@@ -48,7 +47,6 @@
             </MenuItem>
         </Menu>
 
-        <!-- Toolbar -->
         <ToolBarTray Grid.Row="1" Background="#2D2D30">
             <ToolBar Band="0" BandIndex="0" Background="#2D2D30">
                 <Button ToolTip="Select" Padding="5">
@@ -76,38 +74,51 @@
             </ToolBar>
         </ToolBarTray>
 
-        <!-- Main Content -->
         <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="250"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="300"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="200"/>
+            </Grid.RowDefinitions>
 
-            <!-- Scene Hierarchy Panel -->
-            <Border Grid.Column="0" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,0,1,0">
-                <views:SceneHierarchyControl/>
-            </Border>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="300"/>
+                </Grid.ColumnDefinitions>
 
-            <!-- Viewport -->
-            <Border Grid.Column="1" Background="#1E1E1E">
-                <views:ViewportControl/>
-            </Border>
+                <Border Grid.Column="0" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,0,1,0">
+                    <views:SceneHierarchyControl/>
+                </Border>
 
-            <!-- Properties Panel -->
-            <Border Grid.Column="2" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1,0,0,0">
-                <views:PropertiesPanelControl/>
+                <Border Grid.Column="1" Background="#1E1E1E">
+                    <views:ViewportControl x:Name="Viewport"/>
+                </Border>
+
+                <Border Grid.Column="2" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1,0,0,0">
+                    <views:PropertiesPanelControl/>
+                </Border>
+            </Grid>
+
+            <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="#3F3F46"/>
+
+            <Border Grid.Row="2" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,1,0,0">
+                <views:ContentBrowserControl/>
             </Border>
         </Grid>
 
-        <!-- Status Bar -->
         <StatusBar Grid.Row="3" Background="#007ACC" Foreground="White">
             <StatusBarItem>
                 <TextBlock Text="Ready"/>
             </StatusBarItem>
             <Separator/>
             <StatusBarItem>
-                <TextBlock Text="FPS: 60"/>
+                <TextBlock x:Name="StatusDrawCalls" Text="Draw Calls: 0"/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock x:Name="StatusFPS" Text="FPS: 0"/>
             </StatusBarItem>
         </StatusBar>
     </Grid>

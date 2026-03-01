@@ -426,23 +426,25 @@ private:
 | Component | Status | Description |
 |-----------|--------|-------------|
 | MainWindow | ✅ | Main editor window with menu/toolbar |
-| ViewportControl | ✅ | Viewport with engine rendering |
-| SceneHierarchyControl | ✅ | Scene tree view |
+| ViewportControl | ✅ | Viewport with engine rendering and camera controls |
+| SceneHierarchyControl | ✅ | Scene tree view with selection |
 | PropertiesPanelControl | ✅ | Actor properties display |
+| ContentBrowserControl | ✅ | Asset browser with folder navigation |
 | EngineInterop | ✅ | P/Invoke bindings to Engine |
 | EngineInterop DLL | ✅ | C++ DLL for engine exports |
 
 ### Features
 
-1. **Viewport Panel** (Partial)
+1. **Viewport Panel** (Complete)
    - ✅ Engine interop for rendering
    - ✅ Resize handling
-   - 🔲 Camera controls (WASD, mouse)
-   - 🔲 Object selection
+   - ✅ Camera controls (WASD movement, mouse rotation)
+   - 🔲 Object selection via picking
 
 2. **Scene Hierarchy** (Partial)
    - ✅ Tree view of actors
    - ✅ Add/Remove actors (via ViewModel)
+   - ✅ Actor selection sync with Properties panel
    - 🔲 Drag-and-drop reordering
 
 3. **Properties Panel** (Partial)
@@ -450,9 +452,11 @@ private:
    - 🔲 Component properties
    - 🔲 Material editor
 
-4. **Content Browser** (Not Started)
-   - 🔲 Asset browser with thumbnail previews
-   - 🔲 Import assets (FBX, textures)
+4. **Content Browser** (Partial)
+   - ✅ Asset browser with folder tree view
+   - ✅ Asset grid view with icons
+   - ✅ Import assets dialog
+   - 🔲 Thumbnail previews
    - 🔲 Drag-and-drop to viewport
 
 5. **Toolbar** (Partial)
@@ -470,10 +474,14 @@ private:
 
 ### New Files
 
-- `Editor/KojeomEditor/Services/EngineInterop.cs`
-- `Editor/EngineInterop/EngineAPI.h`
-- `Editor/EngineInterop/EngineAPI.cpp`
-- `Editor/EngineInterop/EngineInterop.vcxproj`
+- `Editor/KojeomEditor/Services/EngineInterop.cs` - P/Invoke bindings
+- `Editor/KojeomEditor/Views/ViewportControl.xaml(.cs)` - Viewport with camera controls
+- `Editor/KojeomEditor/Views/SceneHierarchyControl.xaml(.cs)` - Scene tree with selection
+- `Editor/KojeomEditor/Views/PropertiesPanelControl.xaml(.cs)` - Properties panel
+- `Editor/KojeomEditor/Views/ContentBrowserControl.xaml(.cs)` - Content browser panel
+- `Editor/EngineInterop/EngineAPI.h` - C API header
+- `Editor/EngineInterop/EngineAPI.cpp` - C API implementation
+- `Editor/EngineInterop/EngineInterop.vcxproj` - C++ DLL project
 
 ### Project Structure
 
