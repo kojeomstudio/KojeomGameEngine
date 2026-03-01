@@ -896,3 +896,384 @@ HRESULT KShaderProgram::CreatePhongShadowShader(ID3D11Device* Device)
     LOG_INFO("Phong shader with shadows creation completed");
     return S_OK;
 }
+
+HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
+{
+    const std::string ShaderSource = R"(
+        cbuffer TransformBuffer : register(b0)
+        {
+            matrix World;
+            matrix View;
+            matrix Projection;
+        }
+
+        #define MAX_POINT_LIGHTS 8
+        #define MAX_SPOT_LIGHTS 4
+
+        struct FPointLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float4 Color;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+            float  Padding1;
+        };
+
+        struct FSpotLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float3 Direction;
+            float  InnerCone;
+            float4 Color;
+            float  OuterCone;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+        };
+
+        cbuffer LightBuffer : register(b1)
+        {
+            float3 CameraPosition;
+            int    NumPointLights;
+            float3 DirLightDirection;
+            int    NumSpotLights;
+            float4 DirLightColor;
+            float4 AmbientColor;
+            FPointLightData PointLights[MAX_POINT_LIGHTS];
+            FSpotLightData  SpotLights[MAX_SPOT_LIGHTS];
+        }
+
+        cbuffer MaterialBuffer : register(b4)
+        {
+            float4 AlbedoColor;
+            float  Metallic;
+            float  Roughness;
+            float  AO;
+            float  EmissiveIntensity;
+            float4 EmissiveColor;
+            float  NormalIntensity;
+            float  HeightScale;
+            float  Padding0;
+            float  Padding1;
+        };
+
+        cbuffer ShadowBuffer : register(b2)
+        {
+            matrix LightViewProjection;
+            float2 ShadowMapSize;
+            float  DepthBias;
+            int    PCFKernelSize;
+            int    bShadowEnabled;
+            float3 ShadowPadding;
+        };
+
+        Texture2D ShadowMap : register(t3);
+        SamplerComparisonState ShadowSampler : register(s0);
+
+        Texture2D AlbedoMap    : register(t0);
+        Texture2D NormalMap    : register(t1);
+        Texture2D MetallicMap  : register(t2);
+        Texture2D RoughnessMap : register(t3);
+        Texture2D AOMap        : register(t4);
+        Texture2D EmissiveMap  : register(t5);
+
+        SamplerState MaterialSampler : register(s1);
+
+        struct VS_INPUT
+        {
+            float3 Pos       : POSITION;
+            float4 Color     : COLOR;
+            float3 Normal    : NORMAL;
+            float2 TexCoord  : TEXCOORD0;
+            float3 Tangent   : TANGENT;
+            float3 Bitangent : BINORMAL;
+        };
+
+        struct PS_INPUT
+        {
+            float4 Pos       : SV_POSITION;
+            float4 Color     : COLOR;
+            float3 Normal    : NORMAL;
+            float2 TexCoord  : TEXCOORD0;
+            float3 WorldPos  : TEXCOORD1;
+            float4 ShadowPos : TEXCOORD2;
+            float3 Tangent   : TANGENT;
+            float3 Bitangent : BINORMAL;
+        };
+
+        static const float PI = 3.14159265359f;
+
+        float DistributionGGX(float3 N, float3 H, float roughness)
+        {
+            float a = roughness * roughness;
+            float a2 = a * a;
+            float NdotH = max(dot(N, H), 0.0f);
+            float NdotH2 = NdotH * NdotH;
+
+            float nom = a2;
+            float denom = (NdotH2 * (a2 - 1.0f) + 1.0f);
+            denom = PI * denom * denom;
+
+            return nom / max(denom, 0.0001f);
+        }
+
+        float GeometrySchlickGGX(float NdotV, float roughness)
+        {
+            float r = (roughness + 1.0f);
+            float k = (r * r) / 8.0f;
+
+            float nom = NdotV;
+            float denom = NdotV * (1.0f - k) + k;
+
+            return nom / max(denom, 0.0001f);
+        }
+
+        float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+        {
+            float NdotV = max(dot(N, V), 0.0f);
+            float NdotL = max(dot(N, L), 0.0f);
+            float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+            float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+
+            return ggx1 * ggx2;
+        }
+
+        float3 fresnelSchlick(float cosTheta, float3 F0)
+        {
+            return F0 + (1.0f - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+        }
+
+        float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+        {
+            return F0 + (max((1.0f - roughness).rrr, F0) - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+        }
+
+        float CalculateShadow(float4 shadowPos)
+        {
+            if (bShadowEnabled == 0)
+                return 1.0f;
+
+            float3 projCoords = shadowPos.xyz / shadowPos.w;
+            projCoords.x = projCoords.x * 0.5f + 0.5f;
+            projCoords.y = -projCoords.y * 0.5f + 0.5f;
+
+            if (projCoords.x < 0.0f || projCoords.x > 1.0f ||
+                projCoords.y < 0.0f || projCoords.y > 1.0f ||
+                projCoords.z > 1.0f)
+                return 1.0f;
+
+            float currentDepth = projCoords.z;
+            float shadow = 0.0f;
+            float2 texelSize = 1.0f / ShadowMapSize;
+
+            int kernelSize = max(PCFKernelSize, 1);
+            int halfKernel = kernelSize / 2;
+
+            for (int x = -halfKernel; x <= halfKernel; ++x)
+            {
+                for (int y = -halfKernel; y <= halfKernel; ++y)
+                {
+                    float2 offset = float2(x, y) * texelSize;
+                    shadow += ShadowMap.SampleCmpLevelZero(ShadowSampler, 
+                        projCoords.xy + offset, currentDepth - DepthBias);
+                }
+            }
+
+            shadow /= (float)(kernelSize * kernelSize);
+            return shadow;
+        }
+
+        float3 GetNormalFromMap(PS_INPUT input, float3 normal)
+        {
+            float3 tangentNormal = NormalMap.Sample(MaterialSampler, input.TexCoord).xyz * 2.0f - 1.0f;
+            tangentNormal.xy *= NormalIntensity;
+
+            float3 N = normalize(normal);
+            float3 T = normalize(input.Tangent);
+            float3 B = normalize(input.Bitangent);
+
+            float3x3 TBN = float3x3(T, B, N);
+            return normalize(mul(tangentNormal, TBN));
+        }
+
+        float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo, float metallic, float roughness, float ao, float shadow)
+        {
+            float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+
+            float3 Lo = float3(0.0f, 0.0f, 0.0f);
+
+            {
+                float3 L = normalize(-DirLightDirection);
+                float3 H = normalize(V + L);
+
+                float NdotL = max(dot(N, L), 0.0f);
+
+                float NDF = DistributionGGX(N, H, roughness);
+                float G = GeometrySmith(N, V, L, roughness);
+                float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+
+                float3 numerator = NDF * G * F;
+                float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+                float3 specular = numerator / denominator;
+
+                float3 kS = F;
+                float3 kD = (1.0f - kS) * (1.0f - metallic);
+
+                float3 radiance = DirLightColor.rgb * shadow;
+                Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+            }
+
+            [unroll]
+            for (int i = 0; i < MAX_POINT_LIGHTS; ++i)
+            {
+                if (i >= NumPointLights) break;
+
+                float3 lightDir = PointLights[i].Position - input.WorldPos;
+                float distance = length(lightDir);
+
+                if (distance > PointLights[i].Radius) continue;
+
+                float3 L = normalize(lightDir);
+                float3 H = normalize(V + L);
+
+                float attenuation = 1.0f / (1.0f + PointLights[i].Falloff * distance * distance);
+                attenuation *= PointLights[i].Intensity;
+
+                float NdotL = max(dot(N, L), 0.0f);
+
+                float NDF = DistributionGGX(N, H, roughness);
+                float G = GeometrySmith(N, V, L, roughness);
+                float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+
+                float3 numerator = NDF * G * F;
+                float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+                float3 specular = numerator / denominator;
+
+                float3 kS = F;
+                float3 kD = (1.0f - kS) * (1.0f - metallic);
+
+                float3 radiance = PointLights[i].Color.rgb * attenuation;
+                Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+            }
+
+            [unroll]
+            for (int j = 0; j < MAX_SPOT_LIGHTS; ++j)
+            {
+                if (j >= NumSpotLights) break;
+
+                float3 lightDir = SpotLights[j].Position - input.WorldPos;
+                float distance = length(lightDir);
+
+                if (distance > SpotLights[j].Radius) continue;
+
+                float3 L = normalize(lightDir);
+                float3 H = normalize(V + L);
+
+                float3 spotDir = normalize(-SpotLights[j].Direction);
+                float cosAngle = dot(L, spotDir);
+                float cosInner = cos(SpotLights[j].InnerCone);
+                float cosOuter = cos(SpotLights[j].OuterCone);
+
+                if (cosAngle < cosOuter) continue;
+
+                float spotFactor = saturate((cosAngle - cosOuter) / (cosInner - cosOuter));
+                float attenuation = 1.0f / (1.0f + SpotLights[j].Falloff * distance * distance);
+                attenuation *= SpotLights[j].Intensity * spotFactor;
+
+                float NdotL = max(dot(N, L), 0.0f);
+
+                float NDF = DistributionGGX(N, H, roughness);
+                float G = GeometrySmith(N, V, L, roughness);
+                float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+
+                float3 numerator = NDF * G * F;
+                float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+                float3 specular = numerator / denominator;
+
+                float3 kS = F;
+                float3 kD = (1.0f - kS) * (1.0f - metallic);
+
+                float3 radiance = SpotLights[j].Color.rgb * attenuation;
+                Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+            }
+
+            float3 ambient = AmbientColor.rgb * albedo * ao;
+            float3 color = ambient + Lo;
+
+            color = color / (color + float3(1.0f, 1.0f, 1.0f));
+            color = pow(color, float3(1.0f / 2.2f, 1.0f / 2.2f, 1.0f / 2.2f));
+
+            return color;
+        }
+
+        PS_INPUT VS(VS_INPUT input)
+        {
+            PS_INPUT output = (PS_INPUT)0;
+            float4 worldPos  = mul(float4(input.Pos, 1.0f), World);
+            float4 viewPos   = mul(worldPos, View);
+            output.Pos       = mul(viewPos, Projection);
+            output.Color     = input.Color;
+            output.Normal    = mul(input.Normal, (float3x3)World);
+            output.TexCoord  = input.TexCoord;
+            output.WorldPos  = worldPos.xyz;
+            output.ShadowPos = mul(worldPos, LightViewProjection);
+            output.Tangent   = mul(input.Tangent, (float3x3)World);
+            output.Bitangent = mul(input.Bitangent, (float3x3)World);
+            return output;
+        }
+
+        float4 PS(PS_INPUT input) : SV_Target
+        {
+            float3 albedo = AlbedoMap.Sample(MaterialSampler, input.TexCoord).rgb * AlbedoColor.rgb;
+            albedo = pow(albedo, float3(2.2f, 2.2f, 2.2f));
+
+            float metallic = MetallicMap.Sample(MaterialSampler, input.TexCoord).r * Metallic;
+            float roughness = RoughnessMap.Sample(MaterialSampler, input.TexCoord).r * Roughness;
+            float ao = AOMap.Sample(MaterialSampler, input.TexCoord).r * AO;
+
+            float3 normal = normalize(input.Normal);
+            normal = GetNormalFromMap(input, normal);
+
+            float3 V = normalize(CameraPosition - input.WorldPos);
+
+            float shadow = CalculateShadow(input.ShadowPos);
+
+            float3 color = CalculatePBRLighting(normal, V, albedo, metallic, roughness, ao, shadow);
+
+            float3 emissive = EmissiveMap.Sample(MaterialSampler, input.TexCoord).rgb * EmissiveColor.rgb * EmissiveIntensity;
+            color += emissive;
+
+            return float4(color, AlbedoColor.a);
+        }
+    )";
+
+    auto VS = std::make_shared<KShader>();
+    HRESULT hr = VS->CompileFromString(Device, ShaderSource, "VS", EShaderType::Vertex);
+    if (FAILED(hr)) return hr;
+
+    auto PS = std::make_shared<KShader>();
+    hr = PS->CompileFromString(Device, ShaderSource, "PS", EShaderType::Pixel);
+    if (FAILED(hr)) return hr;
+
+    AddShader(VS);
+    AddShader(PS);
+
+    D3D11_INPUT_ELEMENT_DESC Layout[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TANGENT",  0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "BINORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 60, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    hr = CreateInputLayout(Device, Layout, ARRAYSIZE(Layout));
+    if (FAILED(hr)) return hr;
+
+    LOG_INFO("PBR shader creation completed");
+    return S_OK;
+}

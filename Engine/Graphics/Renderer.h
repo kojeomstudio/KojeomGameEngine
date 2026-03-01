@@ -8,6 +8,7 @@
 #include "Mesh.h"
 #include "Texture.h"
 #include "Light.h"
+#include "Material.h"
 #include "Shadow/ShadowRenderer.h"
 #include "Deferred/DeferredRenderer.h"
 
@@ -52,6 +53,9 @@ public:
     void RenderMeshLit(std::shared_ptr<KMesh> InMesh, const XMMATRIX& WorldMatrix,
                        std::shared_ptr<KTexture> InTexture = nullptr);
 
+    void RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& WorldMatrix,
+                       class KMaterial* Material);
+
     void SetDirectionalLight(const FDirectionalLight& Light) { DirectionalLight = Light; }
 
     void AddPointLight(const FPointLight& Light);
@@ -87,6 +91,7 @@ public:
     KDeferredRenderer* GetDeferredRenderer() { return &DeferredRenderer; }
 
     KShaderProgram* GetLightShader() const { return LightShader.get(); }
+    KShaderProgram* GetPBRShader() const { return PBRShader.get(); }
     void Cleanup();
 
     KShaderProgram* GetBasicShader() const { return BasicShader.get(); }
@@ -112,6 +117,7 @@ private:
     std::shared_ptr<KShaderProgram> BasicShader;
     std::shared_ptr<KShaderProgram> LightShader;
     std::shared_ptr<KShaderProgram> ShadowLitShader;
+    std::shared_ptr<KShaderProgram> PBRShader;
     KTextureManager TextureManager;
 
     FDirectionalLight DirectionalLight;
@@ -123,6 +129,7 @@ private:
     KDeferredRenderer DeferredRenderer;
     ComPtr<ID3D11Buffer> ShadowConstantBuffer;
     ComPtr<ID3D11SamplerState> ShadowSamplerState;
+    ComPtr<ID3D11SamplerState> MaterialSamplerState;
     XMFLOAT3 ShadowSceneCenter = { 0.0f, 0.0f, 0.0f };
     float ShadowSceneRadius = 50.0f;
     bool bShadowsEnabled = false;

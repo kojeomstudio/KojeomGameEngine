@@ -128,6 +128,13 @@ public:
     HRESULT CreatePhongShadowShader(ID3D11Device* Device);
 
     /**
+     * @brief Create PBR (Physically Based Rendering) shader
+     * @param Device DirectX 11 device
+     * @return Success: S_OK
+     */
+    HRESULT CreatePBRShader(ID3D11Device* Device);
+
+    /**
      * @brief Compile shader program from source strings
      * @param Device DirectX 11 device
      * @param VSSource Vertex shader source code

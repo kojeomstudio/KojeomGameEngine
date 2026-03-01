@@ -146,6 +146,24 @@ HRESULT KTexture::CreateCheckerboard(ID3D11Device* Device, UINT32 InWidth, UINT3
     return S_OK;
 }
 
+void KTexture::SetFromExisting(ID3D11Texture2D* InTexture, ID3D11ShaderResourceView* InSRV)
+{
+    if (InTexture)
+    {
+        Texture = InTexture;
+        D3D11_TEXTURE2D_DESC desc;
+        InTexture->GetDesc(&desc);
+        Width = desc.Width;
+        Height = desc.Height;
+        Format = desc.Format;
+    }
+    
+    if (InSRV)
+    {
+        ShaderResourceView = InSRV;
+    }
+}
+
 void KTexture::Bind(ID3D11DeviceContext* Context, UINT32 Slot) const
 {
     if (ShaderResourceView)

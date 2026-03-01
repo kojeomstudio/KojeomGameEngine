@@ -154,6 +154,90 @@ void KRenderer::RenderMeshLit(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
     KRenderer::RenderObject(RO);
 }
 
+void KRenderer::RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& WorldMatrix,
+                               KMaterial* Material)
+{
+    if (!GraphicsDevice || !CurrentCamera || !bInFrame)
+    {
+        return;
+    }
+
+    if (!InMesh || !PBRShader)
+    {
+        RenderMeshLit(InMesh, WorldMatrix, nullptr);
+        return;
+    }
+
+    ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
+
+    if (ShadowRenderer.IsInitialized() && bShadowsEnabled)
+    {
+        FShadowCaster Caster;
+        Caster.Mesh = InMesh;
+        Caster.WorldMatrix = WorldMatrix;
+        ShadowRenderer.AddShadowCaster(Caster);
+    }
+
+    PBRShader->Bind(Context);
+
+    InMesh->UpdateConstantBuffer(
+        Context,
+        WorldMatrix,
+        CurrentCamera->GetViewMatrix(),
+        CurrentCamera->GetProjectionMatrix()
+    );
+
+    Context->PSSetConstantBuffers(1, 1, LightConstantBuffer.GetAddressOf());
+
+    if (bShadowsEnabled)
+    {
+        Context->PSSetConstantBuffers(2, 1, ShadowConstantBuffer.GetAddressOf());
+        if (ShadowSamplerState)
+        {
+            Context->PSSetSamplers(0, 1, ShadowSamplerState.GetAddressOf());
+        }
+        ShadowRenderer.BindShadowMap(Context, 3);
+    }
+
+    if (MaterialSamplerState)
+    {
+        Context->PSSetSamplers(1, 1, MaterialSamplerState.GetAddressOf());
+    }
+
+    if (Material)
+    {
+        Material->UpdateConstantBuffer(Context);
+        Context->PSSetConstantBuffers(4, 1, Material->GetConstantBufferAddress());
+        Material->BindTextures(Context);
+    }
+    else
+    {
+        FPBRMaterialParams DefaultParams;
+        ID3D11Buffer* pDefaultBuffer = nullptr;
+        D3D11_BUFFER_DESC desc = {};
+        desc.ByteWidth = sizeof(FPBRMaterialParams);
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        
+        D3D11_SUBRESOURCE_DATA initData = {};
+        initData.pSysMem = &DefaultParams;
+        
+        GraphicsDevice->GetDevice()->CreateBuffer(&desc, &initData, &pDefaultBuffer);
+        if (pDefaultBuffer)
+        {
+            Context->PSSetConstantBuffers(4, 1, &pDefaultBuffer);
+            pDefaultBuffer->Release();
+        }
+    }
+
+    InMesh->Render(Context);
+
+    ID3D11ShaderResourceView* nullSRVs[7] = {};
+    Context->PSSetShaderResources(0, 7, nullSRVs);
+
+    PBRShader->Unbind(Context);
+}
+
 void KRenderer::AddPointLight(const FPointLight& Light)
 {
     if (PointLights.size() < MAX_POINT_LIGHTS)
@@ -234,9 +318,11 @@ void KRenderer::Cleanup()
     ShadowRenderer.Cleanup();
     ShadowConstantBuffer.Reset();
     ShadowSamplerState.Reset();
+    MaterialSamplerState.Reset();
     LightConstantBuffer.Reset();
     WireframeRasterizerState.Reset();
     DebugSphereMesh.reset();
+    PBRShader.reset();
     ShadowLitShader.reset();
     LightShader.reset();
     BasicShader.reset();
@@ -359,6 +445,28 @@ HRESULT KRenderer::InitializeDefaultResources()
     {
         LOG_WARNING("Shadow shader creation failed, shadows will be disabled");
         ShadowLitShader.reset();
+    }
+
+    PBRShader = std::make_shared<KShaderProgram>();
+    hr = PBRShader->CreatePBRShader(Device);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("PBR shader creation failed, PBR rendering will be disabled");
+        PBRShader.reset();
+    }
+
+    D3D11_SAMPLER_DESC MaterialSamplerDesc = {};
+    MaterialSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    MaterialSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    MaterialSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    MaterialSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    MaterialSamplerDesc.MinLOD = 0;
+    MaterialSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    hr = Device->CreateSamplerState(&MaterialSamplerDesc, &MaterialSamplerState);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Material sampler state creation failed");
     }
 
     D3D11_BUFFER_DESC LightCBDesc = {};

@@ -52,6 +52,13 @@ public:
                               const XMFLOAT4& Color1, const XMFLOAT4& Color2, UINT32 CheckSize = 32);
 
     /**
+     * @brief Set texture from existing resources (for IBL)
+     * @param Texture Existing texture
+     * @param SRV Existing shader resource view
+     */
+    void SetFromExisting(ID3D11Texture2D* InTexture, ID3D11ShaderResourceView* InSRV);
+
+    /**
      * @brief Bind texture (to make it usable in shaders)
      * @param Context DirectX 11 device context
      * @param Slot Texture slot number

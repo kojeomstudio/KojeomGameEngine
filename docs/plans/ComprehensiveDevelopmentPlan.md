@@ -5,8 +5,9 @@
 - **Created**: 2026-03-02
 - **Author**: AI Agent
 - **Status**: In Progress
-- **Base Commit**: e453590
+- **Base Commit**: fe09afb
 - **Priority**: Renderer First
+- **Last Updated**: 2026-03-02
 
 ## Overview
 
@@ -85,6 +86,36 @@ struct FShadowBuffer
 - KGBuffer: Manages 3 render targets with RTV and SRV
 - KDeferredRenderer: Geometry pass and lighting pass coordination
 - KRenderer: Added ERenderPath enum and SetRenderPath() for switching
+
+---
+
+### Phase 4: PBR Materials
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-02
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| PBR shader | ✅ | Cook-Torrance BRDF with GGX distribution |
+| Material system | ✅ | FPBRMaterialParams, KMaterial class |
+| IBL support | ✅ | KIBLSystem with BRDF LUT generation |
+| Material editor UI | 🔲 | Pending for C# editor |
+
+#### Implementation Notes
+
+- **FPBRMaterialParams**: Albedo, Metallic, Roughness, AO, Emissive properties
+- **KMaterial**: Material management with texture slots (7 texture types)
+- **KIBLSystem**: Image-based lighting with BRDF LUT
+- **PBRShader**: Metalness/Roughness workflow with HDR tonemapping
+- Pre-defined materials: Default, Metal, Plastic, Rubber, Gold, Silver, Copper
+
+#### New Files
+
+- `Engine/Graphics/Material.h/cpp`
+- `Engine/Graphics/IBL/IBLSystem.h/cpp`
 
 ---
 

@@ -157,24 +157,74 @@ This document outlines the development plan for enhancing the DirectX 11 rendere
 
 ### Phase 4: PBR Materials
 
-**Status**: 🔲 Not Started  
-**Target Completion**: TBD  
-**Commit Hash**: (Fill when starting)
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
+**Commit Hash**: (pending commit)
 
 #### Tasks
 
 | Task | Status | Commit Hash | Notes |
 |------|--------|-------------|-------|
-| PBR shader implementation | 🔲 | | |
-| Material system | 🔲 | | |
-| IBL support | 🔲 | | |
-| Material editor UI | 🔲 | | |
+| PBR shader implementation | ✅ | | Cook-Torrance BRDF with GGX distribution |
+| Material system | ✅ | | FPBRMaterialParams struct, KMaterial class |
+| IBL support | ✅ | | KIBLSystem with BRDF LUT generation |
+| Material editor UI | 🔲 | | Pending for C# editor |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/Material.h/cpp` - PBR material system with FPBRMaterialParams
+- `Engine/Graphics/IBL/IBLSystem.h/cpp` - Image-based lighting support
+
+**Modified Files:**
+- `Engine/Graphics/Shader.h/cpp` - Added CreatePBRShader method
+- `Engine/Graphics/Renderer.h/cpp` - Added RenderMeshPBR, PBRShader, MaterialSamplerState
+- `Engine/Graphics/Texture.h/cpp` - Added SetFromExisting method for IBL
+- `Engine/Core/Engine.h` - Fixed NOMINMAX for std::min/max
+- `Engine/Engine.vcxproj` - Added new files
+
+**Features:**
+- Metalness/Roughness workflow
+- Cook-Torrance microfacet BRDF
+- GGX distribution function
+- Fresnel-Schlick approximation
+- Geometry function (Smith's method)
+- Support for material textures (Albedo, Normal, Metallic, Roughness, AO, Emissive, Height)
+- BRDF LUT generation for IBL
+- HDR tonemapping (Reinhard) in shader
+- Gamma correction
 
 #### Technical Details
 
-- Metalness/Roughness workflow
-- Image-based lighting with pre-filtered cubemaps
-- Material parameter serialization
+- **Material Buffer (b4)**: FPBRMaterialParams with Albedo, Metallic, Roughness, AO, Emissive properties
+- **Texture Slots**:
+  - t0: Albedo map
+  - t1: Normal map  
+  - t2: Metallic map
+  - t3: Roughness map
+  - t4: AO map
+  - t5: Emissive map
+  - t6: Height map
+- **IBL System**: BRDF LUT (512x512 R16G16_FLOAT), Irradiance/Prefiltered cubemap support
+- **Pre-defined Materials**: Default, Metal, Plastic, Rubber, Gold, Silver, Copper
+
+#### PBR Shader Features
+
+```hlsl
+// Core PBR functions implemented:
+float DistributionGGX(float3 N, float3 H, float roughness);
+float GeometrySchlickGGX(float NdotV, float roughness);
+float GeometrySmith(float3 N, float3 V, float3 L, float roughness);
+float3 fresnelSchlick(float cosTheta, float3 F0);
+float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness);
+
+// Normal mapping with tangent space transformation
+float3 GetNormalFromMap(PS_INPUT input, float3 normal);
+
+// Integrated lighting calculation
+float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo, 
+                            float metallic, float roughness, float ao, float shadow);
+```
 
 ---
 
@@ -268,7 +318,8 @@ When making commits related to this plan, update the relevant task with the comm
 ### Internal Dependencies
 
 - ~~All phases depend on Phase 1 (Enhanced Lighting)~~ ✅ Phase 1 Complete
-- Phase 4 (PBR) depends on Phase 3 (Deferred)
+- ~~Phase 4 (PBR) depends on Phase 3 (Deferred)~~ ✅ Phase 4 Complete
+- Phase 5 (Post-Processing) can use PBR output
 - Phase 6 (Optimization) can be done in parallel with other phases
 
 ## Risk Assessment
@@ -324,12 +375,15 @@ Engine/Graphics/
 ├── Mesh.h/cpp                  # Mesh geometry
 ├── Texture.h/cpp               # Texture management
 ├── Light.h                     # Light structures
+├── Material.h/cpp              # PBR material system (Implemented)
 ├── Shadow/                     # Shadow mapping system
 │   ├── ShadowMap.h/cpp
 │   └── ShadowRenderer.h/cpp
 ├── Deferred/                   # Deferred rendering (Implemented)
 │   ├── GBuffer.h/cpp
 │   └── DeferredRenderer.h/cpp
+├── IBL/                        # Image-based lighting (Implemented)
+│   └── IBLSystem.h/cpp
 └── PostProcess/                # (Planned) Post-processing
     ├── PostProcessor.h/cpp
     ├── BloomEffect.h/cpp
