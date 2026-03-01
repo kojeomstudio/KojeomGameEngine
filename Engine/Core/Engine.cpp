@@ -71,6 +71,14 @@ HRESULT KEngine::Initialize(HINSTANCE InInstanceHandle, const std::wstring& InWi
         EngineConstants::DEFAULT_FAR_PLANE
     );
 
+    // Initialize scene manager
+    hr = SceneManager.Initialize();
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Scene manager initialization failed");
+        return hr;
+    }
+
     bIsInitialized = true;
     LOG_INFO("Engine initialization completed");
 

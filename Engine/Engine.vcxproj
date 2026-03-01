@@ -99,6 +99,7 @@
     <ClInclude Include="Assets\Skeleton.h" />
     <ClInclude Include="Assets\Animation.h" />
     <ClInclude Include="Assets\AnimationInstance.h" />
+    <ClInclude Include="Assets\ModelLoader.h" />
     <ClInclude Include="Core\Engine.h" />
     <ClInclude Include="Graphics\Camera.h" />
     <ClInclude Include="Graphics\GraphicsDevice.h" />
@@ -118,7 +119,9 @@
     <ClInclude Include="Graphics\Performance\GPUTimer.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Scene\Actor.h" />
+    <ClInclude Include="Scene\SceneManager.h" />
     <ClInclude Include="Serialization\BinaryArchive.h" />
+    <ClInclude Include="Serialization\JsonArchive.h" />
     <ClInclude Include="Utils\Common.h" />
     <ClInclude Include="Utils\Logger.h" />
     <ClInclude Include="Utils\Math.h" />
@@ -129,6 +132,7 @@
     <ClCompile Include="Assets\Skeleton.cpp" />
     <ClCompile Include="Assets\Animation.cpp" />
     <ClCompile Include="Assets\AnimationInstance.cpp" />
+    <ClCompile Include="Assets\ModelLoader.cpp" />
     <ClCompile Include="Core\Engine.cpp" />
     <ClCompile Include="Graphics\Camera.cpp" />
     <ClCompile Include="Graphics\GraphicsDevice.cpp" />
@@ -147,7 +151,9 @@
     <ClCompile Include="Graphics\Performance\GPUTimer.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
+    <ClCompile Include="Scene\SceneManager.cpp" />
     <ClCompile Include="Serialization\BinaryArchive.cpp" />
+    <ClCompile Include="Serialization\JsonArchive.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

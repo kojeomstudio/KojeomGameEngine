@@ -15,11 +15,11 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority)
-2. **Asset System** (Static/Skeletal Mesh, FBX Loading)
-3. **Scene/Map Management**
-4. **Serialization System**
-5. **C# Editor**
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-6
+2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
+3. **Scene/Map Management** - ✅ Completed
+4. **Serialization System** - ✅ Completed
+5. **C# Editor** - 🔄 In Progress
 
 ---
 
@@ -87,8 +87,8 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ### Phase 2: Shadow Mapping
 
-**Status**: 🔄 In Progress
-**Target Completion**: 2026-03-05
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
 **Priority**: Critical
 
 #### Tasks
@@ -235,19 +235,66 @@ struct FShadowBuffer
 
 ---
 
-## Part 3: Scene/Map Management
+### 2.3 Model Loader
 
-**Status**: 🔲 Not Started
-**Priority**: Medium
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-02
 
-### Components
+#### Components
 
 | Component | Description |
 |-----------|-------------|
-| KActor | Base game object |
-| KActorComponent | Component base class |
-| KScene | Scene graph container |
-| KSceneManager | Scene management |
+| KModelLoader | FBX/OBJ model loading |
+| FLoadedModel | Loaded model container |
+
+#### Implementation Notes
+
+- **KModelLoader**: Supports Assimp (optional) and built-in OBJ parser
+- **FLoadedModel**: Contains StaticMesh, Skeleton, and Animations
+- Built-in OBJ parser for basic model loading without Assimp
+- Configurable options: scale, UV flip, normal generation, tangent generation
+
+#### New Files
+
+- `Engine/Assets/ModelLoader.h/cpp`
+
+#### Features
+
+- OBJ format support (built-in parser)
+- FBX/GLTF/DAE support (with Assimp library)
+- Model caching to avoid duplicate loading
+- Animation loading support (with Assimp)
+- Material slot extraction
+
+---
+
+## Part 3: Scene/Map Management
+
+**Status**: ✅ Completed
+**Priority**: Medium
+**Completion Date**: 2026-03-02
+
+### Components
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| KActor | ✅ | Base game object with transform, hierarchy |
+| KActorComponent | ✅ | Component base class |
+| KScene | ✅ | Scene graph container with save/load |
+| KSceneManager | ✅ | Scene management with multiple scenes |
+
+### Implementation Notes
+
+- **KActor**: Full hierarchy support (parent/children), component system
+- **KScene**: Binary serialization for save/load
+- **KSceneManager**: Multiple scene support, active scene management
+- Added `FTransform` struct for position/rotation/scale
+
+### New Files
+
+- `Engine/Scene/Actor.h/cpp` - Actor and Scene classes
+- `Engine/Scene/SceneManager.h/cpp` - Scene manager
 
 ### Architecture
 
@@ -299,8 +346,27 @@ private:
 
 ## Part 4: Serialization System
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Completed
 **Priority**: Medium
+**Completion Date**: 2026-03-02
+
+### Components
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| KBinaryArchive | ✅ | Binary file read/write |
+| KJsonArchive | ✅ | JSON serialization for editor |
+
+### Implementation Notes
+
+- **KBinaryArchive**: File-based binary serialization with streaming support
+- **KJsonArchive**: Pure C++ JSON parser/serializer (no external dependencies)
+- JSON types: KJsonValue, KJsonObject, KJsonArray, KJsonString, KJsonNumber, KJsonBool, KJsonNull
+
+### New Files
+
+- `Engine/Serialization/BinaryArchive.h/cpp` - Binary serialization
+- `Engine/Serialization/JsonArchive.h/cpp` - JSON serialization
 
 ### Architecture
 
@@ -350,36 +416,64 @@ private:
 
 ## Part 5: C# Editor
 
-**Status**: 🔲 Not Started
+**Status**: 🔄 In Progress
 **Priority**: Medium
 **Framework**: .NET 8.0 WPF
+**Completion Date**: Partial - 2026-03-02
+
+### Components
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| MainWindow | ✅ | Main editor window with menu/toolbar |
+| ViewportControl | ✅ | Viewport with engine rendering |
+| SceneHierarchyControl | ✅ | Scene tree view |
+| PropertiesPanelControl | ✅ | Actor properties display |
+| EngineInterop | ✅ | P/Invoke bindings to Engine |
+| EngineInterop DLL | 🔲 | C++ DLL for engine exports |
 
 ### Features
 
-1. **Viewport Panel**
-   - 3D scene view with camera controls
-   - Object selection and transformation (translate, rotate, scale)
-   - Grid and axis visualization
+1. **Viewport Panel** (Partial)
+   - ✅ Engine interop for rendering
+   - ✅ Resize handling
+   - 🔲 Camera controls (WASD, mouse)
+   - 🔲 Object selection
 
-2. **Scene Hierarchy**
-   - Tree view of all actors in scene
-   - Add/Remove/Rename actors
-   - Drag-and-drop reordering
+2. **Scene Hierarchy** (Partial)
+   - ✅ Tree view of actors
+   - ✅ Add/Remove actors (via ViewModel)
+   - 🔲 Drag-and-drop reordering
 
-3. **Properties Panel**
-   - Transform properties (Position, Rotation, Scale)
-   - Component properties
-   - Material editor
+3. **Properties Panel** (Partial)
+   - ✅ Transform properties (Position, Rotation, Scale)
+   - 🔲 Component properties
+   - 🔲 Material editor
 
-4. **Content Browser**
-   - Asset browser with thumbnail previews
-   - Import assets (FBX, textures)
-   - Drag-and-drop to viewport
+4. **Content Browser** (Not Started)
+   - 🔲 Asset browser with thumbnail previews
+   - 🔲 Import assets (FBX, textures)
+   - 🔲 Drag-and-drop to viewport
 
-5. **Toolbar**
-   - Play/Pause/Stop simulation
-   - Save/Load scene
-   - Undo/Redo
+5. **Toolbar** (Partial)
+   - ✅ Play/Pause/Stop buttons
+   - ✅ Save/Load scene menu
+   - 🔲 Undo/Redo
+
+### Implementation Notes
+
+- **EngineInterop.cs**: P/Invoke bindings to C++ Engine API
+- **EngineAPI.h/cpp**: C-exported functions for engine access
+- **FEngineWrapper**: C++ wrapper class for engine components
+- Scene management through KSceneManager
+- Actor manipulation through KScene/KActor
+
+### New Files
+
+- `Editor/KojeomEditor/Services/EngineInterop.cs`
+- `Editor/EngineInterop/EngineAPI.h`
+- `Editor/EngineInterop/EngineAPI.cpp`
+- `Editor/EngineInterop/EngineInterop.vcxproj`
 
 ### Project Structure
 

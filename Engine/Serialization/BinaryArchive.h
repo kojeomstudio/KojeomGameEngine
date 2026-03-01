@@ -68,7 +68,7 @@ public:
         uint32 Length;
         *this >> Length;
         Value.resize(Length);
-        Read(Value.data(), Length);
+        Read(&Value[0], Length);
         return *this;
     }
 
@@ -77,7 +77,7 @@ public:
         uint32 Length;
         *this >> Length;
         Value.resize(Length);
-        Read(Value.data(), Length * sizeof(wchar_t));
+        Read(&Value[0], Length * sizeof(wchar_t));
         return *this;
     }
 

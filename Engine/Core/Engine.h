@@ -10,6 +10,7 @@
 #include "../Graphics/GraphicsDevice.h"
 #include "../Graphics/Camera.h"
 #include "../Graphics/Renderer.h"
+#include "../Scene/SceneManager.h"
 
 /**
  * @brief Main engine class
@@ -73,6 +74,8 @@ public:
     KGraphicsDevice* GetGraphicsDevice() const { return GraphicsDevice.get(); }
     KCamera* GetCamera() const { return Camera.get(); }
     KRenderer* GetRenderer() const { return Renderer.get(); }
+    KSceneManager& GetSceneManager() { return SceneManager; }
+    const KSceneManager& GetSceneManager() const { return SceneManager; }
     HWND GetWindowHandle() const { return WindowHandle; }
     
     UINT32 GetWindowWidth() const { return WindowWidth; }
@@ -189,6 +192,7 @@ private:
     std::unique_ptr<KGraphicsDevice> GraphicsDevice;
     std::unique_ptr<KCamera> Camera;
     std::unique_ptr<KRenderer> Renderer;
+    KSceneManager SceneManager;
 
     // Engine state
     bool bIsRunning;
