@@ -84,7 +84,12 @@ public:
     void DebugDrawSpotLightVolumes(bool bDraw) { bDebugDrawSpotLightVolumes = bDraw; }
     void SetDebugDrawEnabled(bool bEnabled) { bDebugDrawEnabled = bEnabled; }
     bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
+    void SetDebugMode(bool bEnabled) { SetDebugDrawEnabled(bEnabled); }
     void DebugDrawLightVolumes();
+    
+    int32 GetDrawCallCount() const { return DrawCallCount; }
+    int32 GetVertexCount() const { return VertexCount; }
+    float GetFrameTime() const { return GPUTimer.GetFrameStats().FrameTimeMs; }
 
     void SetShadowEnabled(bool bEnabled);
     bool IsShadowEnabled() const { return ShadowRenderer.IsInitialized(); }
@@ -175,4 +180,7 @@ private:
     KFrustum Frustum;
     KInstancedRenderer InstancedRenderer;
     KGPUTimer GPUTimer;
+    
+    int32 DrawCallCount = 0;
+    int32 VertexCount = 0;
 }; 

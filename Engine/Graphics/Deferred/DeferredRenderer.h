@@ -9,6 +9,7 @@
 #include "../Camera.h"
 #include "../Texture.h"
 #include <vector>
+#include <algorithm>
 
 struct FTransformBuffer
 {
@@ -25,6 +26,15 @@ struct FDeferredMeshRenderData
     XMFLOAT4 BaseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
     float Metallic = 0.0f;
     float Roughness = 0.5f;
+};
+
+struct FForwardTransparentRenderData
+{
+    std::shared_ptr<KMesh> Mesh;
+    XMMATRIX WorldMatrix;
+    std::shared_ptr<KTexture> DiffuseTexture;
+    XMFLOAT4 BaseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    float Alpha = 1.0f;
 };
 
 struct FDeferredLightBuffer
@@ -63,6 +73,10 @@ public:
     void AddRenderData(const FDeferredMeshRenderData& Data);
     void ClearRenderData();
 
+    void AddTransparentRenderData(const FForwardTransparentRenderData& Data);
+    void ClearTransparentRenderData();
+    void RenderForwardTransparentPass(ID3D11DeviceContext* Context, KCamera* Camera, ID3D11RenderTargetView* BackBufferRTV);
+
     void SetDirectionalLight(const FDirectionalLight& Light) { DirectionalLight = Light; }
     void AddPointLight(const FPointLight& Light);
     void ClearPointLights();
@@ -78,9 +92,11 @@ public:
 private:
     HRESULT CreateGeometryPassShader(ID3D11Device* Device);
     HRESULT CreateLightingPassShader(ID3D11Device* Device);
+    HRESULT CreateForwardTransparentShader(ID3D11Device* Device);
     HRESULT CreateConstantBuffers(ID3D11Device* Device);
     HRESULT CreateFullscreenQuad(ID3D11Device* Device);
     HRESULT CreateSamplerStates(ID3D11Device* Device);
+    HRESULT CreateBlendStates(ID3D11Device* Device);
 
     void UpdateTransformBuffer(ID3D11DeviceContext* Context, const XMMATRIX& World, const XMMATRIX& View, const XMMATRIX& Projection);
     void UpdateLightBuffer(ID3D11DeviceContext* Context, KCamera* Camera);
@@ -92,16 +108,19 @@ private:
 
     std::shared_ptr<KShaderProgram> GeometryPassShader;
     std::shared_ptr<KShaderProgram> LightingPassShader;
+    std::shared_ptr<KShaderProgram> ForwardTransparentShader;
 
     ComPtr<ID3D11Buffer> TransformConstantBuffer;
     ComPtr<ID3D11Buffer> LightConstantBuffer;
 
     ComPtr<ID3D11SamplerState> PointSamplerState;
     ComPtr<ID3D11SamplerState> LinearSamplerState;
+    ComPtr<ID3D11BlendState> TransparentBlendState;
 
     std::shared_ptr<KMesh> FullscreenQuadMesh;
 
     std::vector<FDeferredMeshRenderData> RenderDataList;
+    std::vector<FForwardTransparentRenderData> TransparentRenderDataList;
 
     FDirectionalLight DirectionalLight;
     std::vector<FPointLight> PointLights;

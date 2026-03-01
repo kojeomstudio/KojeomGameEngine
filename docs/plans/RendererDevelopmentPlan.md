@@ -125,7 +125,7 @@ This document outlines the development plan for enhancing the DirectX 11 rendere
 | G-Buffer render targets | ✅ | | RT0: Albedo+Metallic, RT1: Normal+Roughness, RT2: Position+AO |
 | Geometry pass | ✅ | | KDeferredRenderer::BeginGeometryPass/RenderGeometry/EndGeometryPass |
 | Lighting pass | ✅ | | Full-screen quad deferred lighting shader |
-| Forward+ transparency | 🔲 | | Pending |
+| Forward+ transparency | ✅ | | FForwardTransparentRenderData, RenderForwardTransparentPass |
 
 #### Implementation Details
 
@@ -242,7 +242,7 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 | HDR tonemapping | ✅ | | ACES Filmic tonemapper with exposure control |
 | Bloom effect | ✅ | | Bright extraction, Gaussian blur, combination |
 | FXAA | ✅ | | Fast approximate anti-aliasing |
-| Color grading | 🔲 | | Basic gamma correction implemented |
+| Color grading | ✅ | | 3D LUT (32x32x32), saturation, contrast, color filter |
 | Screen-space effects | 🔲 | | Pending |
 
 #### Implementation Details

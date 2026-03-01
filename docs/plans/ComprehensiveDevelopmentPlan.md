@@ -69,7 +69,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 | HDR tonemapping | ✅ | ACES Filmic tonemapper |
 | Bloom effect | ✅ | Bright extraction, Gaussian blur |
 | FXAA | ✅ | Fast approximate anti-aliasing |
-| Color grading | 🔲 | Basic gamma implemented, advanced LUT pending |
+| Color grading | ✅ | 3D LUT (32x32x32), saturation, contrast, color filter |
 
 #### Implementation Notes
 
@@ -139,7 +139,7 @@ struct FShadowBuffer
 | G-Buffer render targets | ✅ | Multiple render target setup (3 RTs + Depth) |
 | Geometry pass | ✅ | Fill G-Buffer via KDeferredRenderer |
 | Lighting pass | ✅ | Full-screen quad deferred lighting calculation |
-| Forward+ transparency | 🔲 | Alpha blending support (pending) |
+| Forward+ transparency | ✅ | FForwardTransparentRenderData for transparent objects |
 
 #### Implementation Notes
 
@@ -430,7 +430,7 @@ private:
 | SceneHierarchyControl | ✅ | Scene tree view |
 | PropertiesPanelControl | ✅ | Actor properties display |
 | EngineInterop | ✅ | P/Invoke bindings to Engine |
-| EngineInterop DLL | 🔲 | C++ DLL for engine exports |
+| EngineInterop DLL | ✅ | C++ DLL for engine exports |
 
 ### Features
 

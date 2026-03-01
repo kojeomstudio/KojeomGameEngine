@@ -50,6 +50,20 @@ HRESULT KDeferredRenderer::Initialize(ID3D11Device* Device, UINT32 Width, UINT32
         return hr;
     }
 
+    hr = CreateForwardTransparentShader(Device);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("DeferredRenderer: Failed to create forward transparent shader");
+        return hr;
+    }
+
+    hr = CreateBlendStates(Device);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("DeferredRenderer: Failed to create blend states");
+        return hr;
+    }
+
     bInitialized = true;
     LOG_INFO("DeferredRenderer: Initialized successfully");
     return S_OK;
@@ -60,12 +74,15 @@ void KDeferredRenderer::Cleanup()
     GBuffer.Cleanup();
     GeometryPassShader.reset();
     LightingPassShader.reset();
+    ForwardTransparentShader.reset();
     TransformConstantBuffer.Reset();
     LightConstantBuffer.Reset();
     PointSamplerState.Reset();
     LinearSamplerState.Reset();
+    TransparentBlendState.Reset();
     FullscreenQuadMesh.reset();
     RenderDataList.clear();
+    TransparentRenderDataList.clear();
     PointLights.clear();
     SpotLights.clear();
     bInitialized = false;
@@ -571,4 +588,265 @@ void KDeferredRenderer::ClearAllLights()
 HRESULT KDeferredRenderer::Resize(ID3D11Device* Device, UINT32 NewWidth, UINT32 NewHeight)
 {
     return GBuffer.Resize(Device, NewWidth, NewHeight);
+}
+
+HRESULT KDeferredRenderer::CreateForwardTransparentShader(ID3D11Device* Device)
+{
+    ForwardTransparentShader = std::make_shared<KShaderProgram>();
+
+    std::string VSSource = R"(
+cbuffer TransformBuffer : register(b0)
+{
+    matrix World;
+    matrix View;
+    matrix Projection;
+};
+
+struct VSInput
+{
+    float3 Position : POSITION;
+    float4 Color : COLOR;
+    float3 Normal : NORMAL;
+    float2 TexCoord : TEXCOORD0;
+};
+
+struct VSOutput
+{
+    float4 Position : SV_POSITION;
+    float3 WorldPos : POSITION0;
+    float3 Normal : NORMAL0;
+    float2 TexCoord : TEXCOORD0;
+    float4 Color : COLOR0;
+};
+
+VSOutput main(VSInput input)
+{
+    VSOutput output;
+    
+    float4 worldPos = mul(float4(input.Position, 1.0f), World);
+    output.WorldPos = worldPos.xyz;
+    output.Position = mul(worldPos, View);
+    output.Position = mul(output.Position, Projection);
+    output.Normal = normalize(mul(input.Normal, (float3x3)World));
+    output.TexCoord = input.TexCoord;
+    output.Color = input.Color;
+    
+    return output;
+}
+)";
+
+    std::string PSSource = R"(
+struct LightBuffer
+{
+    float3 CameraPosition;
+    float Padding0;
+    float3 DirLightDirection;
+    float Padding1;
+    float3 DirLightColor;
+    float DirLightIntensity;
+    uint NumPointLights;
+    uint NumSpotLights;
+    float Padding2[2];
+    
+    struct PointLightData
+    {
+        float3 Position;
+        float Intensity;
+        float3 Color;
+        float Radius;
+    } PointLights[8];
+    
+    struct SpotLightData
+    {
+        float3 Position;
+        float Intensity;
+        float3 Direction;
+        float OuterConeAngle;
+        float3 Color;
+        float InnerConeAngle;
+    } SpotLights[4];
+};
+
+struct PSInput
+{
+    float4 Position : SV_POSITION;
+    float3 WorldPos : POSITION0;
+    float3 Normal : NORMAL0;
+    float2 TexCoord : TEXCOORD0;
+    float4 Color : COLOR0;
+};
+
+Texture2D DiffuseTexture : register(t0);
+SamplerState LinearSampler : register(s0);
+
+cbuffer LightBufferCB : register(b1)
+{
+    LightBuffer LightData;
+};
+
+cbuffer MaterialBuffer : register(b2)
+{
+    float4 BaseColor;
+    float Alpha;
+    float Padding[3];
+};
+
+float3 ComputeDirectionalLight(float3 normal, float3 lightDir, float3 lightColor, float intensity)
+{
+    float ndotl = max(dot(normal, -lightDir), 0.0f);
+    return lightColor * intensity * ndotl;
+}
+
+float3 ComputePointLight(float3 worldPos, float3 normal, float3 lightPos, float3 lightColor, float intensity, float radius)
+{
+    float3 lightDir = lightPos - worldPos;
+    float distance = length(lightDir);
+    lightDir = normalize(lightDir);
+    
+    float attenuation = 1.0f - saturate(distance / radius);
+    attenuation = attenuation * attenuation;
+    
+    float ndotl = max(dot(normal, lightDir), 0.0f);
+    return lightColor * intensity * ndotl * attenuation;
+}
+
+float4 main(PSInput input) : SV_TARGET
+{
+    float4 texColor = DiffuseTexture.Sample(LinearSampler, input.TexCoord);
+    float4 albedo = texColor * input.Color * BaseColor;
+    
+    float3 normal = normalize(input.Normal);
+    
+    float3 ambient = float3(0.15f, 0.15f, 0.2f) * albedo.rgb;
+    float3 totalLight = ambient;
+    
+    totalLight += ComputeDirectionalLight(normal, LightData.DirLightDirection, LightData.DirLightColor, LightData.DirLightIntensity);
+    
+    for (uint i = 0; i < LightData.NumPointLights; ++i)
+    {
+        totalLight += ComputePointLight(input.WorldPos, normal, LightData.PointLights[i].Position, 
+            LightData.PointLights[i].Color, LightData.PointLights[i].Intensity, LightData.PointLights[i].Radius);
+    }
+    
+    float3 finalColor = totalLight * albedo.rgb;
+    return float4(finalColor, albedo.a * Alpha);
+}
+)";
+
+    return ForwardTransparentShader->CompileFromSource(Device, VSSource, PSSource, "main", "main");
+}
+
+HRESULT KDeferredRenderer::CreateBlendStates(ID3D11Device* Device)
+{
+    D3D11_BLEND_DESC BlendDesc = {};
+    BlendDesc.RenderTarget[0].BlendEnable = TRUE;
+    BlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    BlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    BlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    BlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    BlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+    BlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    BlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    HRESULT hr = Device->CreateBlendState(&BlendDesc, &TransparentBlendState);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("DeferredRenderer: Failed to create transparent blend state");
+        return hr;
+    }
+
+    return S_OK;
+}
+
+void KDeferredRenderer::AddTransparentRenderData(const FForwardTransparentRenderData& Data)
+{
+    TransparentRenderDataList.push_back(Data);
+}
+
+void KDeferredRenderer::ClearTransparentRenderData()
+{
+    TransparentRenderDataList.clear();
+}
+
+void KDeferredRenderer::RenderForwardTransparentPass(ID3D11DeviceContext* Context, KCamera* Camera, ID3D11RenderTargetView* BackBufferRTV)
+{
+    if (!ForwardTransparentShader || TransparentRenderDataList.empty())
+        return;
+
+    ID3D11DepthStencilView* DepthDSV = GBuffer.GetDepthStencilView();
+    Context->OMSetRenderTargets(1, &BackBufferRTV, DepthDSV);
+    
+    Context->OMSetBlendState(TransparentBlendState.Get(), nullptr, 0xFFFFFFFF);
+    
+    ForwardTransparentShader->Bind(Context);
+    
+    Context->PSSetSamplers(0, 1, LinearSamplerState.GetAddressOf());
+    
+    XMMATRIX View = Camera->GetViewMatrix();
+    XMMATRIX Projection = Camera->GetProjectionMatrix();
+
+    UpdateLightBuffer(Context, Camera);
+    Context->PSSetConstantBuffers(1, 1, LightConstantBuffer.GetAddressOf());
+
+    std::sort(TransparentRenderDataList.begin(), TransparentRenderDataList.end(),
+        [Camera](const FForwardTransparentRenderData& A, const FForwardTransparentRenderData& B)
+        {
+            XMFLOAT3 camPos = Camera->GetPosition();
+            XMVECTOR camPosVec = XMLoadFloat3(&camPos);
+            
+            XMVECTOR posA = XMVector3TransformCoord(XMVectorSet(0, 0, 0, 1), A.WorldMatrix);
+            XMVECTOR posB = XMVector3TransformCoord(XMVectorSet(0, 0, 0, 1), B.WorldMatrix);
+            
+            float distA = XMVectorGetX(XMVector3Length(posA - camPosVec));
+            float distB = XMVectorGetX(XMVector3Length(posB - camPosVec));
+            
+            return distA > distB;
+        });
+
+    for (const auto& RenderData : TransparentRenderDataList)
+    {
+        if (!RenderData.Mesh)
+            continue;
+
+        UpdateTransformBuffer(Context, RenderData.WorldMatrix, View, Projection);
+        Context->VSSetConstantBuffers(0, 1, TransformConstantBuffer.GetAddressOf());
+
+        struct FMaterialBuffer
+        {
+            XMFLOAT4 BaseColor;
+            float Alpha;
+            float Padding[3];
+        } MaterialCB;
+        
+        MaterialCB.BaseColor = RenderData.BaseColor;
+        MaterialCB.Alpha = RenderData.Alpha;
+        MaterialCB.Padding[0] = MaterialCB.Padding[1] = MaterialCB.Padding[2] = 0.0f;
+        
+        D3D11_MAPPED_SUBRESOURCE MappedResource;
+        if (SUCCEEDED(Context->Map(TransformConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
+        {
+            memcpy(MappedResource.pData, &MaterialCB, sizeof(FMaterialBuffer));
+            Context->Unmap(TransformConstantBuffer.Get(), 0);
+        }
+
+        if (RenderData.DiffuseTexture)
+        {
+            ID3D11ShaderResourceView* SRV = RenderData.DiffuseTexture->GetShaderResourceView();
+            Context->PSSetShaderResources(0, 1, &SRV);
+        }
+        else
+        {
+            ID3D11ShaderResourceView* NullSRV = nullptr;
+            Context->PSSetShaderResources(0, 1, &NullSRV);
+        }
+
+        RenderData.Mesh->Render(Context);
+    }
+
+    ID3D11ShaderResourceView* NullSRV = nullptr;
+    Context->PSSetShaderResources(0, 1, &NullSRV);
+    
+    Context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
+    
+    ForwardTransparentShader->Unbind(Context);
 }

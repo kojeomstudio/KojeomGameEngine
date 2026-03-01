@@ -13,6 +13,7 @@ HRESULT KPostProcessor::Initialize(ID3D11Device* InDevice, UINT32 InWidth, UINT3
     Height = InHeight;
 
     Parameters.Resolution = XMFLOAT2(static_cast<float>(Width), static_cast<float>(Height));
+    Parameters.ColorFilter = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
     HRESULT hr = CreateHDRRenderTarget(Device);
     if (FAILED(hr))
@@ -63,6 +64,13 @@ HRESULT KPostProcessor::Initialize(ID3D11Device* InDevice, UINT32 InWidth, UINT3
         return hr;
     }
 
+    hr = CreateColorGradingResources(Device);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create color grading resources");
+        return hr;
+    }
+
     bInitialized = true;
     LOG_INFO("PostProcessor initialized successfully");
     return S_OK;
@@ -95,10 +103,16 @@ void KPostProcessor::Cleanup()
     BloomCombineShader.reset();
     TonemapperShader.reset();
     FXAAShader.reset();
+    ColorGradingShader.reset();
 
     PostProcessConstantBuffer.Reset();
     PointSamplerState.Reset();
     LinearSamplerState.Reset();
+    ColorGradingSamplerState.Reset();
+    
+    ColorGradingLUT.Reset();
+    ColorGradingLUTSRV.Reset();
+    
     FullscreenQuadMesh.reset();
 
     bInitialized = false;
@@ -685,6 +699,11 @@ void KPostProcessor::ApplyPostProcessing(ID3D11DeviceContext* Context, ID3D11Ren
         ApplyBloom(Context);
     }
 
+    if (Parameters.bColorGradingEnabled && ColorGradingLUTSRV)
+    {
+        ApplyColorGrading(Context);
+    }
+
     ApplyTonemapping(Context);
     ApplyFXAA(Context, FinalTarget);
 }
@@ -874,4 +893,239 @@ void KPostProcessor::SetRenderTarget(ID3D11DeviceContext* Context, ID3D11RenderT
 void KPostProcessor::ClearRenderTarget(ID3D11DeviceContext* Context, ID3D11RenderTargetView* RTV, const float ClearColor[4])
 {
     Context->ClearRenderTargetView(RTV, ClearColor);
+}
+
+HRESULT KPostProcessor::CreateColorGradingResources(ID3D11Device* InDevice)
+{
+    D3D11_SAMPLER_DESC samplerDesc = {};
+    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samplerDesc.MipLODBias = 0.0f;
+    samplerDesc.MaxAnisotropy = 1;
+    samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+    samplerDesc.BorderColor[0] = samplerDesc.BorderColor[1] = samplerDesc.BorderColor[2] = samplerDesc.BorderColor[3] = 0;
+    samplerDesc.MinLOD = 0;
+    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    HRESULT hr = InDevice->CreateSamplerState(&samplerDesc, &ColorGradingSamplerState);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create color grading sampler state");
+        return hr;
+    }
+
+    hr = CreateDefaultColorGradingLUT(InDevice);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create default color grading LUT");
+        return hr;
+    }
+
+    ColorGradingShader = std::make_shared<KShaderProgram>();
+
+    std::string vsSource = R"(
+struct VS_INPUT
+{
+    float3 Position : POSITION;
+    float2 TexCoord : TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+    float4 Position : SV_POSITION;
+    float2 TexCoord : TEXCOORD0;
+};
+
+VS_OUTPUT main(VS_INPUT input)
+{
+    VS_OUTPUT output;
+    output.Position = float4(input.Position, 1.0f);
+    output.TexCoord = input.TexCoord;
+    return output;
+}
+)";
+
+    std::string colorGradingPS = R"(
+Texture2D SceneTexture : register(t0);
+Texture3D ColorGradingLUT : register(t1);
+SamplerState PointSampler : register(s0);
+SamplerState LinearSampler : register(s1);
+
+cbuffer PostProcessBuffer : register(b0)
+{
+    float Exposure;
+    float Gamma;
+    float BloomThreshold;
+    float BloomIntensity;
+    float BloomBlurSigma;
+    uint BloomBlurIterations;
+    bool bBloomEnabled;
+    bool bTonemappingEnabled;
+    bool bFXAAEnabled;
+    float FXAASpanMax;
+    float FXAAReduceMin;
+    float FXAAReduceMul;
+    float2 Resolution;
+    bool bColorGradingEnabled;
+    float ColorGradingIntensity;
+    float3 ColorFilter;
+    float Saturation;
+    float Contrast;
+};
+
+struct PS_INPUT
+{
+    float4 Position : SV_POSITION;
+    float2 TexCoord : TEXCOORD0;
+};
+
+float3 ApplyLUT(Texture3D lut, SamplerState lutSampler, float3 color)
+{
+    float lutSize = 32.0f;
+    float scale = (lutSize - 1.0f) / lutSize;
+    float offset = 0.5f / lutSize;
+    
+    float3 lutCoord = color * scale + offset;
+    return lut.Sample(lutSampler, lutCoord).rgb;
+}
+
+float3 AdjustSaturation(float3 color, float saturation)
+{
+    float luminance = dot(color, float3(0.2126, 0.7152, 0.0722));
+    return lerp(float3(luminance, luminance, luminance), color, saturation);
+}
+
+float3 AdjustContrast(float3 color, float contrast)
+{
+    return (color - 0.5f) * contrast + 0.5f;
+}
+
+float4 main(PS_INPUT input) : SV_TARGET
+{
+    float3 color = SceneTexture.Sample(PointSampler, input.TexCoord).rgb;
+    
+    color *= ColorFilter;
+    
+    if (bColorGradingEnabled)
+    {
+        float3 gradedColor = ApplyLUT(ColorGradingLUT, LinearSampler, saturate(color));
+        color = lerp(color, gradedColor, ColorGradingIntensity);
+    }
+    
+    color = AdjustSaturation(color, Saturation);
+    color = AdjustContrast(color, Contrast);
+    
+    return float4(color, 1.0f);
+}
+)";
+
+    hr = ColorGradingShader->CompileFromSource(InDevice, vsSource, colorGradingPS, "main", "main");
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to compile color grading shader");
+        return hr;
+    }
+
+    D3D11_INPUT_ELEMENT_DESC layout[] = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+    };
+    hr = ColorGradingShader->CreateInputLayout(InDevice, layout, 2);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create color grading input layout");
+        return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT KPostProcessor::CreateDefaultColorGradingLUT(ID3D11Device* InDevice)
+{
+    constexpr UINT32 LUT_SIZE = 32;
+    
+    std::vector<float> lutData(LUT_SIZE * LUT_SIZE * LUT_SIZE * 4);
+    
+    for (UINT32 z = 0; z < LUT_SIZE; ++z)
+    {
+        for (UINT32 y = 0; y < LUT_SIZE; ++y)
+        {
+            for (UINT32 x = 0; x < LUT_SIZE; ++x)
+            {
+                UINT32 index = (z * LUT_SIZE * LUT_SIZE + y * LUT_SIZE + x) * 4;
+                lutData[index + 0] = static_cast<float>(x) / (LUT_SIZE - 1);
+                lutData[index + 1] = static_cast<float>(y) / (LUT_SIZE - 1);
+                lutData[index + 2] = static_cast<float>(z) / (LUT_SIZE - 1);
+                lutData[index + 3] = 1.0f;
+            }
+        }
+    }
+
+    D3D11_TEXTURE3D_DESC texDesc = {};
+    texDesc.Width = LUT_SIZE;
+    texDesc.Height = LUT_SIZE;
+    texDesc.Depth = LUT_SIZE;
+    texDesc.MipLevels = 1;
+    texDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    texDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    texDesc.CPUAccessFlags = 0;
+    texDesc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = lutData.data();
+    initData.SysMemPitch = LUT_SIZE * sizeof(float) * 4;
+    initData.SysMemSlicePitch = LUT_SIZE * LUT_SIZE * sizeof(float) * 4;
+
+    HRESULT hr = InDevice->CreateTexture3D(&texDesc, &initData, &ColorGradingLUT);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create color grading LUT texture");
+        return hr;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = texDesc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+    srvDesc.Texture3D.MostDetailedMip = 0;
+    srvDesc.Texture3D.MipLevels = 1;
+
+    hr = InDevice->CreateShaderResourceView(ColorGradingLUT.Get(), &srvDesc, &ColorGradingLUTSRV);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create color grading LUT SRV");
+        return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT KPostProcessor::LoadColorGradingLUT(ID3D11Device* InDevice, const std::wstring& Path)
+{
+    (void)Path;
+    (void)InDevice;
+    LOG_WARNING("LoadColorGradingLUT: Custom LUT loading not implemented, using default LUT");
+    return CreateDefaultColorGradingLUT(InDevice);
+}
+
+void KPostProcessor::ApplyColorGrading(ID3D11DeviceContext* Context)
+{
+    if (!ColorGradingShader || !ColorGradingLUTSRV)
+        return;
+
+    SetRenderTarget(Context, IntermediateRTV.Get());
+
+    ColorGradingShader->Bind(Context);
+    Context->PSSetConstantBuffers(0, 1, PostProcessConstantBuffer.GetAddressOf());
+    Context->PSSetShaderResources(0, 1, HDRShaderResourceView.GetAddressOf());
+    Context->PSSetShaderResources(1, 1, ColorGradingLUTSRV.GetAddressOf());
+    Context->PSSetSamplers(0, 1, PointSamplerState.GetAddressOf());
+    Context->PSSetSamplers(1, 1, ColorGradingSamplerState.GetAddressOf());
+
+    RenderFullscreenQuad(Context);
+
+    ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
+    Context->PSSetShaderResources(0, 2, nullSRVs);
 }

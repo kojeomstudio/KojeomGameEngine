@@ -23,7 +23,12 @@ struct FPostProcessParams
     float FXAAReduceMin = 1.0f / 128.0f;
     float FXAAReduceMul = 1.0f / 8.0f;
     XMFLOAT2 Resolution;
+    bool bColorGradingEnabled = false;
+    float ColorGradingIntensity = 1.0f;
+    XMFLOAT3 ColorFilter;
     float Padding[2];
+    float Saturation = 1.0f;
+    float Contrast = 1.0f;
 };
 
 class KPostProcessor
@@ -53,6 +58,14 @@ public:
     void SetBloomEnabled(bool bEnabled) { Parameters.bBloomEnabled = bEnabled; }
     void SetTonemappingEnabled(bool bEnabled) { Parameters.bTonemappingEnabled = bEnabled; }
     void SetFXAAEnabled(bool bEnabled) { Parameters.bFXAAEnabled = bEnabled; }
+    void SetColorGradingEnabled(bool bEnabled) { Parameters.bColorGradingEnabled = bEnabled; }
+    void SetColorGradingIntensity(float Intensity) { Parameters.ColorGradingIntensity = Intensity; }
+    void SetColorFilter(const XMFLOAT3& Filter) { Parameters.ColorFilter = Filter; }
+    void SetSaturation(float Sat) { Parameters.Saturation = Sat; }
+    void SetContrast(float Cont) { Parameters.Contrast = Cont; }
+
+    HRESULT LoadColorGradingLUT(ID3D11Device* Device, const std::wstring& Path);
+    HRESULT CreateDefaultColorGradingLUT(ID3D11Device* Device);
 
     bool IsInitialized() const { return bInitialized; }
 
@@ -60,6 +73,7 @@ private:
     HRESULT CreateHDRRenderTarget(ID3D11Device* Device);
     HRESULT CreateIntermediateRenderTargets(ID3D11Device* Device);
     HRESULT CreateBloomRenderTargets(ID3D11Device* Device);
+    HRESULT CreateColorGradingResources(ID3D11Device* Device);
     HRESULT CreateShaders(ID3D11Device* Device);
     HRESULT CreateConstantBuffers(ID3D11Device* Device);
     HRESULT CreateSamplerStates(ID3D11Device* Device);
@@ -68,6 +82,7 @@ private:
     void ExtractBrightAreas(ID3D11DeviceContext* Context);
     void BlurBloomTexture(ID3D11DeviceContext* Context);
     void ApplyBloom(ID3D11DeviceContext* Context);
+    void ApplyColorGrading(ID3D11DeviceContext* Context);
     void ApplyTonemapping(ID3D11DeviceContext* Context);
     void ApplyFXAA(ID3D11DeviceContext* Context, ID3D11RenderTargetView* FinalTarget);
 
@@ -104,11 +119,16 @@ private:
     std::shared_ptr<KShaderProgram> BloomCombineShader;
     std::shared_ptr<KShaderProgram> TonemapperShader;
     std::shared_ptr<KShaderProgram> FXAAShader;
+    std::shared_ptr<KShaderProgram> ColorGradingShader;
 
     ComPtr<ID3D11Buffer> PostProcessConstantBuffer;
 
     ComPtr<ID3D11SamplerState> PointSamplerState;
     ComPtr<ID3D11SamplerState> LinearSamplerState;
+    ComPtr<ID3D11SamplerState> ColorGradingSamplerState;
+
+    ComPtr<ID3D11Texture3D> ColorGradingLUT;
+    ComPtr<ID3D11ShaderResourceView> ColorGradingLUTSRV;
 
     std::shared_ptr<KMesh> FullscreenQuadMesh;
 

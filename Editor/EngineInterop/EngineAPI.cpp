@@ -1,3 +1,4 @@
+#define NOMINMAX
 #define ENGINEAPI_EXPORTS
 #include "EngineAPI.h"
 #include <Engine/Core/Engine.h>
