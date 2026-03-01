@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-6
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-6 (Occlusion Culling Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -38,7 +38,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 | Frustum culling | ✅ | KFrustum class with plane extraction from VP matrix |
 | Instanced rendering | ✅ | KInstancedRenderer for batch rendering |
 | GPU query timers | ✅ | KGPUTimer with timestamp queries |
-| Occlusion culling | 🔲 | Pending (future optimization) |
+| Occlusion culling | ✅ | KOcclusionQuery and KOcclusionCuller with hardware occlusion queries |
 | Command buffer optimization | 🔲 | Pending (future optimization) |
 
 #### Implementation Notes
@@ -46,10 +46,12 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 - **KFrustum**: 6-plane frustum extraction, sphere/box intersection tests
 - **KInstancedRenderer**: Dynamic instance buffer (default 1024 instances)
 - **KGPUTimer**: GPU timestamp queries, frame stats tracking
+- **KOcclusionCuller**: Hardware occlusion queries with D3D11_QUERY_OCCLUSION
 
 #### New Files
 
 - `Engine/Graphics/Culling/Frustum.h/cpp`
+- `Engine/Graphics/Culling/OcclusionQuery.h/cpp`
 - `Engine/Graphics/Instanced/InstancedRenderer.h/cpp`
 - `Engine/Graphics/Performance/GPUTimer.h/cpp`
 

@@ -13,6 +13,7 @@
 #include "Deferred/DeferredRenderer.h"
 #include "PostProcess/PostProcessor.h"
 #include "Culling/Frustum.h"
+#include "Culling/OcclusionQuery.h"
 #include "Instanced/InstancedRenderer.h"
 #include "Performance/GPUTimer.h"
 
@@ -132,6 +133,11 @@ public:
     void BeginGPUTimer(const std::string& Name);
     void EndGPUTimer(const std::string& Name);
 
+    void SetOcclusionCullingEnabled(bool bEnabled);
+    bool IsOcclusionCullingEnabled() const { return bOcclusionCullingEnabled; }
+    KOcclusionCuller* GetOcclusionCuller() { return &OcclusionCuller; }
+    bool IsVisibleWithOcclusion(ID3D11DeviceContext* Context, const std::string& QueryName);
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -180,6 +186,8 @@ private:
     KFrustum Frustum;
     KInstancedRenderer InstancedRenderer;
     KGPUTimer GPUTimer;
+    KOcclusionCuller OcclusionCuller;
+    bool bOcclusionCullingEnabled = false;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;

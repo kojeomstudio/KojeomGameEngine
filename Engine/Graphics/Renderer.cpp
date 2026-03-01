@@ -40,6 +40,11 @@ void KRenderer::BeginFrame(KCamera* InCamera, const float ClearColor[4])
 
     GPUTimer.BeginFrame(GraphicsDevice->GetContext());
 
+    if (bOcclusionCullingEnabled && OcclusionCuller.IsInitialized())
+    {
+        OcclusionCuller.BeginFrame(GraphicsDevice->GetContext());
+    }
+
     if (bShadowsEnabled && ShadowRenderer.IsInitialized())
     {
         ShadowRenderer.BeginShadowPass(
@@ -66,6 +71,11 @@ void KRenderer::EndFrame(bool bVSync)
     if (!GraphicsDevice || !bInFrame)
     {
         return;
+    }
+
+    if (bOcclusionCullingEnabled && OcclusionCuller.IsInitialized())
+    {
+        OcclusionCuller.EndFrame(GraphicsDevice->GetContext());
     }
 
     GPUTimer.EndFrame(GraphicsDevice->GetContext());
@@ -321,6 +331,7 @@ void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
+    OcclusionCuller.Cleanup();
     GPUTimer.Cleanup();
     InstancedRenderer.Cleanup();
     PostProcessor.Cleanup();
@@ -588,6 +599,17 @@ HRESULT KRenderer::InitializeDefaultResources()
         LOG_INFO("GPU timer initialized successfully");
     }
 
+    hr = OcclusionCuller.Initialize(Device);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Occlusion culler initialization failed");
+    }
+    else
+    {
+        bOcclusionCullingEnabled = false;
+        LOG_INFO("Occlusion culler initialized successfully");
+    }
+
     LOG_INFO("Default resources initialized successfully");
     return S_OK;
 }
@@ -825,4 +847,24 @@ void KRenderer::EndGPUTimer(const std::string& Name)
     {
         GPUTimer.EndTimer(GraphicsDevice->GetContext(), Name);
     }
+}
+
+void KRenderer::SetOcclusionCullingEnabled(bool bEnabled)
+{
+    if (bEnabled && !OcclusionCuller.IsInitialized())
+    {
+        LOG_WARNING("Cannot enable occlusion culling: occlusion culler not initialized");
+        return;
+    }
+    bOcclusionCullingEnabled = bEnabled;
+    OcclusionCuller.SetEnabled(bEnabled);
+}
+
+bool KRenderer::IsVisibleWithOcclusion(ID3D11DeviceContext* Context, const std::string& QueryName)
+{
+    if (!bOcclusionCullingEnabled || !OcclusionCuller.IsInitialized())
+    {
+        return true;
+    }
+    return OcclusionCuller.IsVisible(Context, QueryName);
 } 
