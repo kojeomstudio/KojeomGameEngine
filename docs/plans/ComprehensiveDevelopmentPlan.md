@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-10 (SSR, TAA, VolumetricFog Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-11 (CSM Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -136,6 +136,35 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 #### New Files
 
 - `Engine/Graphics/Volumetric/VolumetricFog.h/cpp`
+
+---
+
+### Phase 11: Cascaded Shadow Maps
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-02
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| CSM texture array | ✅ | KCascadedShadowMap with up to 4 cascades |
+| Cascade split calculation | ✅ | Practical/Logarithmic split scheme |
+| CSM renderer | ✅ | KCascadedShadowRenderer with per-cascade rendering |
+| Frustum-aligned cascade bounds | ✅ | Automatic cascade bounds from camera frustum |
+
+#### Implementation Notes
+
+- **KCascadedShadowMap**: Manages up to 4 shadow map cascades with texture array
+- **KCascadedShadowRenderer**: Full CSM rendering pipeline
+- **Split Scheme**: Configurable lambda blend between practical and logarithmic
+- **Integration**: Extends shadow system for large outdoor scenes
+
+#### New Files
+
+- `Engine/Graphics/Shadow/CascadedShadowMap.h/cpp`
+- `Engine/Graphics/Shadow/CascadedShadowRenderer.h/cpp`
 
 ---
 

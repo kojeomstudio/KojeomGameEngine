@@ -110,6 +110,8 @@
     <ClInclude Include="Graphics\Shader.h" />
     <ClInclude Include="Graphics\Shadow\ShadowMap.h" />
     <ClInclude Include="Graphics\Shadow\ShadowRenderer.h" />
+    <ClInclude Include="Graphics\Shadow\CascadedShadowMap.h" />
+    <ClInclude Include="Graphics\Shadow\CascadedShadowRenderer.h" />
     <ClInclude Include="Graphics\Deferred\GBuffer.h" />
     <ClInclude Include="Graphics\Deferred\DeferredRenderer.h" />
     <ClInclude Include="Graphics\IBL\IBLSystem.h" />
@@ -148,6 +150,8 @@
     <ClCompile Include="Graphics\Shader.cpp" />
     <ClCompile Include="Graphics\Shadow\ShadowMap.cpp" />
     <ClCompile Include="Graphics\Shadow\ShadowRenderer.cpp" />
+    <ClCompile Include="Graphics\Shadow\CascadedShadowMap.cpp" />
+    <ClCompile Include="Graphics\Shadow\CascadedShadowRenderer.cpp" />
     <ClCompile Include="Graphics\Deferred\GBuffer.cpp" />
     <ClCompile Include="Graphics\Deferred\DeferredRenderer.cpp" />
     <ClCompile Include="Graphics\IBL\IBLSystem.cpp" />

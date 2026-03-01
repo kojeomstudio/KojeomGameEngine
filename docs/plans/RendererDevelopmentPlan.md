@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 10 Completed
+- **Status**: Phase 11 Completed
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-02
 
@@ -548,6 +548,56 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+### Phase 11: Cascaded Shadow Maps
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| CSM texture array | ✅ | | KCascadedShadowMap with up to 4 cascades |
+| Cascade split calculation | ✅ | | Practical/Logarithmic split scheme |
+| CSM renderer | ✅ | | KCascadedShadowRenderer with per-cascade rendering |
+| Frustum-aligned cascade bounds | ✅ | | Automatic cascade bounds from camera frustum |
+| Shadow map array SRV | ✅ | | Single SRV for all cascade shadow maps |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/Shadow/CascadedShadowMap.h/cpp` - CSM texture array management
+- `Engine/Graphics/Shadow/CascadedShadowRenderer.h/cpp` - CSM rendering pipeline
+
+**Features:**
+- Up to 4 cascades for distance-based shadow quality
+- Practical/Logarithmic split scheme with configurable lambda
+- Frustum-aligned cascade bounds calculation
+- Per-cascade light view-projection matrices
+- Texture array for efficient shader binding
+- Configurable cascade resolution, depth bias, PCF kernel
+
+#### Technical Details
+
+**CSM Parameters:**
+- CascadeCount: 4 (default, max 4)
+- CascadeResolution: 1024 (per cascade)
+- SplitLambda: 0.5f (blend between practical and logarithmic splits)
+- DepthBias: 0.0001f
+- PCFKernelSize: 3
+
+**Render Targets:**
+- Cascade Textures: R24G8_TYPELESS (per cascade)
+- Cascade Array SRV: R24_UNORM_X8_TYPELESS
+
+**Cascade Calculation:**
+- Frustum corner extraction from camera
+- Per-cascade tight bounds fitting
+- Light direction-aligned orthographic projection
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template
@@ -661,7 +711,9 @@ Engine/Graphics/
 ├── Material.h/cpp              # PBR material system (Implemented)
 ├── Shadow/                     # Shadow mapping system
 │   ├── ShadowMap.h/cpp
-│   └── ShadowRenderer.h/cpp
+│   ├── ShadowRenderer.h/cpp
+│   ├── CascadedShadowMap.h/cpp
+│   └── CascadedShadowRenderer.h/cpp
 ├── Deferred/                   # Deferred rendering (Implemented)
 │   ├── GBuffer.h/cpp
 │   └── DeferredRenderer.h/cpp
