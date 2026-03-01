@@ -1,0 +1,152 @@
+# ================================
+# KojeomEngine .gitignore
+# ================================
+
+# ================================
+# Visual Studio / MSBuild
+# ================================
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ibs/
+
+# Visual Studio 2015/2017/2019/2022 cache/options directory
+.vs/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ================================
+# Compiled Files
+# ================================
+# Object files
+*.o
+*.obj
+*.slo
+*.lo
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lai
+*.lai
+
+# Shared objects (Linux/Unix)
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug symbols
+*.pdb
+*.ilk
+*.idb
+*.ipdb
+*.iobj
+
+# ================================
+# Windows
+# ================================
+# Windows image file caches
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows shortcuts
+*.lnk
+
+# ================================
+# IDE / Editor
+# ================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs (CLion, Rider, etc.)
+.idea/
+*.iml
+cmake-build-*/
+
+# Visual Studio Code
+*.vsix
+
+# ================================
+# Build Directories (Project-specific)
+# ================================
+# Output directories
+bin/
+lib/
+Engine/x64/
+Examples/*_x64/
+
+# Build recipes
+*.recipe
+
+# TLog files
+*.tlog/
+
+# ================================
+# Temporary Files
+# ================================
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# ================================
+# OS Generated Files
+# ================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
