@@ -1,14 +1,58 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace KojeomEditor.Views;
+
+public class BoolToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool b && b ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is Visibility v && v == Visibility.Visible;
+    }
+}
+
+public class InverseBoolToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool b && !b ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is Visibility v && v != Visibility.Visible;
+    }
+}
 
 public partial class ContentBrowserControl : UserControl
 {
     public ObservableCollection<FolderItem> Folders { get; } = new();
     public ObservableCollection<AssetItem> Assets { get; } = new();
+    
+    private Point _dragStartPoint;
+    private bool _isDragging;
+    
+    public static readonly RoutedEvent AssetDragEvent = 
+        EventManager.RegisterRoutedEvent(nameof(AssetDrag), RoutingStrategy.Bubble, 
+            typeof(RoutedEventHandler), typeof(ContentBrowserControl));
+    
+    public event RoutedEventHandler AssetDrag
+    {
+        add => AddHandler(AssetDragEvent, value);
+        remove => RemoveHandler(AssetDragEvent, value);
+    }
     
     public static readonly DependencyProperty CurrentFolderProperty =
         DependencyProperty.Register(nameof(CurrentFolder), typeof(string), typeof(ContentBrowserControl),
@@ -65,13 +109,20 @@ public partial class ContentBrowserControl : UserControl
             foreach (var file in files)
             {
                 var ext = Path.GetExtension(file).ToLower();
-                Assets.Add(new AssetItem
+                var asset = new AssetItem
                 {
                     Name = Path.GetFileNameWithoutExtension(file),
                     Path = file,
                     Extension = ext,
                     IconText = GetIconForExtension(ext)
-                });
+                };
+                
+                if (IsImageFile(ext))
+                {
+                    asset.ThumbnailImage = CreateThumbnail(file);
+                }
+                
+                Assets.Add(asset);
             }
 
             var dirs = Directory.GetDirectories(currentPath);
@@ -89,6 +140,31 @@ public partial class ContentBrowserControl : UserControl
         catch
         {
             AddDefaultAssets();
+        }
+    }
+
+    private static bool IsImageFile(string ext)
+    {
+        return ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".tga" or ".gif";
+    }
+
+    private BitmapImage? CreateThumbnail(string filePath)
+    {
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.UriSource = new Uri(filePath, UriKind.Absolute);
+            bitmap.DecodePixelWidth = 64;
+            bitmap.DecodePixelHeight = 64;
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
+            bitmap.Freeze();
+            return bitmap;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -168,6 +244,49 @@ public partial class ContentBrowserControl : UserControl
         {
         }
     }
+    
+    private void AssetList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStartPoint = e.GetPosition(null);
+        _isDragging = false;
+    }
+    
+    private void AssetList_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed && !_isDragging)
+        {
+            var currentPosition = e.GetPosition(null);
+            var diff = _dragStartPoint - currentPosition;
+            
+            if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+            {
+                StartDrag(e);
+            }
+        }
+    }
+    
+    private void StartDrag(MouseEventArgs e)
+    {
+        if (SelectedAsset == null) return;
+        if (SelectedAsset.Extension == "[Folder]") return;
+        
+        _isDragging = true;
+        
+        var data = new DataObject();
+        data.SetData("AssetPath", SelectedAsset.Path);
+        data.SetData("AssetName", SelectedAsset.Name);
+        data.SetData("AssetExtension", SelectedAsset.Extension);
+        
+        try
+        {
+            DragDrop.DoDragDrop(AssetListBox, data, DragDropEffects.Copy);
+        }
+        finally
+        {
+            _isDragging = false;
+        }
+    }
 }
 
 public class FolderItem
@@ -184,4 +303,6 @@ public class AssetItem
     public string Path { get; set; } = "";
     public string Extension { get; set; } = "";
     public string IconText { get; set; } = "📄";
+    public BitmapImage? ThumbnailImage { get; set; }
+    public bool HasThumbnail => ThumbnailImage != null;
 }

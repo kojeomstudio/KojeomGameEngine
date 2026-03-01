@@ -505,12 +505,12 @@ private:
     - ✅ Texture slot management
     - ✅ Texture file picker
 
-5. **Content Browser** (Partial)
+5. **Content Browser** (Complete)
    - ✅ Asset browser with folder tree view
    - ✅ Asset grid view with icons
    - ✅ Import assets dialog
-   - 🔲 Thumbnail previews
-   - 🔲 Drag-and-drop to viewport
+   - ✅ Thumbnail previews for image files
+   - ✅ Drag-and-drop to viewport for actor spawning
 
 6. **Toolbar** (Complete)
    - ✅ Play/Pause/Stop buttons

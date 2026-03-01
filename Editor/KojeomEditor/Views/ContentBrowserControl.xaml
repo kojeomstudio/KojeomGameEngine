@@ -3,8 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:KojeomEditor.Views"
              mc:Ignorable="d" 
              d:DesignHeight="200" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+    </UserControl.Resources>
     
     <Grid>
         <Grid.RowDefinitions>
@@ -60,7 +66,10 @@
             <ListBox Grid.Column="2" ItemsSource="{Binding Assets}" 
                      SelectedItem="{Binding SelectedAsset}"
                      Background="#1E1E1E" BorderThickness="0"
-                     SelectionMode="Single" MouseDoubleClick="Asset_DoubleClick">
+                     SelectionMode="Single" MouseDoubleClick="Asset_DoubleClick"
+                     PreviewMouseLeftButtonDown="AssetList_PreviewMouseLeftButtonDown"
+                     PreviewMouseMove="AssetList_PreviewMouseMove"
+                     x:Name="AssetListBox">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel IsItemsHost="True"/>
@@ -72,8 +81,14 @@
                                 CornerRadius="4" Cursor="Hand">
                             <StackPanel>
                                 <Border Width="64" Height="64" Margin="4,4,4,2" Background="#1E1E1E" CornerRadius="2">
-                                    <TextBlock Text="{Binding IconText}" FontSize="28" 
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Grid>
+                                        <Image Source="{Binding ThumbnailImage}" 
+                                               Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVisibilityConverter}}"
+                                               Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding IconText}" FontSize="28" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Visibility="{Binding HasThumbnail, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                    </Grid>
                                 </Border>
                                 <TextBlock Text="{Binding Name}" FontSize="10" 
                                            TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"

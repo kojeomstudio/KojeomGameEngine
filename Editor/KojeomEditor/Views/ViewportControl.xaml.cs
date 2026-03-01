@@ -73,6 +73,9 @@ public partial class ViewportControl : UserControl
         MouseUp += OnMouseUp;
         MouseMove += OnMouseMove;
         MouseLeave += OnMouseLeave;
+        AllowDrop = true;
+        Drop += OnDrop;
+        DragOver += OnDragOver;
     }
 
     private static void OnEngineChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -386,6 +389,85 @@ public partial class ViewportControl : UserControl
             inv[i] *= det;
 
         return inv;
+    }
+
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent("AssetPath"))
+        {
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+    }
+
+    private void OnDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent("AssetPath")) return;
+        
+        var assetPath = e.Data.GetData("AssetPath") as string;
+        var assetName = e.Data.GetData("AssetName") as string;
+        var assetExt = e.Data.GetData("AssetExtension") as string;
+        
+        if (string.IsNullOrEmpty(assetPath) || string.IsNullOrEmpty(assetExt)) return;
+        
+        var dropPosition = e.GetPosition(this);
+        SpawnActorFromAsset(assetPath, assetName ?? "Actor", assetExt, dropPosition);
+    }
+
+    private void SpawnActorFromAsset(string assetPath, string assetName, string assetExt, Point dropPosition)
+    {
+        if (_engine == null || !_engine.IsInitialized || SceneViewModel == null) return;
+        
+        float ndcX = (float)(2.0 * dropPosition.X / ActualWidth - 1.0);
+        float ndcY = (float)(1.0 - 2.0 * dropPosition.Y / ActualHeight);
+        
+        var (camX, camY, camZ) = _engine.GetCameraPosition();
+        float spawnDistance = 5.0f;
+        
+        float spawnX = camX + (float)(ndcX * spawnDistance);
+        float spawnY = camY;
+        float spawnZ = camZ + spawnDistance;
+        
+        var scene = _engine.GetActiveScene();
+        if (scene == IntPtr.Zero) return;
+        
+        var actorPtr = _engine.CreateActor(scene, assetName);
+        if (actorPtr != IntPtr.Zero)
+        {
+            _engine.SetActorPosition(actorPtr, spawnX, spawnY, spawnZ);
+        }
+        
+        var newActor = new ActorViewModel
+        {
+            Name = assetName,
+            PositionX = spawnX,
+            PositionY = spawnY,
+            PositionZ = spawnZ
+        };
+        
+        SceneViewModel.Actors.Add(newActor);
+        SceneViewModel.SelectedActor = newActor;
+        
+        if (PropertiesViewModel != null)
+        {
+            PropertiesViewModel.SetSelectedActor(newActor);
+        }
+    }
+
+    private static string GetActorTypeFromExtension(string ext)
+    {
+        return ext.ToLower() switch
+        {
+            ".fbx" or ".obj" or ".gltf" or ".glb" => "StaticMesh",
+            ".png" or ".jpg" or ".jpeg" or ".tga" => "Texture",
+            ".mat" or ".material" => "Material",
+            ".scene" => "Scene",
+            _ => "Actor"
+        };
     }
 
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
