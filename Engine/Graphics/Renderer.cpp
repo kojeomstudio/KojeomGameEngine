@@ -331,6 +331,7 @@ void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
+    CommandBuffer.Cleanup();
     OcclusionCuller.Cleanup();
     GPUTimer.Cleanup();
     InstancedRenderer.Cleanup();
@@ -610,6 +611,16 @@ HRESULT KRenderer::InitializeDefaultResources()
         LOG_INFO("Occlusion culler initialized successfully");
     }
 
+    hr = CommandBuffer.Initialize(Device);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Command buffer initialization failed");
+    }
+    else
+    {
+        LOG_INFO("Command buffer initialized successfully");
+    }
+
     LOG_INFO("Default resources initialized successfully");
     return S_OK;
 }
@@ -867,4 +878,34 @@ bool KRenderer::IsVisibleWithOcclusion(ID3D11DeviceContext* Context, const std::
         return true;
     }
     return OcclusionCuller.IsVisible(Context, QueryName);
+}
+
+void KRenderer::AddRenderCommand(const FRenderCommand& Command)
+{
+    if (!CommandBuffer.IsInitialized())
+    {
+        return;
+    }
+    CommandBuffer.AddCommand(Command);
+}
+
+void KRenderer::ExecuteCommandBuffer()
+{
+    if (!CommandBuffer.IsInitialized() || !GraphicsDevice)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
+    
+    if (bFrustumCullingEnabled)
+    {
+        CommandBuffer.ExecuteWithFrustumCulling(Context, Frustum);
+    }
+    else
+    {
+        CommandBuffer.Execute(Context);
+    }
+    
+    CommandBuffer.Clear();
 } 

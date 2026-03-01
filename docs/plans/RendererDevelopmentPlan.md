@@ -301,20 +301,21 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 |------|--------|-------------|-------|
 | Frustum culling | ✅ | | KFrustum class with plane extraction |
 | Occlusion culling | ✅ | | KOcclusionQuery and KOcclusionCuller with hardware queries |
-| Instanced rendering | ✅ | | KInstancedRenderer with batch rendering |
+| Instanced rendering | ✅ | | KInstancedRenderer for batch rendering |
 | GPU query timers | ✅ | | KGPUTimer with timestamp queries |
-| Command buffer optimization | 🔲 | | Pending |
+| Command buffer optimization | ✅ | | KCommandBuffer for batch rendering with state caching |
 
 #### Implementation Details
 
 **New Files:**
 - `Engine/Graphics/Culling/Frustum.h/cpp` - Frustum culling with plane extraction
 - `Engine/Graphics/Culling/OcclusionQuery.h/cpp` - Hardware occlusion queries
+- `Engine/Graphics/CommandBuffer/CommandBuffer.h/cpp` - Command buffer for batch rendering
 - `Engine/Graphics/Instanced/InstancedRenderer.h/cpp` - Instanced rendering support
 - `Engine/Graphics/Performance/GPUTimer.h/cpp` - GPU performance queries
 
 **Modified Files:**
-- `Engine/Graphics/Renderer.h/cpp` - Added frustum culling, occlusion culling, instanced renderer, GPU timer integration
+- `Engine/Graphics/Renderer.h/cpp` - Added frustum culling, occlusion culling, command buffer, instanced renderer, GPU timer integration
 - `Engine/Engine.vcxproj` - Added new files
 
 **Features:**
@@ -323,6 +324,7 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 - KOcclusionCuller: Occlusion culling system with named queries
 - Sphere and box intersection tests
 - KInstancedRenderer: Batch rendering with instance buffer
+- KCommandBuffer: Render command batching with sort keys (None, Shader, Texture, Material, Depth, ShaderThenTexture, MaterialThenDepth)
 - KGPUTimer: GPU timestamp queries for performance profiling
 - Frame stats tracking
 
@@ -469,6 +471,8 @@ Engine/Graphics/
 ├── Culling/                    # Culling systems (Implemented)
 │   ├── Frustum.h/cpp
 │   └── OcclusionQuery.h/cpp
+├── CommandBuffer/              # Command buffer (Implemented)
+│   └── CommandBuffer.h/cpp
 ├── Instanced/                  # Instanced rendering (Implemented)
 │   └── InstancedRenderer.h/cpp
 └── Performance/                # GPU performance (Implemented)

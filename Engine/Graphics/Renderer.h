@@ -14,6 +14,7 @@
 #include "PostProcess/PostProcessor.h"
 #include "Culling/Frustum.h"
 #include "Culling/OcclusionQuery.h"
+#include "CommandBuffer/CommandBuffer.h"
 #include "Instanced/InstancedRenderer.h"
 #include "Performance/GPUTimer.h"
 
@@ -138,6 +139,13 @@ public:
     KOcclusionCuller* GetOcclusionCuller() { return &OcclusionCuller; }
     bool IsVisibleWithOcclusion(ID3D11DeviceContext* Context, const std::string& QueryName);
 
+    void SetCommandBufferEnabled(bool bEnabled) { bCommandBufferEnabled = bEnabled; }
+    bool IsCommandBufferEnabled() const { return bCommandBufferEnabled && CommandBuffer.IsInitialized(); }
+    KCommandBuffer* GetCommandBuffer() { return &CommandBuffer; }
+    void AddRenderCommand(const FRenderCommand& Command);
+    void ExecuteCommandBuffer();
+    const FCommandBufferStats& GetCommandBufferStats() const { return CommandBuffer.GetStats(); }
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -184,10 +192,12 @@ private:
     bool bFrustumCullingEnabled = true;
 
     KFrustum Frustum;
+    KCommandBuffer CommandBuffer;
     KInstancedRenderer InstancedRenderer;
     KGPUTimer GPUTimer;
     KOcclusionCuller OcclusionCuller;
     bool bOcclusionCullingEnabled = false;
+    bool bCommandBufferEnabled = true;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;

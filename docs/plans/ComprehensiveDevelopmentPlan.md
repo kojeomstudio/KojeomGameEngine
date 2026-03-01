@@ -39,7 +39,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 | Instanced rendering | ✅ | KInstancedRenderer for batch rendering |
 | GPU query timers | ✅ | KGPUTimer with timestamp queries |
 | Occlusion culling | ✅ | KOcclusionQuery and KOcclusionCuller with hardware occlusion queries |
-| Command buffer optimization | 🔲 | Pending (future optimization) |
+| Command buffer optimization | ✅ | KCommandBuffer with state caching and sort key rendering |
 
 #### Implementation Notes
 
@@ -47,11 +47,13 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 - **KInstancedRenderer**: Dynamic instance buffer (default 1024 instances)
 - **KGPUTimer**: GPU timestamp queries, frame stats tracking
 - **KOcclusionCuller**: Hardware occlusion queries with D3D11_QUERY_OCCLUSION
+- **KCommandBuffer**: Render command batching with sort key optimization (Shader, Texture, Material, Depth sorting)
 
 #### New Files
 
 - `Engine/Graphics/Culling/Frustum.h/cpp`
 - `Engine/Graphics/Culling/OcclusionQuery.h/cpp`
+- `Engine/Graphics/CommandBuffer/CommandBuffer.h/cpp`
 - `Engine/Graphics/Instanced/InstancedRenderer.h/cpp`
 - `Engine/Graphics/Performance/GPUTimer.h/cpp`
 
