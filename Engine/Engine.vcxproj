@@ -96,6 +96,9 @@
   <ItemGroup>
     <ClInclude Include="Assets\StaticMesh.h" />
     <ClInclude Include="Assets\StaticMeshComponent.h" />
+    <ClInclude Include="Assets\Skeleton.h" />
+    <ClInclude Include="Assets\Animation.h" />
+    <ClInclude Include="Assets\AnimationInstance.h" />
     <ClInclude Include="Core\Engine.h" />
     <ClInclude Include="Graphics\Camera.h" />
     <ClInclude Include="Graphics\GraphicsDevice.h" />
@@ -123,6 +126,9 @@
   <ItemGroup>
     <ClCompile Include="Assets\StaticMesh.cpp" />
     <ClCompile Include="Assets\StaticMeshComponent.cpp" />
+    <ClCompile Include="Assets\Skeleton.cpp" />
+    <ClCompile Include="Assets\Animation.cpp" />
+    <ClCompile Include="Assets\AnimationInstance.cpp" />
     <ClCompile Include="Core\Engine.cpp" />
     <ClCompile Include="Graphics\Camera.cpp" />
     <ClCompile Include="Graphics\GraphicsDevice.cpp" />
