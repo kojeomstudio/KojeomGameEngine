@@ -120,6 +120,9 @@
     <ClInclude Include="Graphics\Instanced\InstancedRenderer.h" />
     <ClInclude Include="Graphics\Performance\GPUTimer.h" />
     <ClInclude Include="Graphics\SSAO\SSAO.h" />
+    <ClInclude Include="Graphics\SSR\SSR.h" />
+    <ClInclude Include="Graphics\TAA\TAA.h" />
+    <ClInclude Include="Graphics\Volumetric\VolumetricFog.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Scene\SceneManager.h" />
@@ -155,6 +158,9 @@
     <ClCompile Include="Graphics\Instanced\InstancedRenderer.cpp" />
     <ClCompile Include="Graphics\Performance\GPUTimer.cpp" />
     <ClCompile Include="Graphics\SSAO\SSAO.cpp" />
+    <ClCompile Include="Graphics\SSR\SSR.cpp" />
+    <ClCompile Include="Graphics\TAA\TAA.cpp" />
+    <ClCompile Include="Graphics\Volumetric\VolumetricFog.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Scene\SceneManager.cpp" />

@@ -8,11 +8,32 @@ HRESULT KDeferredRenderer::Initialize(ID3D11Device* Device, UINT32 Width, UINT32
         return E_INVALIDARG;
     }
 
-    HRESULT hr = GBuffer.Initialize(Device, Width, Height);
+    HRESULT     hr = GBuffer.Initialize(Device, Width, Height);
     if (FAILED(hr))
     {
         LOG_ERROR("DeferredRenderer: Failed to initialize GBuffer");
         return hr;
+    }
+
+    D3D11_TEXTURE2D_DESC lightingTexDesc = {};
+    lightingTexDesc.Width = Width;
+    lightingTexDesc.Height = Height;
+    lightingTexDesc.MipLevels = 1;
+    lightingTexDesc.ArraySize = 1;
+    lightingTexDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    lightingTexDesc.SampleDesc.Count = 1;
+    lightingTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    lightingTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    hr = Device->CreateTexture2D(&lightingTexDesc, nullptr, &LightingOutputTexture);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("DeferredRenderer: Failed to create lighting output texture");
+    }
+    else
+    {
+        Device->CreateRenderTargetView(LightingOutputTexture.Get(), nullptr, &LightingOutputRTV);
+        Device->CreateShaderResourceView(LightingOutputTexture.Get(), nullptr, &LightingOutputSRV);
     }
 
     hr = CreateGeometryPassShader(Device);
@@ -72,6 +93,9 @@ HRESULT KDeferredRenderer::Initialize(ID3D11Device* Device, UINT32 Width, UINT32
 void KDeferredRenderer::Cleanup()
 {
     GBuffer.Cleanup();
+    LightingOutputTexture.Reset();
+    LightingOutputRTV.Reset();
+    LightingOutputSRV.Reset();
     GeometryPassShader.reset();
     LightingPassShader.reset();
     ForwardTransparentShader.reset();
@@ -471,6 +495,13 @@ void KDeferredRenderer::RenderLightingPass(ID3D11DeviceContext* Context, KCamera
     if (!LightingPassShader || !FullscreenQuadMesh)
         return;
 
+    if (LightingOutputRTV)
+    {
+        float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        Context->ClearRenderTargetView(LightingOutputRTV.Get(), clearColor);
+        Context->OMSetRenderTargets(1, &LightingOutputRTV, nullptr);
+    }
+
     Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     
     LightingPassShader->Bind(Context);
@@ -493,6 +524,12 @@ void KDeferredRenderer::RenderLightingPass(ID3D11DeviceContext* Context, KCamera
     
     ID3D11ShaderResourceView* NullSRVs[4] = { nullptr, nullptr, nullptr, nullptr };
     Context->PSSetShaderResources(0, 4, NullSRVs);
+
+    if (LightingOutputRTV)
+    {
+        ID3D11RenderTargetView* nullRTV = nullptr;
+        Context->OMSetRenderTargets(1, &nullRTV, nullptr);
+    }
     
     LightingPassShader->Unbind(Context);
 }

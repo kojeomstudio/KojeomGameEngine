@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-7 (SSAO Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-10 (SSR, TAA, VolumetricFog Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -52,6 +52,90 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 #### New Files
 
 - `Engine/Graphics/SSAO/SSAO.h/cpp`
+
+---
+
+### Phase 8: Screen Space Reflections
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-02
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| SSR ray marching | ✅ | Ray marching with depth buffer for hit detection |
+| Fresnel effect | ✅ | Fresnel-Schlick approximation for realistic reflections |
+| Edge fade | ✅ | Screen edge fade factor for smooth boundaries |
+| Renderer integration | ✅ | KSSR class with Deferred rendering support |
+
+#### Implementation Notes
+
+- **KSSR**: Full SSR system with configurable parameters
+- **Ray Marching**: Step-based ray marching with thickness check
+- **Fresnel**: Fresnel-Schlick approximation for reflection intensity
+- **Integration**: Works with Deferred rendering pipeline
+
+#### New Files
+
+- `Engine/Graphics/SSR/SSR.h/cpp`
+
+---
+
+### Phase 9: Temporal Anti-Aliasing
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-02
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| History buffer | ✅ | Double-buffered history textures |
+| TAA shader | ✅ | Temporal reprojection and blending |
+| YCoCg clipping | ✅ | Color space clipping for ghosting reduction |
+| Sharpening | ✅ | Optional sharpening pass |
+
+#### Implementation Notes
+
+- **KTAA**: Full TAA system with history management
+- **YCoCg**: Color space conversion for better ghosting reduction
+- **Sharpening**: Optional post-TAA sharpening
+- **Integration**: Works with Deferred rendering pipeline
+
+#### New Files
+
+- `Engine/Graphics/TAA/TAA.h/cpp`
+
+---
+
+### Phase 10: Volumetric Fog
+
+**Status**: ✅ Completed
+**Priority**: Medium
+**Completion Date**: 2026-03-02
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Height fog | ✅ | Exponential height-based fog density |
+| Volumetric lighting | ✅ | In-scattering with light contribution |
+| Ray marching | ✅ | Step-based fog computation |
+| Henyey-Greenstein phase | ✅ | Anisotropic scattering |
+
+#### Implementation Notes
+
+- **KVolumetricFog**: Full volumetric fog system
+- **Height Fog**: Exponential density falloff with height
+- **In-Scattering**: Volumetric light contribution with phase function
+- **Integration**: Works with Deferred rendering pipeline
+
+#### New Files
+
+- `Engine/Graphics/Volumetric/VolumetricFog.h/cpp`
 
 ---
 
@@ -677,6 +761,12 @@ Engine/
 │   │   └── GPUTimer.h/cpp
 │   ├── SSAO/
 │   │   └── SSAO.h/cpp
+│   ├── SSR/
+│   │   └── SSR.h/cpp
+│   ├── TAA/
+│   │   └── TAA.h/cpp
+│   ├── Volumetric/
+│   │   └── VolumetricFog.h/cpp
 │   ├── Material.h/cpp
 │   └── ...
 ├── Assets/

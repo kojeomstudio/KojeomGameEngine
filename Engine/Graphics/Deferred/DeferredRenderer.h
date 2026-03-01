@@ -85,6 +85,8 @@ public:
     void ClearAllLights();
 
     KGBuffer* GetGBuffer() { return &GBuffer; }
+    ID3D11ShaderResourceView* GetLightingOutputSRV() const { return LightingOutputSRV.Get(); }
+    ID3D11RenderTargetView* GetLightingOutputRTV() const { return LightingOutputRTV.Get(); }
     bool IsInitialized() const { return bInitialized; }
 
     HRESULT Resize(ID3D11Device* Device, UINT32 NewWidth, UINT32 NewHeight);
@@ -105,6 +107,10 @@ private:
 
 private:
     KGBuffer GBuffer;
+
+    ComPtr<ID3D11Texture2D> LightingOutputTexture;
+    ComPtr<ID3D11RenderTargetView> LightingOutputRTV;
+    ComPtr<ID3D11ShaderResourceView> LightingOutputSRV;
 
     std::shared_ptr<KShaderProgram> GeometryPassShader;
     std::shared_ptr<KShaderProgram> LightingPassShader;

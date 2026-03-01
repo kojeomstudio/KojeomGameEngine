@@ -18,6 +18,9 @@
 #include "Instanced/InstancedRenderer.h"
 #include "Performance/GPUTimer.h"
 #include "SSAO/SSAO.h"
+#include "SSR/SSR.h"
+#include "TAA/TAA.h"
+#include "Volumetric/VolumetricFog.h"
 
 enum class ERenderPath
 {
@@ -152,6 +155,21 @@ public:
     KSSAO* GetSSAO() { return &SSAO; }
     void ComputeSSAO();
 
+    void SetSSREnabled(bool bEnabled);
+    bool IsSSREnabled() const { return bSSREnabled && SSR.IsInitialized(); }
+    KSSR* GetSSR() { return &SSR; }
+    void ComputeSSR();
+
+    void SetTAAEnabled(bool bEnabled);
+    bool IsTAAEnabled() const { return bTAAEnabled && TAA.IsInitialized(); }
+    KTAA* GetTAA() { return &TAA; }
+    void ApplyTAA();
+
+    void SetVolumetricFogEnabled(bool bEnabled);
+    bool IsVolumetricFogEnabled() const { return bVolumetricFogEnabled && VolumetricFog.IsInitialized(); }
+    KVolumetricFog* GetVolumetricFog() { return &VolumetricFog; }
+    void ComputeVolumetricFog();
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -203,9 +221,15 @@ private:
     KGPUTimer GPUTimer;
     KOcclusionCuller OcclusionCuller;
     KSSAO SSAO;
+    KSSR SSR;
+    KTAA TAA;
+    KVolumetricFog VolumetricFog;
     bool bOcclusionCullingEnabled = false;
     bool bCommandBufferEnabled = true;
     bool bSSAOEnabled = false;
+    bool bSSREnabled = false;
+    bool bTAAEnabled = false;
+    bool bVolumetricFogEnabled = false;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;

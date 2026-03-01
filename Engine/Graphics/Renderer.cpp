@@ -332,6 +332,9 @@ void KRenderer::Cleanup()
     LOG_INFO("Cleaning up Renderer...");
 
     SSAO.Cleanup();
+    SSR.Cleanup();
+    TAA.Cleanup();
+    VolumetricFog.Cleanup();
     CommandBuffer.Cleanup();
     OcclusionCuller.Cleanup();
     GPUTimer.Cleanup();
@@ -631,6 +634,39 @@ HRESULT KRenderer::InitializeDefaultResources()
     {
         bSSAOEnabled = false;
         LOG_INFO("SSAO initialized successfully");
+    }
+
+    hr = SSR.Initialize(Device, GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+    if (FAILED(hr))
+    {
+        LOG_WARNING("SSR initialization failed");
+    }
+    else
+    {
+        bSSREnabled = false;
+        LOG_INFO("SSR initialized successfully");
+    }
+
+    hr = TAA.Initialize(Device, GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+    if (FAILED(hr))
+    {
+        LOG_WARNING("TAA initialization failed");
+    }
+    else
+    {
+        bTAAEnabled = false;
+        LOG_INFO("TAA initialized successfully");
+    }
+
+    hr = VolumetricFog.Initialize(Device, GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Volumetric Fog initialization failed");
+    }
+    else
+    {
+        bVolumetricFogEnabled = false;
+        LOG_INFO("Volumetric Fog initialized successfully");
     }
 
     LOG_INFO("Default resources initialized successfully");
@@ -957,5 +993,126 @@ void KRenderer::ComputeSSAO()
         GBuffer->GetDepthSRV(),
         CurrentCamera->GetProjectionMatrix(),
         CurrentCamera->GetViewMatrix()
+    );
+}
+
+void KRenderer::SetSSREnabled(bool bEnabled)
+{
+    if (bEnabled && !SSR.IsInitialized())
+    {
+        LOG_WARNING("Cannot enable SSR: SSR system not initialized");
+        return;
+    }
+    bSSREnabled = bEnabled;
+}
+
+void KRenderer::ComputeSSR()
+{
+    if (!bSSREnabled || !SSR.IsInitialized() || !DeferredRenderer.IsInitialized())
+    {
+        return;
+    }
+
+    if (CurrentRenderPath != ERenderPath::Deferred)
+    {
+        return;
+    }
+
+    KGBuffer* GBuffer = DeferredRenderer.GetGBuffer();
+    if (!GBuffer)
+    {
+        return;
+    }
+
+    SSR.ComputeSSR(
+        GraphicsDevice->GetContext(),
+        DeferredRenderer.GetLightingOutputSRV(),
+        GBuffer->GetNormalRoughnessSRV(),
+        GBuffer->GetPositionAOSRV(),
+        GBuffer->GetDepthSRV(),
+        CurrentCamera->GetProjectionMatrix(),
+        CurrentCamera->GetViewMatrix()
+    );
+}
+
+void KRenderer::SetTAAEnabled(bool bEnabled)
+{
+    if (bEnabled && !TAA.IsInitialized())
+    {
+        LOG_WARNING("Cannot enable TAA: TAA system not initialized");
+        return;
+    }
+    bTAAEnabled = bEnabled;
+}
+
+void KRenderer::ApplyTAA()
+{
+    if (!bTAAEnabled || !TAA.IsInitialized() || !DeferredRenderer.IsInitialized())
+    {
+        return;
+    }
+
+    if (CurrentRenderPath != ERenderPath::Deferred)
+    {
+        return;
+    }
+
+    KGBuffer* GBuffer = DeferredRenderer.GetGBuffer();
+    if (!GBuffer)
+    {
+        return;
+    }
+
+    static XMMATRIX PreviousViewProjection = XMMatrixIdentity();
+    XMMATRIX CurrentViewProjection = CurrentCamera->GetViewMatrix() * CurrentCamera->GetProjectionMatrix();
+
+    TAA.ApplyTAA(
+        GraphicsDevice->GetContext(),
+        DeferredRenderer.GetLightingOutputSRV(),
+        GBuffer->GetPositionAOSRV(),
+        GBuffer->GetDepthSRV(),
+        CurrentViewProjection,
+        PreviousViewProjection
+    );
+
+    PreviousViewProjection = CurrentViewProjection;
+}
+
+void KRenderer::SetVolumetricFogEnabled(bool bEnabled)
+{
+    if (bEnabled && !VolumetricFog.IsInitialized())
+    {
+        LOG_WARNING("Cannot enable Volumetric Fog: Volumetric Fog system not initialized");
+        return;
+    }
+    bVolumetricFogEnabled = bEnabled;
+}
+
+void KRenderer::ComputeVolumetricFog()
+{
+    if (!bVolumetricFogEnabled || !VolumetricFog.IsInitialized() || !DeferredRenderer.IsInitialized())
+    {
+        return;
+    }
+
+    if (CurrentRenderPath != ERenderPath::Deferred)
+    {
+        return;
+    }
+
+    KGBuffer* GBuffer = DeferredRenderer.GetGBuffer();
+    if (!GBuffer || !CurrentCamera)
+    {
+        return;
+    }
+
+    VolumetricFog.ComputeFog(
+        GraphicsDevice->GetContext(),
+        GBuffer->GetDepthSRV(),
+        GBuffer->GetPositionAOSRV(),
+        CurrentCamera->GetViewMatrix(),
+        CurrentCamera->GetProjectionMatrix(),
+        XMMatrixInverse(nullptr, CurrentCamera->GetProjectionMatrix()),
+        CurrentCamera->GetPosition()
     );
 } 

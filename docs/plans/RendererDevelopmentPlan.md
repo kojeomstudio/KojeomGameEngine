@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 7 Completed
+- **Status**: Phase 10 Completed
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-02
 
@@ -399,6 +399,152 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 1. Compute SSAO using Normal, Position, Depth from G-Buffer
 2. Apply separable Gaussian blur (horizontal + vertical)
 3. Output to lighting pass or apply to final image
+
+---
+
+### Phase 8: Screen Space Reflections
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| SSR ray marching | ✅ | | Ray marching with depth buffer |
+| Fresnel effect | ✅ | | Fresnel-Schlick approximation |
+| Edge fade | ✅ | | Screen edge fade factor |
+| Renderer integration | ✅ | | KSSR class with Deferred rendering support |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/SSR/SSR.h/cpp` - SSR system with ray marching
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Added SSR integration
+- `Engine/Graphics/Deferred/DeferredRenderer.h/cpp` - Added lighting output texture
+- `Engine/Engine.vcxproj` - Added SSR files
+
+**Features:**
+- Ray marching based reflections
+- Fresnel effect for realistic reflections
+- Edge fade for smooth screen boundaries
+- Configurable parameters (MaxDistance, Intensity, EdgeFade, FresnelPower)
+- Integration with Deferred rendering pipeline
+
+#### Technical Details
+
+**SSR Parameters:**
+- MaxDistance: 100.0f (maximum ray march distance)
+- Resolution: 0.5f (resolution scale)
+- Thickness: 0.5f (object thickness for hit detection)
+- StepCount: 32 (ray march steps)
+- MaxSteps: 64 (maximum iterations)
+- EdgeFade: 0.1f (screen edge fade factor)
+- FresnelPower: 3.0f (fresnel effect power)
+- Intensity: 1.0f (reflection intensity)
+
+**Render Targets:**
+- SSR Texture: R16G16B16A16_FLOAT format
+- Combined Texture: R16G16B16A16_FLOAT format
+
+---
+
+### Phase 9: Temporal Anti-Aliasing
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| History buffer | ✅ | | Double-buffered history textures |
+| TAA shader | ✅ | | Temporal reprojection and blending |
+| YCoCg clipping | ✅ | | Color space clipping for ghosting reduction |
+| Sharpening | ✅ | | Optional sharpening pass |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/TAA/TAA.h/cpp` - TAA system with history management
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Added TAA integration
+- `Engine/Engine.vcxproj` - Added TAA files
+
+**Features:**
+- Double-buffered history for temporal accumulation
+- YCoCg color space clipping to reduce ghosting
+- Velocity buffer support for motion-aware blending
+- Optional sharpening pass
+- Configurable blend factor and feedback parameters
+
+#### Technical Details
+
+**TAA Parameters:**
+- BlendFactor: 0.1f (base blend factor)
+- FeedbackMin: 0.88f (minimum feedback)
+- FeedbackMax: 0.97f (maximum feedback)
+- MotionBlurScale: 1.0f (motion blur scale)
+- SharpenStrength: 0.5f (sharpening strength)
+
+**Render Targets:**
+- History Textures: 2x R16G16B16A16_FLOAT format (double-buffered)
+- Output Texture: R16G16B16A16_FLOAT format
+
+---
+
+### Phase 10: Volumetric Fog
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-02  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| Height fog | ✅ | | Exponential height-based fog |
+| Volumetric lighting | ✅ | | In-scattering with light contribution |
+| Ray marching | ✅ | | Step-based fog computation |
+| Henyey-Greenstein phase | ✅ | | Anisotropic scattering |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/Volumetric/VolumetricFog.h/cpp` - Volumetric fog system
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Added VolumetricFog integration
+- `Engine/Engine.vcxproj` - Added VolumetricFog files
+
+**Features:**
+- Height-based exponential fog density
+- Volumetric light in-scattering
+- Henyey-Greenstein phase function for anisotropic scattering
+- Configurable fog color, density, and height falloff
+- Point light integration for light shafts
+
+#### Technical Details
+
+**Fog Parameters:**
+- Density: 0.01f (base fog density)
+- HeightFalloff: 0.1f (height-based density falloff)
+- HeightBase: 0.0f (base height for fog)
+- Scattering: 0.5f (in-scattering coefficient)
+- Extinction: 0.01f (extinction coefficient)
+- Anisotropy: 0.2f (phase function anisotropy)
+- StepCount: 64 (ray march steps)
+- MaxDistance: 100.0f (maximum fog distance)
+
+**Render Targets:**
+- Fog Texture: R16G16B16A16_FLOAT format
+- Fog Output: R16G16B16A16_FLOAT format
+- Combined Texture: R16G16B16A16_FLOAT format
 
 ---
 
