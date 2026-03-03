@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 12 Completed
+- **Status**: Phase 13 Completed
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-02
 
@@ -655,6 +655,65 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+### Phase 13: Particle System
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-03  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| Particle structure | ✅ | | FParticle struct with position, velocity, color, size |
+| Particle emitter | ✅ | | KParticleEmitter with emission shapes |
+| Particle shader | ✅ | | Billboard rendering with additive blending |
+| Texture atlas support | ✅ | | Animated textures support |
+| Renderer integration | ✅ | | Works with existing render pipeline |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/Particle/ParticleEmitter.h/cpp` - Particle system with emission shapes
+
+**Modified Files:**
+- `Engine/Engine.vcxproj` - Added Particle files
+
+**Features:**
+- Multiple emission shapes (Point, Sphere, Cone, Box)
+- Configurable particle parameters (lifetime, size, color over time)
+- Gravity and velocity simulation
+- Billboard rendering with rotation
+- Additive blending for fire/smoke effects
+- Texture atlas support for animated particles
+- Burst emission support
+
+#### Technical Details
+
+**Particle Parameters:**
+- MaxParticles: 1000 (configurable)
+- EmitRate: 10 particles per second
+- Lifetime: Min/Max range
+- Speed: Min/Max range
+- Size: Min/Max range with interpolation
+- Color: Start/End color interpolation
+- Gravity: Physics simulation
+- SpreadAngle: Direction variation
+
+**Emitter Shapes:**
+- Point: Single emission point
+- Sphere: Volume or shell emission
+- Cone: Directional cone shape
+- Box: 3D box volume
+
+**Rendering:**
+- Dynamic vertex buffer for particles
+- Billboard geometry in vertex shader
+- Additive blending state
+- Depth test without depth write
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template
@@ -795,6 +854,8 @@ Engine/Graphics/
 │   └── VolumetricFog.h/cpp
 ├── SSGI/                       # Screen Space Global Illumination (Implemented)
 │   └── SSGI.h/cpp
+├── Particle/                   # Particle System (Implemented)
+│   └── ParticleEmitter.h/cpp
 └── Performance/                # GPU performance (Implemented)
     └── GPUTimer.h/cpp
 ```

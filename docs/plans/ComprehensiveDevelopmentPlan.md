@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-12 (SSGI Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-13 (Particle System Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -195,6 +195,35 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 #### New Files
 
 - `Engine/Graphics/SSGI/SSGI.h/cpp`
+
+---
+
+### Phase 13: Particle System
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-03
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Particle structure | ✅ | FParticle struct with position, velocity, color, size |
+| Particle emitter | ✅ | KParticleEmitter with emission shapes |
+| Particle shader | ✅ | Billboard rendering with additive blending |
+| Texture atlas support | ✅ | Animated textures support |
+
+#### Implementation Notes
+
+- **KParticleEmitter**: Full particle system with configurable parameters
+- **Emission Shapes**: Point, Sphere, Cone, Box
+- **Billboard Rendering**: Particles always face camera
+- **Additive Blending**: Fire/smoke effects
+- **Texture Atlas**: Animated particle textures
+
+#### New Files
+
+- `Engine/Graphics/Particle/ParticleEmitter.h/cpp`
 
 ---
 
@@ -828,6 +857,8 @@ Engine/
 │   │   └── VolumetricFog.h/cpp
 │   ├── SSGI/
 │   │   └── SSGI.h/cpp
+│   ├── Particle/
+│   │   └── ParticleEmitter.h/cpp
 │   ├── Material.h/cpp
 │   └── ...
 ├── Assets/
