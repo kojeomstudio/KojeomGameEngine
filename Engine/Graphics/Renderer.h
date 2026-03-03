@@ -21,6 +21,7 @@
 #include "SSR/SSR.h"
 #include "TAA/TAA.h"
 #include "Volumetric/VolumetricFog.h"
+#include "SSGI/SSGI.h"
 
 enum class ERenderPath
 {
@@ -170,6 +171,11 @@ public:
     KVolumetricFog* GetVolumetricFog() { return &VolumetricFog; }
     void ComputeVolumetricFog();
 
+    void SetSSGIEnabled(bool bEnabled);
+    bool IsSSGIEnabled() const { return bSSGIEnabled && SSGI.IsInitialized(); }
+    KSSGI* GetSSGI() { return &SSGI; }
+    void ComputeSSGI();
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -224,12 +230,14 @@ private:
     KSSR SSR;
     KTAA TAA;
     KVolumetricFog VolumetricFog;
+    KSSGI SSGI;
     bool bOcclusionCullingEnabled = false;
     bool bCommandBufferEnabled = true;
     bool bSSAOEnabled = false;
     bool bSSREnabled = false;
     bool bTAAEnabled = false;
     bool bVolumetricFogEnabled = false;
+    bool bSSGIEnabled = false;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;

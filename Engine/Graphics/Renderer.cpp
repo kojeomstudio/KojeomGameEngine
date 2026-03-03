@@ -1115,4 +1115,58 @@ void KRenderer::ComputeVolumetricFog()
         XMMatrixInverse(nullptr, CurrentCamera->GetProjectionMatrix()),
         CurrentCamera->GetPosition()
     );
+}
+
+void KRenderer::SetSSGIEnabled(bool bEnabled)
+{
+    if (bEnabled && !SSGI.IsInitialized())
+    {
+        if (GraphicsDevice && DeferredRenderer.IsInitialized())
+        {
+            UINT32 width = GraphicsDevice->GetWidth();
+            UINT32 height = GraphicsDevice->GetHeight();
+            HRESULT hr = SSGI.Initialize(GraphicsDevice->GetDevice(), width, height);
+            if (FAILED(hr))
+            {
+                LOG_ERROR("Failed to initialize SSGI system");
+                return;
+            }
+            LOG_INFO("SSGI system initialized");
+        }
+        else
+        {
+            LOG_WARNING("Cannot enable SSGI: System not initialized");
+            return;
+        }
+    }
+    bSSGIEnabled = bEnabled;
+}
+
+void KRenderer::ComputeSSGI()
+{
+    if (!bSSGIEnabled || !SSGI.IsInitialized() || !DeferredRenderer.IsInitialized())
+    {
+        return;
+    }
+
+    if (CurrentRenderPath != ERenderPath::Deferred)
+    {
+        return;
+    }
+
+    KGBuffer* GBuffer = DeferredRenderer.GetGBuffer();
+    if (!GBuffer || !CurrentCamera)
+    {
+        return;
+    }
+
+    SSGI.ComputeSSGI(
+        GraphicsDevice->GetContext(),
+        GBuffer->GetNormalRoughnessSRV(),
+        GBuffer->GetPositionAOSRV(),
+        GBuffer->GetDepthSRV(),
+        GBuffer->GetAlbedoMetallicSRV(),
+        CurrentCamera->GetProjectionMatrix(),
+        CurrentCamera->GetViewMatrix()
+    );
 } 

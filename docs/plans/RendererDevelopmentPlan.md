@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 11 Completed
+- **Status**: Phase 12 Completed
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-02
 
@@ -598,6 +598,63 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+### Phase 12: Screen Space Global Illumination
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-03  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| SSGI kernel generation | ✅ | | 16 samples with hemisphere distribution |
+| Noise texture generation | ✅ | | 4x4 random rotation texture |
+| SSGI shader | ✅ | | Ray marching with indirect lighting |
+| Blur shader | ✅ | | Separable Gaussian blur for SSGI |
+| Renderer integration | ✅ | | KSSGI class with Deferred rendering support |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/SSGI/SSGI.h/cpp` - SSGI system with kernel and noise generation
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Added SSGI integration
+- `Engine/Engine.vcxproj` - Added SSGI files
+
+**Features:**
+- 16-sample SSGI kernel with hemisphere distribution
+- 4x4 random rotation noise texture
+- Configurable radius, intensity, and falloff parameters
+- Separable Gaussian blur for smoothing
+- Integration with Deferred rendering pipeline
+- Real-time toggle and parameter adjustment
+
+#### Technical Details
+
+**SSGI Parameters:**
+- Radius: 0.5f (sample search radius)
+- Intensity: 1.0f (indirect lighting intensity)
+- SampleCount: 16 (number of samples to use)
+- MaxSteps: 32 (maximum ray march steps)
+- Thickness: 0.5f (object thickness for hit detection)
+- Falloff: 1.0f (distance falloff power)
+- TemporalBlend: 0.9f (temporal accumulation blend)
+- BlurStrength: 1.0f (blur intensity)
+
+**Render Targets:**
+- SSGI Texture: R16G16B16A16_FLOAT format
+- Blurred Output: R16G16B16A16_FLOAT format (ping-pong)
+- History Texture: R16G16B16A16_FLOAT format (temporal)
+
+**Shader Pipeline:**
+1. Compute SSGI using Normal, Position, Depth, Albedo from G-Buffer
+2. Apply separable Gaussian blur (horizontal + vertical)
+3. Output indirect lighting contribution
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template
@@ -728,8 +785,16 @@ Engine/Graphics/
 │   └── CommandBuffer.h/cpp
 ├── Instanced/                  # Instanced rendering (Implemented)
 │   └── InstancedRenderer.h/cpp
-├── SSAO/                        # Screen Space Ambient Occlusion (Implemented)
+├── SSAO/                       # Screen Space Ambient Occlusion (Implemented)
 │   └── SSAO.h/cpp
+├── SSR/                        # Screen Space Reflections (Implemented)
+│   └── SSR.h/cpp
+├── TAA/                        # Temporal Anti-Aliasing (Implemented)
+│   └── TAA.h/cpp
+├── Volumetric/                 # Volumetric Fog (Implemented)
+│   └── VolumetricFog.h/cpp
+├── SSGI/                       # Screen Space Global Illumination (Implemented)
+│   └── SSGI.h/cpp
 └── Performance/                # GPU performance (Implemented)
     └── GPUTimer.h/cpp
 ```

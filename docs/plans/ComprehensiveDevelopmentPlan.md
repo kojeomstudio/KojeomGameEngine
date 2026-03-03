@@ -7,7 +7,7 @@
 - **Status**: Completed
 - **Base Commit**: fe09afb
 - **Priority**: Renderer First
-- **Last Updated**: 2026-03-02
+- **Last Updated**: 2026-03-03
 
 ## Overview
 
@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-11 (CSM Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-12 (SSGI Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -165,6 +165,36 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 - `Engine/Graphics/Shadow/CascadedShadowMap.h/cpp`
 - `Engine/Graphics/Shadow/CascadedShadowRenderer.h/cpp`
+
+---
+
+### Phase 12: Screen Space Global Illumination
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-03
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| SSGI kernel generation | ✅ | 16 samples with hemisphere distribution |
+| Noise texture generation | ✅ | 4x4 random rotation texture |
+| SSGI shader | ✅ | Ray marching with indirect lighting |
+| Blur shader | ✅ | Separable Gaussian blur for SSGI |
+| Renderer integration | ✅ | KSSGI class with Deferred rendering support |
+
+#### Implementation Notes
+
+- **KSSGI**: Full SSGI system with configurable parameters
+- **SSGI Kernel**: 16-sample hemisphere distribution with randomization
+- **Noise Texture**: 4x4 rotation texture for random sample rotation
+- **Blur**: Separable Gaussian blur for smooth GI results
+- **Integration**: Works with Deferred rendering pipeline
+
+#### New Files
+
+- `Engine/Graphics/SSGI/SSGI.h/cpp`
 
 ---
 
@@ -796,6 +826,8 @@ Engine/
 │   │   └── TAA.h/cpp
 │   ├── Volumetric/
 │   │   └── VolumetricFog.h/cpp
+│   ├── SSGI/
+│   │   └── SSGI.h/cpp
 │   ├── Material.h/cpp
 │   └── ...
 ├── Assets/

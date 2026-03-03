@@ -125,6 +125,7 @@
     <ClInclude Include="Graphics\SSR\SSR.h" />
     <ClInclude Include="Graphics\TAA\TAA.h" />
     <ClInclude Include="Graphics\Volumetric\VolumetricFog.h" />
+    <ClInclude Include="Graphics\SSGI\SSGI.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Scene\SceneManager.h" />
@@ -165,6 +166,7 @@
     <ClCompile Include="Graphics\SSR\SSR.cpp" />
     <ClCompile Include="Graphics\TAA\TAA.cpp" />
     <ClCompile Include="Graphics\Volumetric\VolumetricFog.cpp" />
+    <ClCompile Include="Graphics\SSGI\SSGI.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Scene\SceneManager.cpp" />
