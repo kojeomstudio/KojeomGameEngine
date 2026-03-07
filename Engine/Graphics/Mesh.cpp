@@ -147,6 +147,31 @@ HRESULT KMesh::InitializeFromBuffer(ID3D11Buffer* InVertexBuffer, UINT32 InVerte
     return S_OK;
 }
 
+HRESULT KMesh::InitializeFromBuffers(ID3D11Device* Device,
+                                      ID3D11Buffer* InVertexBuffer, ID3D11Buffer* InIndexBuffer,
+                                      UINT32 InVertexCount, UINT32 InIndexCount, UINT32 InVertexStride)
+{
+    if (!Device || !InVertexBuffer || InVertexCount == 0)
+    {
+        LOG_ERROR("Invalid parameters for InitializeFromBuffers");
+        return E_INVALIDARG;
+    }
+
+    VertexBuffer = InVertexBuffer;
+    IndexBuffer = InIndexBuffer;
+    VertexCount = InVertexCount;
+    IndexCount = InIndexCount;
+
+    HRESULT hr = CreateConstantBuffer(Device);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create constant buffer for terrain mesh");
+        return hr;
+    }
+
+    return S_OK;
+}
+
 // Static factory methods implementation
 
 std::unique_ptr<KMesh> KMesh::CreateTriangle(ID3D11Device* Device)

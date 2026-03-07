@@ -66,6 +66,10 @@ public:
 
     HRESULT InitializeFromBuffer(ID3D11Buffer* InVertexBuffer, UINT32 InVertexCount, UINT32 InVertexStride);
 
+    HRESULT InitializeFromBuffers(ID3D11Device* Device, 
+                                   ID3D11Buffer* InVertexBuffer, ID3D11Buffer* InIndexBuffer,
+                                   UINT32 InVertexCount, UINT32 InIndexCount, UINT32 InVertexStride);
+
     /**
      * @brief Render the mesh
      * @param Context DirectX 11 device context

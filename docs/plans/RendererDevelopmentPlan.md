@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 17 Completed
+- **Status**: Phase 18 Completed
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-07
 
@@ -946,6 +946,60 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+### Phase 18: Terrain System
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-07  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| Height map generation | ✅ | | Perlin noise, raw file loading |
+| Terrain mesh generation | ✅ | | FTerrainVertex with position, normal, texcoord |
+| LOD system | ✅ | | Up to 4 LOD levels with distance-based switching |
+| TerrainComponent | ✅ | | KTerrainComponent for scene integration |
+| Splat layer support | ✅ | | FSplatLayer with diffuse/normal textures |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/Terrain/Terrain.h/cpp` - Terrain system with height map and LOD
+
+**Modified Files:**
+- `Engine/Graphics/Mesh.h/cpp` - Added InitializeFromBuffers method
+- `Engine/Engine.vcxproj` - Added Terrain files
+
+**Features:**
+- KHeightMap: Height map loading (raw files) and procedural generation (Perlin noise)
+- KTerrain: Terrain mesh with configurable resolution, scale, and height scale
+- LOD System: Up to 4 LOD levels with configurable distances
+- Height queries: GetHeightAtWorldPosition for collision/physics integration
+- Normal queries: GetNormalAtWorldPosition for terrain-aligned objects
+- Splat layers: Support for multiple terrain textures
+
+#### Technical Details
+
+**Terrain Configuration:**
+- Resolution: 128 (default, configurable)
+- Scale: 1.0f (vertex spacing)
+- HeightScale: 50.0f (max height multiplier)
+- TextureScale: 1.0f (UV tiling)
+- LODCount: 4 (number of LOD levels)
+- LODDistances: [50, 100, 200, 400] (distance thresholds)
+
+**Height Map Generation:**
+- Perlin noise with configurable octaves and persistence
+- Smooth filtering for natural terrain
+- Bilinear interpolation for smooth height queries
+
+**Render Targets:**
+- Vertex Buffer: FTerrainVertex (Position, Normal, TexCoord, Tangent, Bitangent)
+- Index Buffer: 32-bit indices for terrain triangles
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template
@@ -1097,4 +1151,7 @@ Engine/Graphics/
 
 Engine/DebugUI/
 └── DebugUI.h/cpp               # Debug UI system (Implemented)
+
+Engine/Graphics/Terrain/
+└── Terrain.h/cpp               # Terrain system (Implemented)
 ```

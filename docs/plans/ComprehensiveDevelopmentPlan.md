@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-13 (Particle System Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-18 (Terrain System Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -224,6 +224,36 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 #### New Files
 
 - `Engine/Graphics/Particle/ParticleEmitter.h/cpp`
+
+---
+
+### Phase 18: Terrain System
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-07
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Height map generation | ✅ | Perlin noise, raw file loading |
+| Terrain mesh generation | ✅ | FTerrainVertex with position, normal, texcoord |
+| LOD system | ✅ | Up to 4 LOD levels with distance-based switching |
+| TerrainComponent | ✅ | KTerrainComponent for scene integration |
+| Splat layer support | ✅ | FSplatLayer with diffuse/normal textures |
+
+#### Implementation Notes
+
+- **KHeightMap**: Height map loading and procedural generation
+- **KTerrain**: Terrain mesh with LOD support
+- **KTerrainComponent**: Actor component for scene integration
+- **LOD System**: Configurable LOD distances for performance
+- **Height Queries**: GetHeightAtWorldPosition for physics integration
+
+#### New Files
+
+- `Engine/Graphics/Terrain/Terrain.h/cpp`
 
 ---
 
