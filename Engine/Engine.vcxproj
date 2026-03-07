@@ -134,6 +134,7 @@
     <ClInclude Include="DebugUI\DebugUI.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Graphics\Terrain\Terrain.h" />
+    <ClInclude Include="Graphics\Water\Water.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Scene\SceneManager.h" />
     <ClInclude Include="Serialization\BinaryArchive.h" />
@@ -182,6 +183,7 @@
     <ClCompile Include="DebugUI\DebugUI.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Graphics\Terrain\Terrain.cpp" />
+    <ClCompile Include="Graphics\Water\Water.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Scene\SceneManager.cpp" />
     <ClCompile Include="Serialization\BinaryArchive.cpp" />

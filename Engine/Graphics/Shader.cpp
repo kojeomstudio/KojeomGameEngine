@@ -1530,3 +1530,230 @@ HRESULT KShaderProgram::CreateSkinnedShader(ID3D11Device* Device)
     LOG_INFO("Skinned mesh shader creation completed");
     return S_OK;
 }
+
+HRESULT KShaderProgram::CreateWaterShader(ID3D11Device* Device)
+{
+    const std::string ShaderSource = R"(
+        cbuffer WaterBuffer : register(b0)
+        {
+            matrix World;
+            matrix View;
+            matrix Projection;
+            matrix ReflectionView;
+            
+            float4 DeepColor;
+            float4 ShallowColor;
+            float4 FoamColor;
+            float4 CameraPosition;
+            
+            float4 WaveDirections[4];
+            float4 WaveParams[4];
+            
+            float Time;
+            float Transparency;
+            float RefractionScale;
+            float ReflectionScale;
+            
+            float FresnelBias;
+            float FresnelPower;
+            float FoamIntensity;
+            float FoamThreshold;
+            
+            float NormalMapTiling;
+            float DepthMaxDistance;
+            float WaveSpeed;
+            float Padding;
+            
+            uint WaveCount;
+            float3 Padding2;
+        };
+
+        Texture2D NormalMap    : register(t0);
+        Texture2D NormalMap2   : register(t1);
+        Texture2D DuDvMap      : register(t2);
+        Texture2D FoamTexture  : register(t3);
+        Texture2D ReflectionTexture : register(t4);
+        Texture2D RefractionTexture : register(t5);
+        Texture2D DepthTexture : register(t6);
+
+        SamplerState WaterSampler : register(s0);
+        SamplerState ClampedSampler : register(s1);
+
+        struct VS_INPUT
+        {
+            float3 Pos       : POSITION;
+            float3 Normal    : NORMAL;
+            float2 TexCoord  : TEXCOORD0;
+            float3 Tangent   : TANGENT;
+            float3 Bitangent : BINORMAL;
+        };
+
+        struct PS_INPUT
+        {
+            float4 Pos           : SV_POSITION;
+            float3 WorldPos      : TEXCOORD0;
+            float2 TexCoord      : TEXCOORD1;
+            float4 ReflectionPos : TEXCOORD2;
+            float4 RefractionPos : TEXCOORD3;
+            float3 Normal        : NORMAL;
+            float3 Tangent       : TANGENT;
+            float3 Bitangent     : BINORMAL;
+            float4 ScreenPos     : TEXCOORD4;
+        };
+
+        float3 GerstnerWave(float2 position, float4 waveDir, float4 waveParams)
+        {
+            float steepness = waveParams.w;
+            float wavelength = waveParams.y;
+            float speed = waveParams.z;
+            float amplitude = waveParams.x;
+            
+            float k = 2.0f * 3.14159f / wavelength;
+            float c = sqrt(9.8f / k);
+            float2 d = normalize(waveDir.xy);
+            float f = k * (dot(d, position) - c * Time * speed);
+            float a = steepness / k;
+            
+            return float3(
+                d.x * a * cos(f),
+                amplitude * sin(f),
+                d.y * a * cos(f)
+            );
+        }
+
+        float3 CalculateWavePosition(float3 pos)
+        {
+            float3 waveOffset = float3(0, 0, 0);
+            
+            [unroll]
+            for (uint i = 0; i < 4; ++i)
+            {
+                if (i >= WaveCount) break;
+                waveOffset += GerstnerWave(pos.xz, WaveDirections[i], WaveParams[i]);
+            }
+            
+            return pos + waveOffset;
+        }
+
+        float3 CalculateWaveNormal(float3 pos)
+        {
+            float eps = 0.1f;
+            float3 p0 = CalculateWavePosition(pos);
+            float3 px = CalculateWavePosition(pos + float3(eps, 0, 0));
+            float3 pz = CalculateWavePosition(pos + float3(0, 0, eps));
+            
+            float3 tangent = normalize(px - p0);
+            float3 bitangent = normalize(pz - p0);
+            
+            return normalize(cross(bitangent, tangent));
+        }
+
+        float Fresnel(float3 viewDir, float3 normal)
+        {
+            float cosTheta = saturate(dot(viewDir, normal));
+            return FresnelBias + (1.0f - FresnelBias) * pow(1.0f - cosTheta, FresnelPower);
+        }
+
+        float2 CalculateDuDv(float2 uv, float time)
+        {
+            float2 duDv = DuDvMap.Sample(WaterSampler, uv + time * 0.02f).rg * 2.0f - 1.0f;
+            duDv += DuDvMap.Sample(WaterSampler, uv * 2.0f - time * 0.01f).rg * 2.0f - 1.0f;
+            return duDv * RefractionScale;
+        }
+
+        PS_INPUT VS(VS_INPUT input)
+        {
+            PS_INPUT output = (PS_INPUT)0;
+            
+            float3 wavePos = CalculateWavePosition(input.Pos);
+            
+            float4 worldPos = mul(float4(wavePos, 1.0f), World);
+            float4 viewPos = mul(worldPos, View);
+            output.Pos = mul(viewPos, Projection);
+            
+            output.WorldPos = worldPos.xyz;
+            output.TexCoord = input.TexCoord * NormalMapTiling;
+            
+            float4 reflectionPos = mul(worldPos, ReflectionView);
+            output.ReflectionPos = mul(reflectionPos, Projection);
+            
+            output.RefractionPos = output.Pos;
+            output.ScreenPos = output.Pos;
+            
+            output.Normal = CalculateWaveNormal(input.Pos);
+            output.Tangent = input.Tangent;
+            output.Bitangent = input.Bitangent;
+            
+            return output;
+        }
+
+        float4 PS(PS_INPUT input) : SV_Target
+        {
+            float2 ndc = input.ScreenPos.xy / input.ScreenPos.w;
+            float2 screenUV = ndc * 0.5f + 0.5f;
+            screenUV.y = 1.0f - screenUV.y;
+            
+            float2 duDv = CalculateDuDv(input.TexCoord, Time);
+            
+            float2 distortedUV = clamp(screenUV + duDv, 0.001f, 0.999f);
+            
+            float4 reflectionColor = ReflectionTexture.Sample(ClampedSampler, distortedUV);
+            float4 refractionColor = RefractionTexture.Sample(ClampedSampler, distortedUV);
+            
+            float3 normal1 = NormalMap.Sample(WaterSampler, input.TexCoord + Time * 0.05f).rgb * 2.0f - 1.0f;
+            float3 normal2 = NormalMap2.Sample(WaterSampler, input.TexCoord - Time * 0.03f).rgb * 2.0f - 1.0f;
+            float3 normal = normalize(normal1 + normal2);
+            
+            float3 viewDir = normalize(CameraPosition.xyz - input.WorldPos);
+            float fresnel = Fresnel(viewDir, input.Normal);
+            
+            float depthValue = DepthTexture.Sample(ClampedSampler, distortedUV).r;
+            float floorDepth = depthValue * DepthMaxDistance;
+            float surfaceDepth = input.ScreenPos.z * DepthMaxDistance;
+            float waterDepth = floorDepth - surfaceDepth;
+            
+            float depthFactor = saturate(waterDepth / DepthMaxDistance);
+            float4 waterColor = lerp(ShallowColor, DeepColor, depthFactor);
+            
+            float4 finalColor = lerp(refractionColor * waterColor, reflectionColor, fresnel * ReflectionScale);
+            finalColor = lerp(finalColor, waterColor, Transparency * (1.0f - depthFactor));
+            
+            float foamFactor = saturate((1.0f - waterDepth / FoamThreshold) * FoamIntensity);
+            float4 foam = FoamTexture.Sample(WaterSampler, input.TexCoord);
+            finalColor = lerp(finalColor, foam * FoamColor, foamFactor * foam.r);
+            
+            float3 lightDir = normalize(float3(0.5f, 1.0f, 0.3f));
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 256.0f);
+            finalColor.rgb += spec * 0.5f;
+            
+            return saturate(finalColor);
+        }
+    )";
+
+    auto VS = std::make_shared<KShader>();
+    HRESULT hr = VS->CompileFromString(Device, ShaderSource, "VS", EShaderType::Vertex);
+    if (FAILED(hr)) return hr;
+
+    auto PS = std::make_shared<KShader>();
+    hr = PS->CompileFromString(Device, ShaderSource, "PS", EShaderType::Pixel);
+    if (FAILED(hr)) return hr;
+
+    AddShader(VS);
+    AddShader(PS);
+
+    D3D11_INPUT_ELEMENT_DESC Layout[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TANGENT",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "BINORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    hr = CreateInputLayout(Device, Layout, ARRAYSIZE(Layout));
+    if (FAILED(hr)) return hr;
+
+    LOG_INFO("Water shader creation completed");
+    return S_OK;
+}
