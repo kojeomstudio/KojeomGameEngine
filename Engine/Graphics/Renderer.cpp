@@ -1222,4 +1222,117 @@ void KRenderer::ComputeSSGI()
         CurrentCamera->GetProjectionMatrix(),
         CurrentCamera->GetViewMatrix()
     );
-} 
+}
+
+void KRenderer::SetMotionBlurEnabled(bool bEnabled)
+{
+    if (bEnabled)
+    {
+        if (!MotionBlur.IsInitialized())
+        {
+            HRESULT hr = MotionBlur.Initialize(GraphicsDevice->GetDevice(), 
+                GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+            if (FAILED(hr))
+            {
+                LOG_WARNING("Cannot enable Motion Blur: Failed to initialize");
+                return;
+            }
+        }
+    }
+    bMotionBlurEnabled = bEnabled;
+}
+
+void KRenderer::ApplyMotionBlur()
+{
+    if (!bMotionBlurEnabled || !MotionBlur.IsInitialized() || !CurrentCamera)
+    {
+        return;
+    }
+
+    MotionBlur.ApplyMotionBlur(
+        GraphicsDevice->GetContext(),
+        PostProcessor.GetHDRShaderResourceView(),
+        nullptr,
+        PostProcessor.GetHDRRenderTargetView()
+    );
+}
+
+void KRenderer::SetDepthOfFieldEnabled(bool bEnabled)
+{
+    if (bEnabled)
+    {
+        if (!DepthOfField.IsInitialized())
+        {
+            HRESULT hr = DepthOfField.Initialize(GraphicsDevice->GetDevice(),
+                GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+            if (FAILED(hr))
+            {
+                LOG_WARNING("Cannot enable Depth of Field: Failed to initialize");
+                return;
+            }
+            if (CurrentCamera)
+            {
+                DepthOfField.SetCameraNearFar(CurrentCamera->GetNearZ(), CurrentCamera->GetFarZ());
+            }
+        }
+    }
+    bDepthOfFieldEnabled = bEnabled;
+}
+
+void KRenderer::ApplyDepthOfField()
+{
+    if (!bDepthOfFieldEnabled || !DepthOfField.IsInitialized())
+    {
+        return;
+    }
+
+    ID3D11ShaderResourceView* depthSRV = nullptr;
+    if (DeferredRenderer.IsInitialized())
+    {
+        KGBuffer* GBuffer = DeferredRenderer.GetGBuffer();
+        if (GBuffer)
+        {
+            depthSRV = GBuffer->GetDepthSRV();
+        }
+    }
+
+    DepthOfField.ApplyDepthOfField(
+        GraphicsDevice->GetContext(),
+        PostProcessor.GetHDRShaderResourceView(),
+        depthSRV,
+        PostProcessor.GetHDRRenderTargetView()
+    );
+}
+
+void KRenderer::SetLensEffectsEnabled(bool bEnabled)
+{
+    if (bEnabled)
+    {
+        if (!LensEffects.IsInitialized())
+        {
+            HRESULT hr = LensEffects.Initialize(GraphicsDevice->GetDevice(),
+                GraphicsDevice->GetWidth(), GraphicsDevice->GetHeight());
+            if (FAILED(hr))
+            {
+                LOG_WARNING("Cannot enable Lens Effects: Failed to initialize");
+                return;
+            }
+        }
+    }
+    bLensEffectsEnabled = bEnabled;
+}
+
+void KRenderer::ApplyLensEffects(float DeltaTime)
+{
+    if (!bLensEffectsEnabled || !LensEffects.IsInitialized())
+    {
+        return;
+    }
+
+    LensEffects.ApplyLensEffects(
+        GraphicsDevice->GetContext(),
+        PostProcessor.GetHDRShaderResourceView(),
+        PostProcessor.GetHDRRenderTargetView(),
+        DeltaTime
+    );
+}

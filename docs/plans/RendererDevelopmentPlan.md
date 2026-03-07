@@ -841,6 +841,59 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+### Phase 16: Advanced Post-Processing Effects
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-07  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| Motion Blur system | ✅ | | KMotionBlur with velocity-based blur |
+| Depth of Field system | ✅ | | KDepthOfField with CoC calculation |
+| Chromatic Aberration effect | ✅ | | KLensEffects combined class |
+| Vignette effect | ✅ | | KLensEffects combined class |
+| Film Grain effect | ✅ | | KLensEffects combined class |
+| Renderer integration | ✅ | | Added to KRenderer with enable/disable methods |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/PostProcess/MotionBlur.h/cpp` - Motion blur with velocity buffer
+- `Engine/Graphics/PostProcess/DepthOfField.h/cpp` - DoF with Circle of Confusion
+- `Engine/Graphics/PostProcess/LensEffects.h/cpp` - Combined lens effects (CA, Vignette, Film Grain)
+
+**Features:**
+- Motion Blur: Velocity-based blur with configurable intensity and samples
+- Depth of Field: Focus distance, range, and blur radius control
+- Chromatic Aberration: RGB channel separation based on distance from center
+- Vignette: Adjustable screen edge darkening
+- Film Grain: Animated noise with configurable intensity
+
+#### Technical Details
+
+**Motion Blur Parameters:**
+- Intensity: 1.0f (blur strength)
+- MaxSamples: 16 (quality/performance trade-off)
+- MinVelocity: 1.0f (minimum velocity to trigger blur)
+- MaxVelocity: 100.0f (maximum velocity for blur calculation)
+
+**Depth of Field Parameters:**
+- FocusDistance: 10.0f (distance to focal plane)
+- FocusRange: 5.0f (depth of field range)
+- BlurRadius: 5.0f (maximum blur radius)
+- MaxBlurSamples: 8 (quality setting)
+
+**Lens Effects Parameters:**
+- ChromaticAberrationStrength: 0.005f
+- VignetteIntensity: 0.5f
+- VignetteSmoothness: 0.5f
+- FilmGrainIntensity: 0.1f
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template

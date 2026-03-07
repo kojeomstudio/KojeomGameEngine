@@ -22,6 +22,12 @@
 #include "TAA/TAA.h"
 #include "Volumetric/VolumetricFog.h"
 #include "SSGI/SSGI.h"
+#include "PostProcess/MotionBlur.h"
+#include "PostProcess/DepthOfField.h"
+#include "PostProcess/LensEffects.h"
+#include "PostProcess/MotionBlur.h"
+#include "PostProcess/DepthOfField.h"
+#include "PostProcess/LensEffects.h"
 
 enum class ERenderPath
 {
@@ -180,6 +186,21 @@ public:
     KSSGI* GetSSGI() { return &SSGI; }
     void ComputeSSGI();
 
+    void SetMotionBlurEnabled(bool bEnabled);
+    bool IsMotionBlurEnabled() const { return bMotionBlurEnabled && MotionBlur.IsInitialized(); }
+    KMotionBlur* GetMotionBlur() { return &MotionBlur; }
+    void ApplyMotionBlur();
+
+    void SetDepthOfFieldEnabled(bool bEnabled);
+    bool IsDepthOfFieldEnabled() const { return bDepthOfFieldEnabled && DepthOfField.IsInitialized(); }
+    KDepthOfField* GetDepthOfField() { return &DepthOfField; }
+    void ApplyDepthOfField();
+
+    void SetLensEffectsEnabled(bool bEnabled);
+    bool IsLensEffectsEnabled() const { return bLensEffectsEnabled && LensEffects.IsInitialized(); }
+    KLensEffects* GetLensEffects() { return &LensEffects; }
+    void ApplyLensEffects(float DeltaTime);
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -236,6 +257,9 @@ private:
     KTAA TAA;
     KVolumetricFog VolumetricFog;
     KSSGI SSGI;
+    KMotionBlur MotionBlur;
+    KDepthOfField DepthOfField;
+    KLensEffects LensEffects;
     bool bOcclusionCullingEnabled = false;
     bool bCommandBufferEnabled = true;
     bool bSSAOEnabled = false;
@@ -243,6 +267,9 @@ private:
     bool bTAAEnabled = false;
     bool bVolumetricFogEnabled = false;
     bool bSSGIEnabled = false;
+    bool bMotionBlurEnabled = false;
+    bool bDepthOfFieldEnabled = false;
+    bool bLensEffectsEnabled = false;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;
