@@ -5,6 +5,7 @@
 #include "../Texture.h"
 #include "../Shader.h"
 #include "../Mesh.h"
+#include "AutoExposure.h"
 #include <memory>
 #include <vector>
 
@@ -51,6 +52,7 @@ public:
 
     void BeginHDRPass(ID3D11DeviceContext* Context);
     void ApplyPostProcessing(ID3D11DeviceContext* Context, ID3D11RenderTargetView* FinalTarget);
+    void ApplyPostProcessing(ID3D11DeviceContext* Context, ID3D11RenderTargetView* FinalTarget, float DeltaTime);
 
     void SetParameters(const FPostProcessParams& Params) { Parameters = Params; }
     const FPostProcessParams& GetParameters() const { return Parameters; }
@@ -63,6 +65,10 @@ public:
     void SetColorFilter(const XMFLOAT3& Filter) { Parameters.ColorFilter = Filter; }
     void SetSaturation(float Sat) { Parameters.Saturation = Sat; }
     void SetContrast(float Cont) { Parameters.Contrast = Cont; }
+
+    KAutoExposure* GetAutoExposure() const { return AutoExposure.get(); }
+    void SetAutoExposureEnabled(bool bEnabled);
+    bool IsAutoExposureEnabled() const;
 
     HRESULT LoadColorGradingLUT(ID3D11Device* Device, const std::wstring& Path);
     HRESULT CreateDefaultColorGradingLUT(ID3D11Device* Device);
@@ -131,6 +137,8 @@ private:
     ComPtr<ID3D11ShaderResourceView> ColorGradingLUTSRV;
 
     std::shared_ptr<KMesh> FullscreenQuadMesh;
+
+    std::unique_ptr<KAutoExposure> AutoExposure;
 
     FPostProcessParams Parameters;
     bool bInitialized = false;

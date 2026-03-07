@@ -920,12 +920,17 @@ void KRenderer::BeginHDRPass()
 
 void KRenderer::EndHDRPass()
 {
+    EndHDRPass(0.016f);
+}
+
+void KRenderer::EndHDRPass(float DeltaTime)
+{
     if (!PostProcessor.IsInitialized() || !bPostProcessEnabled)
     {
         return;
     }
 
-    PostProcessor.ApplyPostProcessing(GraphicsDevice->GetContext(), GraphicsDevice->GetRenderTargetView());
+    PostProcessor.ApplyPostProcessing(GraphicsDevice->GetContext(), GraphicsDevice->GetRenderTargetView(), DeltaTime);
 }
 
 bool KRenderer::IsVisibleInFrustum(const FBoundingSphere& Sphere) const

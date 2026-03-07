@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-20 (Atmospheric Scattering/Sky System Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-21 (Automatic Exposure Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -323,6 +323,60 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 #### New Files
 
 - `Engine/Graphics/Sky/SkySystem.h/cpp`
+
+---
+
+### Phase 21: Automatic Exposure / Eye Adaptation
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-07
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| AutoExposure system | ✅ | KAutoExposure class with luminance computation |
+| Luminance downsample | ✅ | Multi-pass downsampling (128 -> 64 -> 32) |
+| Exposure adaptation | ✅ | Speed-up/speed-down adaptation with min/max limits |
+| PostProcessor integration | ✅ | DeltaTime-based ApplyPostProcessing overload |
+| Renderer integration | ✅ | EndHDRPass(float DeltaTime) overload |
+
+#### Implementation Notes
+
+- **KAutoExposure**: Automatic exposure system with configurable parameters
+- **Luminance Downsample**: 3-pass downsampling for efficient luminance calculation
+- **Log-average Luminance**: Geometric mean calculation for exposure
+- **Adaptation Speed**: Different speeds for bright-to-dark and dark-to-bright transitions
+- **Integration**: Works with existing PostProcessor pipeline
+
+#### New Files
+
+- `Engine/Graphics/PostProcess/AutoExposure.h/cpp`
+
+#### Technical Details
+
+**AutoExposure Parameters:**
+- TargetLuminance: 0.18f (middle gray)
+- MinExposure: 0.1f
+- MaxExposure: 10.0f
+- AdaptationSpeedUp: 3.0f (bright to dark)
+- AdaptationSpeedDown: 1.0f (dark to bright)
+- LowPercentile: 0.5f (histogram)
+- HighPercentile: 0.95f (histogram)
+
+**Luminance Pipeline:**
+1. Downsample HDR to 128x128 luminance texture
+2. Downsample to 64x64
+3. Downsample to 32x32
+4. Read back and compute log-average luminance
+5. Calculate target exposure: TargetLuminance / avgLuminance
+6. Apply exponential adaptation: exp(-speed * deltaTime)
+
+**Integration:**
+- PostProcessor: ApplyPostProcessing(Context, Target, DeltaTime)
+- Renderer: EndHDRPass(float DeltaTime)
+- AutoExposure: ComputeExposure(Context, HDRTexture, DeltaTime)
 
 ---
 

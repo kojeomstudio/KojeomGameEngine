@@ -131,6 +131,7 @@
     <ClInclude Include="Graphics\PostProcess\MotionBlur.h" />
     <ClInclude Include="Graphics\PostProcess\DepthOfField.h" />
     <ClInclude Include="Graphics\PostProcess\LensEffects.h" />
+    <ClInclude Include="Graphics\PostProcess\AutoExposure.h" />
     <ClInclude Include="DebugUI\DebugUI.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Graphics\Terrain\Terrain.h" />
@@ -181,6 +182,7 @@
     <ClCompile Include="Graphics\PostProcess\MotionBlur.cpp" />
     <ClCompile Include="Graphics\PostProcess\DepthOfField.cpp" />
     <ClCompile Include="Graphics\PostProcess\LensEffects.cpp" />
+    <ClCompile Include="Graphics\PostProcess\AutoExposure.cpp" />
     <ClCompile Include="DebugUI\DebugUI.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Graphics\Terrain\Terrain.cpp" />

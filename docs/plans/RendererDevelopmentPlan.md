@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: All Phases Completed (Phase 1-19)
+- **Status**: All Phases Completed (Phase 1-21)
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-07
 
@@ -1144,6 +1144,65 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+### Phase 21: Automatic Exposure / Eye Adaptation
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-07  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| AutoExposure system | ✅ | | KAutoExposure class |
+| Luminance downsample | ✅ | | 3-pass downsampling (128 -> 64 -> 32) |
+| Exposure adaptation | ✅ | | Speed-up/speed-down with min/max limits |
+| PostProcessor integration | ✅ | | DeltaTime-based ApplyPostProcessing |
+| Renderer integration | ✅ | | EndHDRPass(float DeltaTime) overload |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/PostProcess/AutoExposure.h/cpp` - Automatic exposure system
+
+**Modified Files:**
+- `Engine/Graphics/PostProcess/PostProcessor.h/cpp` - Added AutoExposure integration
+- `Engine/Graphics/Renderer.h/cpp` - Added EndHDRPass(float DeltaTime)
+- `Engine/Engine.vcxproj` - Added AutoExposure files
+
+**Features:**
+- Automatic exposure based on scene luminance
+- Log-average luminance calculation (geometric mean)
+- Separate adaptation speeds for bright-to-dark and dark-to-bright
+- Configurable min/max exposure limits
+- Integration with existing HDR pipeline
+
+#### Technical Details
+
+**AutoExposure Parameters:**
+- TargetLuminance: 0.18f (middle gray)
+- MinExposure: 0.1f
+- MaxExposure: 10.0f
+- AdaptationSpeedUp: 3.0f
+- AdaptationSpeedDown: 1.0f
+
+**Luminance Pipeline:**
+1. Downsample HDR to 128x128 luminance texture (R16_FLOAT)
+2. Downsample to 64x64
+3. Downsample to 32x32
+4. Read back and compute log-average luminance
+5. Calculate target exposure
+6. Apply exponential adaptation
+
+**Exposure Calculation:**
+```
+targetExposure = targetLuminance / avgLuminance
+t = 1.0 - exp(-adaptSpeed * deltaTime)
+currentExposure = currentExposure + (targetExposure - currentExposure) * t
+```
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template
@@ -1266,7 +1325,11 @@ Engine/Graphics/
 ├── IBL/                        # Image-based lighting (Implemented)
 │   └── IBLSystem.h/cpp
 ├── PostProcess/                # Post-processing (Implemented)
-│   └── PostProcessor.h/cpp
+│   ├── PostProcessor.h/cpp
+│   ├── MotionBlur.h/cpp
+│   ├── DepthOfField.h/cpp
+│   ├── LensEffects.h/cpp
+│   └── AutoExposure.h/cpp
 ├── Culling/                    # Culling systems (Implemented)
 │   ├── Frustum.h/cpp
 │   └── OcclusionQuery.h/cpp

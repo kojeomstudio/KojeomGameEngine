@@ -121,6 +121,7 @@ public:
     KPostProcessor* GetPostProcessor() { return &PostProcessor; }
     void BeginHDRPass();
     void EndHDRPass();
+    void EndHDRPass(float DeltaTime);
 
     KShaderProgram* GetLightShader() const { return LightShader.get(); }
     KShaderProgram* GetPBRShader() const { return PBRShader.get(); }

@@ -71,6 +71,13 @@ HRESULT KPostProcessor::Initialize(ID3D11Device* InDevice, UINT32 InWidth, UINT3
         return hr;
     }
 
+    AutoExposure = std::make_unique<KAutoExposure>();
+    hr = AutoExposure->Initialize(Device, Width, Height);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Failed to initialize auto exposure, using fixed exposure");
+    }
+
     bInitialized = true;
     LOG_INFO("PostProcessor initialized successfully");
     return S_OK;
@@ -114,6 +121,12 @@ void KPostProcessor::Cleanup()
     ColorGradingLUTSRV.Reset();
     
     FullscreenQuadMesh.reset();
+
+    if (AutoExposure)
+    {
+        AutoExposure->Cleanup();
+        AutoExposure.reset();
+    }
 
     bInitialized = false;
 }
@@ -688,7 +701,18 @@ void KPostProcessor::BeginHDRPass(ID3D11DeviceContext* Context)
 
 void KPostProcessor::ApplyPostProcessing(ID3D11DeviceContext* Context, ID3D11RenderTargetView* FinalTarget)
 {
+    ApplyPostProcessing(Context, FinalTarget, 0.016f);
+}
+
+void KPostProcessor::ApplyPostProcessing(ID3D11DeviceContext* Context, ID3D11RenderTargetView* FinalTarget, float DeltaTime)
+{
     if (!bInitialized) return;
+
+    if (AutoExposure && AutoExposure->IsEnabled())
+    {
+        float autoExposure = AutoExposure->ComputeExposure(Context, HDRShaderResourceView.Get(), DeltaTime);
+        Parameters.Exposure = autoExposure;
+    }
 
     UpdatePostProcessBuffer(Context);
 
@@ -833,6 +857,19 @@ void KPostProcessor::ApplyFXAA(ID3D11DeviceContext* Context, ID3D11RenderTargetV
 
     ID3D11ShaderResourceView* nullSRV = nullptr;
     Context->PSSetShaderResources(0, 1, &nullSRV);
+}
+
+void KPostProcessor::SetAutoExposureEnabled(bool bEnabled)
+{
+    if (AutoExposure)
+    {
+        AutoExposure->SetEnabled(bEnabled);
+    }
+}
+
+bool KPostProcessor::IsAutoExposureEnabled() const
+{
+    return AutoExposure ? AutoExposure->IsEnabled() : false;
 }
 
 void KPostProcessor::RenderFullscreenQuad(ID3D11DeviceContext* Context)
