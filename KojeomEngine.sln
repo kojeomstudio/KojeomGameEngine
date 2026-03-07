@@ -19,6 +19,46 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AdvancedExample", "Examples
 		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BasicRenderingSample", "samples\BasicRendering\BasicRenderingSample.vcxproj", "{A1000001-F44F-4478-BDAE-6634EFC2CA01}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LightingSample", "samples\Lighting\LightingSample.vcxproj", "{A1000002-F44F-4478-BDAE-6634EFC2CA02}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PBRSample", "samples\PBR\PBRSample.vcxproj", "{A1000003-F44F-4478-BDAE-6634EFC2CA03}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PostProcessingSample", "samples\PostProcessing\PostProcessingSample.vcxproj", "{A1000004-F44F-4478-BDAE-6634EFC2CA04}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TerrainSample", "samples\Terrain\TerrainSample.vcxproj", "{A1000005-F44F-4478-BDAE-6634EFC2CA05}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WaterSample", "samples\Water\WaterSample.vcxproj", "{A1000006-F44F-4478-BDAE-6634EFC2CA06}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SkySample", "samples\Sky\SkySample.vcxproj", "{A1000007-F44F-4478-BDAE-6634EFC2CA07}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParticlesSample", "samples\Particles\ParticlesSample.vcxproj", "{A1000008-F44F-4478-BDAE-6634EFC2CA08}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -41,6 +81,38 @@ Global
 		{C5F80730-F44F-4478-BDAE-6634EFC2CA90}.Debug|x64.Build.0 = Debug|x64
 		{C5F80730-F44F-4478-BDAE-6634EFC2CA90}.Release|x64.ActiveCfg = Release|x64
 		{C5F80730-F44F-4478-BDAE-6634EFC2CA90}.Release|x64.Build.0 = Release|x64
+		{A1000001-F44F-4478-BDAE-6634EFC2CA01}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000001-F44F-4478-BDAE-6634EFC2CA01}.Debug|x64.Build.0 = Debug|x64
+		{A1000001-F44F-4478-BDAE-6634EFC2CA01}.Release|x64.ActiveCfg = Release|x64
+		{A1000001-F44F-4478-BDAE-6634EFC2CA01}.Release|x64.Build.0 = Release|x64
+		{A1000002-F44F-4478-BDAE-6634EFC2CA02}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000002-F44F-4478-BDAE-6634EFC2CA02}.Debug|x64.Build.0 = Debug|x64
+		{A1000002-F44F-4478-BDAE-6634EFC2CA02}.Release|x64.ActiveCfg = Release|x64
+		{A1000002-F44F-4478-BDAE-6634EFC2CA02}.Release|x64.Build.0 = Release|x64
+		{A1000003-F44F-4478-BDAE-6634EFC2CA03}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000003-F44F-4478-BDAE-6634EFC2CA03}.Debug|x64.Build.0 = Debug|x64
+		{A1000003-F44F-4478-BDAE-6634EFC2CA03}.Release|x64.ActiveCfg = Release|x64
+		{A1000003-F44F-4478-BDAE-6634EFC2CA03}.Release|x64.Build.0 = Release|x64
+		{A1000004-F44F-4478-BDAE-6634EFC2CA04}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000004-F44F-4478-BDAE-6634EFC2CA04}.Debug|x64.Build.0 = Debug|x64
+		{A1000004-F44F-4478-BDAE-6634EFC2CA04}.Release|x64.ActiveCfg = Release|x64
+		{A1000004-F44F-4478-BDAE-6634EFC2CA04}.Release|x64.Build.0 = Release|x64
+		{A1000005-F44F-4478-BDAE-6634EFC2CA05}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000005-F44F-4478-BDAE-6634EFC2CA05}.Debug|x64.Build.0 = Debug|x64
+		{A1000005-F44F-4478-BDAE-6634EFC2CA05}.Release|x64.ActiveCfg = Release|x64
+		{A1000005-F44F-4478-BDAE-6634EFC2CA05}.Release|x64.Build.0 = Release|x64
+		{A1000006-F44F-4478-BDAE-6634EFC2CA06}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000006-F44F-4478-BDAE-6634EFC2CA06}.Debug|x64.Build.0 = Debug|x64
+		{A1000006-F44F-4478-BDAE-6634EFC2CA06}.Release|x64.ActiveCfg = Release|x64
+		{A1000006-F44F-4478-BDAE-6634EFC2CA06}.Release|x64.Build.0 = Release|x64
+		{A1000007-F44F-4478-BDAE-6634EFC2CA07}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000007-F44F-4478-BDAE-6634EFC2CA07}.Debug|x64.Build.0 = Debug|x64
+		{A1000007-F44F-4478-BDAE-6634EFC2CA07}.Release|x64.ActiveCfg = Release|x64
+		{A1000007-F44F-4478-BDAE-6634EFC2CA07}.Release|x64.Build.0 = Release|x64
+		{A1000008-F44F-4478-BDAE-6634EFC2CA08}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000008-F44F-4478-BDAE-6634EFC2CA08}.Debug|x64.Build.0 = Debug|x64
+		{A1000008-F44F-4478-BDAE-6634EFC2CA08}.Release|x64.ActiveCfg = Release|x64
+		{A1000008-F44F-4478-BDAE-6634EFC2CA08}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,4 +120,4 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
 	EndGlobalSection
-EndGlobal 
+EndGlobal
