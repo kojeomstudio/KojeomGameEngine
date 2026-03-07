@@ -375,6 +375,7 @@ void KRenderer::Cleanup()
 {
     LOG_INFO("Cleaning up Renderer...");
 
+    SkySystem.Cleanup();
     SSAO.Cleanup();
     SSR.Cleanup();
     TAA.Cleanup();
@@ -1374,4 +1375,31 @@ void KRenderer::RenderDebugUI()
     
     DebugUI.SetFrameStats(stats);
     DebugUI.Render(GraphicsDevice->GetContext());
+}
+
+void KRenderer::SetSkyEnabled(bool bEnabled)
+{
+    if (bEnabled)
+    {
+        if (!SkySystem.IsInitialized())
+        {
+            HRESULT hr = SkySystem.Initialize(GraphicsDevice);
+            if (FAILED(hr))
+            {
+                LOG_WARNING("Cannot enable Sky: Failed to initialize");
+                return;
+            }
+        }
+    }
+    bSkyEnabled = bEnabled;
+}
+
+void KRenderer::RenderSky()
+{
+    if (!bSkyEnabled || !SkySystem.IsInitialized() || !CurrentCamera)
+    {
+        return;
+    }
+
+    SkySystem.Render(CurrentCamera, GraphicsDevice->GetDepthStencilView());
 }

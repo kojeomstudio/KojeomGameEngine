@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-19 (Water Rendering System Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-20 (Atmospheric Scattering/Sky System Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -289,6 +289,40 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 #### New Files
 
 - `Engine/Graphics/Water/Water.h/cpp`
+
+---
+
+### Phase 20: Atmospheric Scattering / Sky System
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-07
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Sky dome mesh | ✅ | 32 segments x 16 rings hemisphere |
+| Atmospheric scattering | ✅ | Rayleigh and Mie scattering |
+| Sky shader | ✅ | Ray marching with in-scattering |
+| Sun disk rendering | ✅ | Smoothstep sun disk with intensity |
+| ACES tonemapping | ✅ | HDR to LDR conversion |
+| Time of day support | ✅ | SetTimeOfDay with hour/latitude |
+| Renderer integration | ✅ | SetSkyEnabled, RenderSky methods |
+
+#### Implementation Notes
+
+- **KSkySystem**: Full atmospheric scattering system
+- **FAtmosphereParams**: Sun direction, Rayleigh/Mie coefficients, planet/atmosphere radii
+- **Rayleigh Scattering**: Atmospheric scattering for air molecules
+- **Mie Scattering**: Atmospheric scattering for aerosols/particles
+- **Ray Marching**: 16-sample ray marching through atmosphere
+- **Sun Disk**: Procedural sun disk with smoothstep falloff
+- **ACES Tonemapping**: Filmic tonemapper for HDR output
+
+#### New Files
+
+- `Engine/Graphics/Sky/SkySystem.h/cpp`
 
 ---
 
@@ -989,6 +1023,8 @@ Engine/
 │   │   └── ParticleEmitter.h/cpp
 │   ├── Water/
 │   │   └── Water.h/cpp
+│   ├── Sky/
+│   │   └── SkySystem.h/cpp
 │   ├── Material.h/cpp
 │   └── ...
 ├── Assets/

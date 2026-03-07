@@ -1078,6 +1078,72 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+### Phase 20: Atmospheric Scattering / Sky System
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-07  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| Sky dome mesh generation | ✅ | | 32 segments x 16 rings hemisphere |
+| Atmospheric scattering shader | ✅ | | Rayleigh and Mie scattering |
+| Sky constant buffer | ✅ | | FSkyConstantBuffer (b0) with atmosphere params |
+| Sun disk rendering | ✅ | | Smoothstep sun disk with glow |
+| Time of day support | ✅ | | SetTimeOfDay with sun position calculation |
+| Renderer integration | ✅ | | SetSkyEnabled, RenderSky methods |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Graphics/Sky/SkySystem.h/cpp` - Sky system with atmospheric scattering
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Added SkySystem integration
+- `Engine/Engine.vcxproj` - Added SkySystem files
+
+**Features:**
+- KSkySystem: Atmospheric scattering with Rayleigh and Mie coefficients
+- Gerstner-style sky dome with configurable resolution
+- Sun disk rendering with configurable intensity
+- Time of day system with sun position calculation
+- Exposure control with ACES tonemapping
+- Configurable atmosphere parameters (Rayleigh/Mie coefficients, heights)
+- Integration with existing renderer
+
+#### Technical Details
+
+**Sky Parameters:**
+- SunDirection: { 0.0f, 1.0f, 0.0f } (configurable)
+- SunIntensity: 1.0f
+- RayleighCoefficients: { 5.8e-6, 13.5e-6, 33.1e-6 }
+- RayleighHeight: 8000.0f
+- MieCoefficients: { 21.0e-6, 21.0e-6, 21.0e-6 }
+- MieHeight: 1200.0f
+- MieAnisotropy: 0.758f
+- SunAngleScale: 0.9995f
+- AtmosphereRadius: 6420000.0f
+- PlanetRadius: 6360000.0f
+- Exposure: 1.0f
+
+**Render States:**
+- Rasterizer: Cull front faces (sky dome viewed from inside)
+- Depth Stencil: Read-only (no depth write)
+- Blend: Disabled
+
+**Shader Pipeline:**
+1. VS: Transform sky dome vertices
+2. VS: Calculate ray direction from camera
+3. PS: Ray-sphere intersection for atmosphere
+4. PS: Compute Rayleigh and Mie scattering
+5. PS: Calculate in-scattering along light ray
+6. PS: Add sun disk contribution
+7. PS: Apply ACES tonemapping and gamma correction
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template
@@ -1232,4 +1298,14 @@ Engine/DebugUI/
 
 Engine/Graphics/Terrain/
 └── Terrain.h/cpp               # Terrain system (Implemented)
+
+Engine/Graphics/Sky/
+└── SkySystem.h/cpp             # Atmospheric Scattering/Sky (Implemented)
+```
+
+Engine/Graphics/Sky/
+└── SkySystem.h/cpp             # Atmospheric scattering/sky system (Implemented)
+
+Engine/Graphics/Water/
+└── Water.h/cpp                 # Water rendering system (Implemented)
 ```

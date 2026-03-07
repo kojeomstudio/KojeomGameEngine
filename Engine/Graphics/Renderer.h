@@ -26,6 +26,7 @@
 #include "PostProcess/DepthOfField.h"
 #include "PostProcess/LensEffects.h"
 #include "../DebugUI/DebugUI.h"
+#include "Sky/SkySystem.h"
 
 enum class ERenderPath
 {
@@ -204,6 +205,11 @@ public:
     bool IsDebugUIEnabled() const { return bDebugUIEnabled && DebugUI.IsInitialized(); }
     void RenderDebugUI();
 
+    void SetSkyEnabled(bool bEnabled);
+    bool IsSkyEnabled() const { return bSkyEnabled && SkySystem.IsInitialized(); }
+    KSkySystem* GetSkySystem() { return &SkySystem; }
+    void RenderSky();
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -274,9 +280,11 @@ private:
     bool bDepthOfFieldEnabled = false;
     bool bLensEffectsEnabled = false;
     bool bDebugUIEnabled = false;
+    bool bSkyEnabled = false;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;
     
     KojeomEngine::KDebugUI DebugUI;
-}; 
+    KSkySystem SkySystem;
+};
