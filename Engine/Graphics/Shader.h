@@ -134,15 +134,8 @@ public:
      */
     HRESULT CreatePBRShader(ID3D11Device* Device);
 
-    /**
-     * @brief Compile shader program from source strings
-     * @param Device DirectX 11 device
-     * @param VSSource Vertex shader source code
-     * @param PSSource Pixel shader source code
-     * @param VSEntry Vertex shader entry point
-     * @param PSEntry Pixel shader entry point
-     * @return Success: S_OK
-     */
+    HRESULT CreateSkinnedShader(ID3D11Device* Device);
+
     HRESULT CompileFromSource(ID3D11Device* Device, const std::string& VSSource,
                              const std::string& PSSource, const std::string& VSEntry,
                              const std::string& PSEntry);

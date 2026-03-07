@@ -4,9 +4,9 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 13 Completed
+- **Status**: Phase 14 Completed
 - **Base Commit**: fe09afb
-- **Last Updated**: 2026-03-02
+- **Last Updated**: 2026-03-07
 
 ## Overview
 
@@ -711,6 +711,69 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 - Billboard geometry in vertex shader
 - Additive blending state
 - Depth test without depth write
+
+---
+
+### Phase 14: Skeletal Mesh Rendering
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-07  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| SkeletalMeshComponent | ✅ | | FSkinnedVertex struct, KSkeletalMesh class |
+| GPU skinning shader | ✅ | | Skinned vertex shader with bone matrix palette |
+| Bone matrix constant buffer | ✅ | | FBoneMatrixBuffer (b5) with 256 bones |
+| Renderer integration | ✅ | | RenderSkeletalMesh method in KRenderer |
+| Animation playback | ✅ | | PlayAnimation, StopAnimation, PauseAnimation |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Assets/SkeletalMeshComponent.h/cpp` - Skeletal mesh component with GPU skinning
+
+**Modified Files:**
+- `Engine/Graphics/Shader.h/cpp` - Added CreateSkinnedShader method
+- `Engine/Graphics/Renderer.h/cpp` - Added RenderSkeletalMesh method and SkinnedShader
+- `Engine/Engine.vcxproj` - Added SkeletalMeshComponent files
+
+**Features:**
+- FSkinnedVertex with 4 bone influences and weights
+- GPU skinning in vertex shader (bone matrix palette)
+- Support for up to 256 bones per mesh
+- Animation playback with multiple play modes (Once, Loop, PingPong)
+- Bone matrix constant buffer (b5)
+- Integration with existing animation system (KSkeleton, KAnimation, KAnimationInstance)
+
+#### Technical Details
+
+**Skinned Vertex Structure:**
+- Position (float3)
+- Color (float4)
+- Normal (float3)
+- TexCoord (float2)
+- Tangent (float3)
+- Bitangent (float3)
+- BoneIndices (uint4) - Up to 4 bone influences
+- BoneWeights (float4) - Weights for each bone
+
+**Bone Matrix Buffer (b5):**
+- Array of 256 XMMATRIX
+- Transposed for HLSL
+
+**Shader Pipeline:**
+1. VS: Apply bone transforms based on weights
+2. Transform position, normal, tangent, bitangent
+3. Apply world/view/projection transforms
+4. PS: Standard Phong lighting
+
+**Animation Support:**
+- Uses KAnimationInstance for runtime playback
+- Automatic bone matrix computation
+- Supports all animation play modes
 
 ---
 

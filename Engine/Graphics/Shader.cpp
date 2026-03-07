@@ -1277,3 +1277,256 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
     LOG_INFO("PBR shader creation completed");
     return S_OK;
 }
+
+HRESULT KShaderProgram::CreateSkinnedShader(ID3D11Device* Device)
+{
+    const std::string ShaderSource = R"(
+        cbuffer TransformBuffer : register(b0)
+        {
+            matrix World;
+            matrix View;
+            matrix Projection;
+        }
+
+        #define MAX_BONES 256
+        cbuffer BoneBuffer : register(b5)
+        {
+            matrix BoneMatrices[MAX_BONES];
+        }
+
+        #define MAX_POINT_LIGHTS 8
+        #define MAX_SPOT_LIGHTS 4
+
+        struct FPointLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float4 Color;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+            float  Padding1;
+        };
+
+        struct FSpotLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float3 Direction;
+            float  InnerCone;
+            float4 Color;
+            float  OuterCone;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+        };
+
+        cbuffer LightBuffer : register(b1)
+        {
+            float3 CameraPosition;
+            int    NumPointLights;
+            float3 DirLightDirection;
+            int    NumSpotLights;
+            float4 DirLightColor;
+            float4 AmbientColor;
+            FPointLightData PointLights[MAX_POINT_LIGHTS];
+            FSpotLightData  SpotLights[MAX_SPOT_LIGHTS];
+        }
+
+        struct VS_INPUT
+        {
+            float3 Pos       : POSITION;
+            float4 Color     : COLOR;
+            float3 Normal    : NORMAL;
+            float2 TexCoord  : TEXCOORD0;
+            float3 Tangent   : TANGENT;
+            float3 Bitangent : BINORMAL;
+            uint4  BoneIndices : BONEINDICES;
+            float4 BoneWeights : BONEWEIGHTS;
+        };
+
+        struct PS_INPUT
+        {
+            float4 Pos       : SV_POSITION;
+            float4 Color     : COLOR;
+            float3 Normal    : NORMAL;
+            float2 TexCoord  : TEXCOORD0;
+            float3 WorldPos  : TEXCOORD1;
+            float3 Tangent   : TANGENT;
+            float3 Bitangent : BINORMAL;
+        };
+
+        float3 SkinPosition(float3 pos, uint4 boneIndices, float4 boneWeights)
+        {
+            float3 skinnedPos = float3(0, 0, 0);
+            
+            [unroll]
+            for (int i = 0; i < 4; ++i)
+            {
+                if (boneWeights[i] > 0.0f)
+                {
+                    skinnedPos += mul(float4(pos, 1.0f), BoneMatrices[boneIndices[i]]).xyz * boneWeights[i];
+                }
+            }
+            
+            return skinnedPos;
+        }
+
+        float3 SkinNormal(float3 normal, uint4 boneIndices, float4 boneWeights)
+        {
+            float3 skinnedNormal = float3(0, 0, 0);
+            
+            [unroll]
+            for (int i = 0; i < 4; ++i)
+            {
+                if (boneWeights[i] > 0.0f)
+                {
+                    skinnedNormal += mul(normal, (float3x3)BoneMatrices[boneIndices[i]]) * boneWeights[i];
+                }
+            }
+            
+            return skinnedNormal;
+        }
+
+        float3 CalculatePointLight(FPointLightData light, float3 normal, float3 worldPos, float3 viewDir)
+        {
+            float3 lightDir = light.Position - worldPos;
+            float  distance = length(lightDir);
+            
+            if (distance > light.Radius)
+                return float3(0, 0, 0);
+            
+            lightDir = normalize(lightDir);
+            
+            float attenuation = 1.0f / (1.0f + light.Falloff * distance * distance);
+            attenuation *= light.Intensity;
+            
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * light.Color.rgb;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * light.Color.rgb * 0.3f;
+            
+            return (diffuse + specular) * attenuation;
+        }
+
+        float3 CalculateSpotLight(FSpotLightData light, float3 normal, float3 worldPos, float3 viewDir)
+        {
+            float3 lightDir = light.Position - worldPos;
+            float  distance = length(lightDir);
+            
+            if (distance > light.Radius)
+                return float3(0, 0, 0);
+            
+            lightDir = normalize(lightDir);
+            
+            float3 spotDir = normalize(-light.Direction);
+            float cosAngle = dot(lightDir, spotDir);
+            float cosInner = cos(light.InnerCone);
+            float cosOuter = cos(light.OuterCone);
+            
+            if (cosAngle < cosOuter)
+                return float3(0, 0, 0);
+            
+            float spotFactor = saturate((cosAngle - cosOuter) / (cosInner - cosOuter));
+            
+            float attenuation = 1.0f / (1.0f + light.Falloff * distance * distance);
+            attenuation *= light.Intensity * spotFactor;
+            
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * light.Color.rgb;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * light.Color.rgb * 0.3f;
+            
+            return (diffuse + specular) * attenuation;
+        }
+
+        PS_INPUT VS(VS_INPUT input)
+        {
+            PS_INPUT output = (PS_INPUT)0;
+            
+            float3 skinnedPos = SkinPosition(input.Pos, input.BoneIndices, input.BoneWeights);
+            float3 skinnedNormal = SkinNormal(input.Normal, input.BoneIndices, input.BoneWeights);
+            float3 skinnedTangent = SkinNormal(input.Tangent, input.BoneIndices, input.BoneWeights);
+            float3 skinnedBitangent = SkinNormal(input.Bitangent, input.BoneIndices, input.BoneWeights);
+            
+            float4 worldPos = mul(float4(skinnedPos, 1.0f), World);
+            float4 viewPos = mul(worldPos, View);
+            output.Pos = mul(viewPos, Projection);
+            output.Color = input.Color;
+            output.Normal = mul(skinnedNormal, (float3x3)World);
+            output.TexCoord = input.TexCoord;
+            output.WorldPos = worldPos.xyz;
+            output.Tangent = mul(skinnedTangent, (float3x3)World);
+            output.Bitangent = mul(skinnedBitangent, (float3x3)World);
+            
+            return output;
+        }
+
+        float4 PS(PS_INPUT input) : SV_Target
+        {
+            float3 normal = normalize(input.Normal);
+            float3 viewDir = normalize(CameraPosition - input.WorldPos);
+            
+            float3 ambient = AmbientColor.rgb * input.Color.rgb;
+            
+            float3 lightDir = normalize(-DirLightDirection);
+            float diff = max(dot(normal, lightDir), 0.0f);
+            float3 diffuse = diff * DirLightColor.rgb * input.Color.rgb;
+            
+            float3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(normal, halfDir), 0.0f), 32.0f);
+            float3 specular = spec * DirLightColor.rgb * 0.4f;
+            
+            float3 result = ambient + diffuse + specular;
+            
+            [unroll]
+            for (int i = 0; i < MAX_POINT_LIGHTS; ++i)
+            {
+                if (i >= NumPointLights) break;
+                result += CalculatePointLight(PointLights[i], normal, input.WorldPos, viewDir) * input.Color.rgb;
+            }
+            
+            [unroll]
+            for (int j = 0; j < MAX_SPOT_LIGHTS; ++j)
+            {
+                if (j >= NumSpotLights) break;
+                result += CalculateSpotLight(SpotLights[j], normal, input.WorldPos, viewDir) * input.Color.rgb;
+            }
+            
+            return saturate(float4(result, input.Color.a));
+        }
+    )";
+
+    auto VS = std::make_shared<KShader>();
+    HRESULT hr = VS->CompileFromString(Device, ShaderSource, "VS", EShaderType::Vertex);
+    if (FAILED(hr)) return hr;
+
+    auto PS = std::make_shared<KShader>();
+    hr = PS->CompileFromString(Device, ShaderSource, "PS", EShaderType::Pixel);
+    if (FAILED(hr)) return hr;
+
+    AddShader(VS);
+    AddShader(PS);
+
+    D3D11_INPUT_ELEMENT_DESC Layout[] =
+    {
+        { "POSITION",     0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL",       0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TANGENT",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "BINORMAL",     0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 60, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "BONEINDICES",  0, DXGI_FORMAT_R32G32B32A32_UINT,  0, 72, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "BONEWEIGHTS",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 88, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    hr = CreateInputLayout(Device, Layout, ARRAYSIZE(Layout));
+    if (FAILED(hr)) return hr;
+
+    LOG_INFO("Skinned mesh shader creation completed");
+    return S_OK;
+}

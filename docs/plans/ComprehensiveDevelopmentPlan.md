@@ -227,6 +227,36 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ---
 
+### Phase 14: Skeletal Mesh Rendering
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-07
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| SkeletalMeshComponent | ✅ | KSkeletalMesh and KSkeletalMeshComponent classes |
+| GPU skinning shader | ✅ | Vertex shader with bone matrix palette |
+| Bone matrix buffer | ✅ | FBoneMatrixBuffer (b5) with 256 bones |
+| Renderer integration | ✅ | RenderSkeletalMesh method in KRenderer |
+| Animation playback | ✅ | Integration with KAnimationInstance |
+
+#### Implementation Notes
+
+- **FSkinnedVertex**: Vertex with 4 bone influences and weights
+- **KSkeletalMesh**: Skeletal mesh container with skinned vertex data
+- **KSkeletalMeshComponent**: Actor component for rendering skeletal meshes
+- **GPU Skinning**: Bone transforms applied in vertex shader
+- **Animation**: Uses existing KAnimationInstance for playback
+
+#### New Files
+
+- `Engine/Assets/SkeletalMeshComponent.h/cpp`
+
+---
+
 ### Phase 6: Performance Optimization
 
 **Status**: ✅ Completed
@@ -863,10 +893,11 @@ Engine/
 │   └── ...
 ├── Assets/
 │   ├── StaticMesh.h/cpp
-│   ├── SkeletalMesh.h/cpp
+│   ├── StaticMeshComponent.h/cpp
+│   ├── SkeletalMeshComponent.h/cpp
 │   ├── Skeleton.h/cpp
 │   ├── Animation.h/cpp
-│   ├── Material.h/cpp
+│   ├── AnimationInstance.h/cpp
 │   └── ModelLoader.h/cpp
 ├── Scene/
 │   ├── Actor.h/cpp

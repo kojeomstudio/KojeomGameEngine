@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "../Assets/SkeletalMeshComponent.h"
 
 HRESULT KRenderer::Initialize(KGraphicsDevice* InGraphicsDevice)
 {
@@ -255,6 +256,49 @@ void KRenderer::RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
     PBRShader->Unbind(Context);
 }
 
+void KRenderer::RenderSkeletalMesh(KSkeletalMesh* InMesh, const XMMATRIX& WorldMatrix,
+                                     ID3D11Buffer* BoneMatrixBuffer)
+{
+    if (!GraphicsDevice || !CurrentCamera || !bInFrame)
+    {
+        return;
+    }
+
+    if (!InMesh || !SkinnedShader || !BoneMatrixBuffer)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
+
+    if (ShadowRenderer.IsInitialized() && bShadowsEnabled)
+    {
+    }
+
+    SkinnedShader->Bind(Context);
+
+    FConstantBuffer TransformBuffer;
+    TransformBuffer.WorldMatrix = XMMatrixTranspose(WorldMatrix);
+    TransformBuffer.ViewMatrix = XMMatrixTranspose(CurrentCamera->GetViewMatrix());
+    TransformBuffer.ProjectionMatrix = XMMatrixTranspose(CurrentCamera->GetProjectionMatrix());
+
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    HRESULT hr = Context->Map(ShadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    if (SUCCEEDED(hr))
+    {
+        memcpy(mappedResource.pData, &TransformBuffer, sizeof(FConstantBuffer));
+        Context->Unmap(ShadowConstantBuffer.Get(), 0);
+    }
+
+    Context->VSSetConstantBuffers(0, 1, ShadowConstantBuffer.GetAddressOf());
+    Context->PSSetConstantBuffers(1, 1, LightConstantBuffer.GetAddressOf());
+    Context->VSSetConstantBuffers(5, 1, &BoneMatrixBuffer);
+
+    InMesh->Render(Context);
+
+    SkinnedShader->Unbind(Context);
+}
+
 void KRenderer::AddPointLight(const FPointLight& Light)
 {
     if (PointLights.size() < MAX_POINT_LIGHTS)
@@ -349,6 +393,7 @@ void KRenderer::Cleanup()
     WireframeRasterizerState.Reset();
     DebugSphereMesh.reset();
     PBRShader.reset();
+    SkinnedShader.reset();
     ShadowLitShader.reset();
     LightShader.reset();
     BasicShader.reset();
@@ -479,6 +524,14 @@ HRESULT KRenderer::InitializeDefaultResources()
     {
         LOG_WARNING("PBR shader creation failed, PBR rendering will be disabled");
         PBRShader.reset();
+    }
+
+    SkinnedShader = std::make_shared<KShaderProgram>();
+    hr = SkinnedShader->CreateSkinnedShader(Device);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Skinned shader creation failed, skeletal mesh rendering will be disabled");
+        SkinnedShader.reset();
     }
 
     D3D11_SAMPLER_DESC MaterialSamplerDesc = {};
