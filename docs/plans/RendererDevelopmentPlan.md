@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 14 Completed
+- **Status**: Phase 15 Completed
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-07
 
@@ -774,6 +774,70 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 - Uses KAnimationInstance for runtime playback
 - Automatic bone matrix computation
 - Supports all animation play modes
+
+---
+
+### Phase 15: Enhanced Model Loading with FBX/GLTF Support
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-07  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| Fix OBJ loader bug | ✅ | | Mesh vertices/indices now properly set |
+| Full Assimp integration | ✅ | | Complete Assimp implementation for FBX/GLTF |
+| Skeleton extraction from FBX | ✅ | | BuildSkeletonRecursive with bind poses |
+| Animation extraction | ✅ | | Full animation channel extraction |
+| Bone weight extraction | ✅ | | Vertex bone weights with normalization |
+| GLTF fallback loader | ✅ | | Basic GLTF/JSON parsing without Assimp |
+| StaticMesh LOD methods | ✅ | | SetLODData, AddLOD methods |
+
+#### Implementation Details
+
+**Modified Files:**
+- `Engine/Assets/ModelLoader.h/cpp` - Complete rewrite with Assimp integration
+- `Engine/Assets/StaticMesh.h/cpp` - Added SetLODData, AddLOD methods
+
+**Features:**
+- Complete Assimp integration with USE_ASSIMP compile flag
+- Automatic skeleton extraction with bone hierarchy
+- Animation channel extraction with position/rotation/scale keys
+- Vertex bone weight extraction with 4-bone limit and normalization
+- Inverse bind pose matrix extraction
+- Basic GLTF fallback parser (requires Assimp for full support)
+- Improved OBJ loader with n-gon triangulation support
+
+#### Technical Details
+
+**Assimp Processing Flags:**
+- aiProcess_Triangulate - Convert all faces to triangles
+- aiProcess_JoinIdenticalVertices - Optimize vertex cache
+- aiProcess_LimitBoneWeights - Limit to 4 bone influences
+- aiProcess_CalcTangentSpace - Generate tangents for normal mapping
+- aiProcess_GenSmoothNormals - Generate smooth normals if missing
+- aiProcess_FlipUVs - Flip UV coordinates (configurable)
+
+**Bone Processing:**
+- Recursive skeleton building from aiNode hierarchy
+- Automatic bind pose and inverse bind pose calculation
+- Bone name to index mapping for fast lookups
+
+**Animation Processing:**
+- Position keys (aiVectorKey)
+- Rotation keys (aiQuatKey with SLERP interpolation)
+- Scale keys (aiVectorKey)
+- Ticks per second conversion
+
+**File Format Support:**
+- FBX (with Assimp)
+- GLTF/GLB (with Assimp)
+- OBJ (built-in parser)
+- DAE/Collada (with Assimp)
+- 3DS (with Assimp)
+- Blend (with Assimp)
 
 ---
 

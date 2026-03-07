@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 struct FLoadedModel
 {
@@ -54,6 +55,8 @@ public:
 private:
     HRESULT LoadWithAssimp(const std::wstring& Path, FLoadedModel* OutModel, const FModelLoadOptions& Options);
     HRESULT LoadOBJFallback(const std::wstring& Path, FLoadedModel* OutModel, const FModelLoadOptions& Options);
+    HRESULT LoadGLTFFallback(const std::wstring& Path, FLoadedModel* OutModel, const FModelLoadOptions& Options);
+    HRESULT ParseGLTFJson(const std::string& JsonContent, const std::wstring& BasePath, FLoadedModel* OutModel, const FModelLoadOptions& Options);
 
     void ProcessNode(void* AssimpNode, void* AssimpScene, FLoadedModel* OutModel, const FModelLoadOptions& Options);
     std::shared_ptr<KStaticMesh> ProcessMesh(void* AssimpMesh, void* AssimpScene, FLoadedModel* OutModel, const FModelLoadOptions& Options);

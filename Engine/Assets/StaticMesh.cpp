@@ -147,6 +147,33 @@ HRESULT KStaticMesh::CreateFromMeshData(ID3D11Device* Device, const std::vector<
     return S_OK;
 }
 
+void KStaticMesh::SetLODData(uint32 LODIndex, const std::vector<FVertex>& Vertices, const std::vector<uint32>& Indices)
+{
+    if (LODIndex >= LODs.size())
+    {
+        LODs.resize(LODIndex + 1);
+    }
+
+    LODs[LODIndex].Vertices = Vertices;
+    LODs[LODIndex].Indices = Indices;
+    LODs[LODIndex].ScreenSize = 1.0f / (LODIndex + 1);
+    LODs[LODIndex].Distance = 0.0f;
+
+    bRenderMeshesCreated = false;
+}
+
+void KStaticMesh::AddLOD(const std::vector<FVertex>& Vertices, const std::vector<uint32>& Indices, float ScreenSize)
+{
+    FMeshLOD newLOD;
+    newLOD.Vertices = Vertices;
+    newLOD.Indices = Indices;
+    newLOD.ScreenSize = ScreenSize;
+    newLOD.Distance = 0.0f;
+    LODs.push_back(std::move(newLOD));
+
+    bRenderMeshesCreated = false;
+}
+
 HRESULT KStaticMesh::CreateRenderMeshes(ID3D11Device* Device)
 {
     if (!Device) return E_INVALIDARG;

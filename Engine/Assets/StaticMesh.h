@@ -41,6 +41,9 @@ public:
     void SetName(const std::string& InName) { Name = InName; }
     const std::string& GetName() const { return Name; }
 
+    void SetLODData(uint32 LODIndex, const std::vector<FVertex>& Vertices, const std::vector<uint32>& Indices);
+    void AddLOD(const std::vector<FVertex>& Vertices, const std::vector<uint32>& Indices, float ScreenSize = 1.0f);
+
     uint32 GetLODCount() const { return static_cast<uint32>(LODs.size()); }
     FMeshLOD* GetLOD(uint32 Index) { return Index < LODs.size() ? &LODs[Index] : nullptr; }
     const FMeshLOD* GetLOD(uint32 Index) const { return Index < LODs.size() ? &LODs[Index] : nullptr; }

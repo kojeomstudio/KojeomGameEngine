@@ -257,6 +257,39 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ---
 
+### Phase 15: Enhanced Model Loading with FBX/GLTF Support
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-07
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Fix OBJ loader bug | ✅ | Mesh vertices/indices now properly set |
+| Full Assimp integration | ✅ | Complete Assimp implementation for FBX/GLTF |
+| Skeleton extraction from FBX | ✅ | BuildSkeletonRecursive with bind poses |
+| Animation extraction | ✅ | Full animation channel extraction |
+| Bone weight extraction | ✅ | Vertex bone weights with normalization |
+| GLTF fallback loader | ✅ | Basic GLTF/JSON parsing without Assimp |
+| StaticMesh LOD methods | ✅ | SetLODData, AddLOD methods |
+
+#### Implementation Notes
+
+- **KModelLoader**: Complete rewrite with full Assimp integration
+- **Skeleton Extraction**: Recursive skeleton building with bind poses
+- **Animation**: Position/rotation/scale key extraction
+- **Bone Weights**: 4-bone limit with automatic normalization
+- **GLTF Fallback**: Basic parser when Assimp not available
+
+#### Modified Files
+
+- `Engine/Assets/ModelLoader.h/cpp` - Complete Assimp integration
+- `Engine/Assets/StaticMesh.h/cpp` - Added LOD management methods
+
+---
+
 ### Phase 6: Performance Optimization
 
 **Status**: ✅ Completed
