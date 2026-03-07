@@ -1336,3 +1336,42 @@ void KRenderer::ApplyLensEffects(float DeltaTime)
         DeltaTime
     );
 }
+
+void KRenderer::SetDebugUIEnabled(bool bEnabled)
+{
+    if (bEnabled)
+    {
+        if (!DebugUI.IsInitialized())
+        {
+            HRESULT hr = DebugUI.Initialize(
+                GraphicsDevice->GetDevice(),
+                GraphicsDevice->GetContext()
+            );
+            if (FAILED(hr))
+            {
+                LOG_WARNING("Cannot enable DebugUI: Failed to initialize");
+                return;
+            }
+        }
+    }
+    bDebugUIEnabled = bEnabled;
+}
+
+void KRenderer::RenderDebugUI()
+{
+    if (!bDebugUIEnabled || !DebugUI.IsInitialized())
+    {
+        return;
+    }
+
+    KojeomEngine::KDebugUI::FFrameStats stats;
+    const auto& gpuStats = GPUTimer.GetFrameStats();
+    stats.FrameTime = gpuStats.FrameTimeMs;
+    stats.FPS = gpuStats.FrameTimeMs > 0.0f ? 1000.0f / gpuStats.FrameTimeMs : 0.0f;
+    stats.DrawCalls = static_cast<UINT>(DrawCallCount);
+    stats.TriangleCount = static_cast<UINT>(DrawCallCount * 3);
+    stats.VertexCount = static_cast<UINT>(VertexCount);
+    
+    DebugUI.SetFrameStats(stats);
+    DebugUI.Render(GraphicsDevice->GetContext());
+}

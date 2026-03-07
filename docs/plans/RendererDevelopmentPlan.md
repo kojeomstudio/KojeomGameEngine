@@ -4,7 +4,7 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: Phase 15 Completed
+- **Status**: Phase 17 Completed
 - **Base Commit**: fe09afb
 - **Last Updated**: 2026-03-07
 
@@ -894,6 +894,58 @@ float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo,
 
 ---
 
+### Phase 17: Debug UI (ImGUI) Integration
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-07  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| DebugUI framework | ✅ | | KDebugUI class with ImGUI backend |
+| Performance stats overlay | ✅ | | FPS, frame time, draw calls display |
+| Renderer integration | ✅ | | SetDebugUIEnabled, RenderDebugUI methods |
+| Custom debug panels | ✅ | | RegisterDebugPanel for extensible UI |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/DebugUI/DebugUI.h/cpp` - Debug UI system with ImGUI integration
+
+**Modified Files:**
+- `Engine/Graphics/Renderer.h/cpp` - Added DebugUI integration
+- `Engine/Engine.vcxproj` - Added DebugUI files
+
+**Features:**
+- ImGUI-based debug overlay system
+- Performance statistics display (FPS, frame time, draw calls, triangles, vertices)
+- Extensible panel system for custom debug widgets
+- Main menu bar with view options
+- Conditional compilation with USE_IMGUI flag
+
+#### Technical Details
+
+**DebugUI Parameters:**
+- bVisible: Toggle overlay visibility
+- bInitialized: Track initialization state
+
+**Frame Stats:**
+- FrameTime: Current frame time in milliseconds
+- FPS: Frames per second
+- DrawCalls: Number of draw calls per frame
+- TriangleCount: Number of triangles rendered
+- VertexCount: Number of vertices processed
+
+**Architecture:**
+- Singleton pattern for global access
+- Conditional ImGUI integration (compile with USE_IMGUI)
+- Non-intrusive integration with existing renderer
+- Register/Unregister pattern for custom panels
+
+---
+
 ## Progress Tracking
 
 ### Commit History Template
@@ -1036,6 +1088,13 @@ Engine/Graphics/
 │   └── SSGI.h/cpp
 ├── Particle/                   # Particle System (Implemented)
 │   └── ParticleEmitter.h/cpp
-└── Performance/                # GPU performance (Implemented)
-    └── GPUTimer.h/cpp
+├── Performance/                # GPU performance (Implemented)
+│   └── GPUTimer.h/cpp
+└── PostProcess/                # Advanced Post-processing (Implemented)
+    ├── MotionBlur.h/cpp
+    ├── DepthOfField.h/cpp
+    └── LensEffects.h/cpp
+
+Engine/DebugUI/
+└── DebugUI.h/cpp               # Debug UI system (Implemented)
 ```

@@ -131,6 +131,7 @@
     <ClInclude Include="Graphics\PostProcess\MotionBlur.h" />
     <ClInclude Include="Graphics\PostProcess\DepthOfField.h" />
     <ClInclude Include="Graphics\PostProcess\LensEffects.h" />
+    <ClInclude Include="DebugUI\DebugUI.h" />
     <ClInclude Include="Graphics\Texture.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Scene\SceneManager.h" />
@@ -177,6 +178,7 @@
     <ClCompile Include="Graphics\PostProcess\MotionBlur.cpp" />
     <ClCompile Include="Graphics\PostProcess\DepthOfField.cpp" />
     <ClCompile Include="Graphics\PostProcess\LensEffects.cpp" />
+    <ClCompile Include="DebugUI\DebugUI.cpp" />
     <ClCompile Include="Graphics\Texture.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Scene\SceneManager.cpp" />

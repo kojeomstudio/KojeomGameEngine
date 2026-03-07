@@ -25,9 +25,7 @@
 #include "PostProcess/MotionBlur.h"
 #include "PostProcess/DepthOfField.h"
 #include "PostProcess/LensEffects.h"
-#include "PostProcess/MotionBlur.h"
-#include "PostProcess/DepthOfField.h"
-#include "PostProcess/LensEffects.h"
+#include "../DebugUI/DebugUI.h"
 
 enum class ERenderPath
 {
@@ -200,6 +198,11 @@ public:
     bool IsLensEffectsEnabled() const { return bLensEffectsEnabled && LensEffects.IsInitialized(); }
     KLensEffects* GetLensEffects() { return &LensEffects; }
     void ApplyLensEffects(float DeltaTime);
+    
+    KojeomEngine::KDebugUI* GetDebugUI() { return &DebugUI; }
+    void SetDebugUIEnabled(bool bEnabled);
+    bool IsDebugUIEnabled() const { return bDebugUIEnabled && DebugUI.IsInitialized(); }
+    void RenderDebugUI();
 
 private:
     HRESULT InitializeDefaultResources();
@@ -270,7 +273,10 @@ private:
     bool bMotionBlurEnabled = false;
     bool bDepthOfFieldEnabled = false;
     bool bLensEffectsEnabled = false;
+    bool bDebugUIEnabled = false;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;
+    
+    KojeomEngine::KDebugUI DebugUI;
 }; 
