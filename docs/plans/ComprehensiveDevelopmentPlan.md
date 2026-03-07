@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-18 (Terrain System Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-19 (Water Rendering System Added)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
