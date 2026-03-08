@@ -7,7 +7,7 @@
 - **Status**: Completed
 - **Base Commit**: fe09afb
 - **Priority**: Renderer First
-- **Last Updated**: 2026-03-07
+- **Last Updated**: 2026-03-08
 
 ## Overview
 
@@ -377,6 +377,95 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 - PostProcessor: ApplyPostProcessing(Context, Target, DeltaTime)
 - Renderer: EndHDRPass(float DeltaTime)
 - AutoExposure: ComputeExposure(Context, HDRTexture, DeltaTime)
+
+---
+
+### Phase 22: Input System
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-08
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Input types and enums | ✅ | EKeyCode, EMouseButton, EInputState |
+| KInputManager class | ✅ | Full input manager with keyboard/mouse support |
+| Keyboard input handling | ✅ | Key down/up, key state tracking |
+| Mouse input handling | ✅ | Mouse position, delta, buttons, wheel |
+| Raw input support | ✅ | High-precision mouse input for FPS controls |
+| Action mapping system | ✅ | Named input actions with modifiers |
+| Engine integration | ✅ | Window message handling, update cycle |
+
+#### Implementation Notes
+
+- **EKeyCode**: Virtual key codes for keyboard (letters, numbers, function keys, arrows, etc.)
+- **EMouseButton**: Left, Right, Middle, X1, X2 buttons
+- **KInputManager**: Singleton input manager with key state tracking
+- **Raw Input**: WM_INPUT handling for high-precision mouse movement
+- **Action System**: Register named actions with primary key and modifier keys
+
+#### New Files
+
+- `Engine/Input/InputTypes.h`
+- `Engine/Input/InputManager.h/cpp`
+
+#### Technical Details
+
+**Input Manager Features:**
+- Key state tracking: IsKeyDown, IsKeyUp, IsKeyHeld, IsKeyJustPressed, IsKeyJustReleased
+- Mouse state: Position, delta, button states, wheel delta
+- Raw input: WM_INPUT for FPS-style controls
+- Action mapping: RegisterAction with primary key and modifier key
+
+---
+
+### Phase 23: Audio System
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-08
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Audio types and structs | ✅ | FAudioConfig, FSoundParams, FSoundState |
+| KSound class | ✅ | WAV file loading, audio data management |
+| KAudioManager class | ✅ | XAudio2-based audio engine |
+| WAV file loading | ✅ | RIFF/WAVE format parsing |
+| Sound playback | ✅ | Play, stop, pause, resume |
+| Volume control | ✅ | Master, sound, music volumes |
+
+#### Implementation Notes
+
+- **XAudio2**: Microsoft XAudio2 API for audio playback
+- **KSound**: Sound resource with WAV file loading
+- **KAudioManager**: Singleton audio manager with XAudio2 integration
+- **Voice Management**: Active voice tracking and automatic cleanup
+
+#### New Files
+
+- `Engine/Audio/AudioTypes.h`
+- `Engine/Audio/Sound.h/cpp`
+- `Engine/Audio/AudioManager.h/cpp`
+
+#### Technical Details
+
+**Audio Manager Features:**
+- XAudio2 engine initialization
+- WAV file loading and parsing
+- Sound playback with volume/pitch control
+- Looping sounds and music
+- Separate volume controls for master, sound effects, music
+
+**Sound Parameters:**
+- Volume: 0.0 - 1.0
+- Pitch: 0.5 - 2.0
+- Pan: -1.0 - 1.0
+- Looping: boolean
+- IsMusic: boolean for music category
 
 ---
 

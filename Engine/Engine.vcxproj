@@ -67,7 +67,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;xaudio2.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -90,7 +90,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;xaudio2.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -137,6 +137,11 @@
     <ClInclude Include="Graphics\Terrain\Terrain.h" />
     <ClInclude Include="Graphics\Water\Water.h" />
     <ClInclude Include="Graphics\Sky\SkySystem.h" />
+    <ClInclude Include="Input\InputTypes.h" />
+    <ClInclude Include="Input\InputManager.h" />
+    <ClInclude Include="Audio\AudioTypes.h" />
+    <ClInclude Include="Audio\Sound.h" />
+    <ClInclude Include="Audio\AudioManager.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Scene\SceneManager.h" />
     <ClInclude Include="Serialization\BinaryArchive.h" />
@@ -188,6 +193,9 @@
     <ClCompile Include="Graphics\Terrain\Terrain.cpp" />
     <ClCompile Include="Graphics\Water\Water.cpp" />
     <ClCompile Include="Graphics\Sky\SkySystem.cpp" />
+    <ClCompile Include="Input\InputManager.cpp" />
+    <ClCompile Include="Audio\Sound.cpp" />
+    <ClCompile Include="Audio\AudioManager.cpp" />
     <ClCompile Include="Scene\Actor.cpp" />
     <ClCompile Include="Scene\SceneManager.cpp" />
     <ClCompile Include="Serialization\BinaryArchive.cpp" />

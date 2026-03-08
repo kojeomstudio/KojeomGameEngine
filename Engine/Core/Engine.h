@@ -11,6 +11,7 @@
 #include "../Graphics/Camera.h"
 #include "../Graphics/Renderer.h"
 #include "../Scene/SceneManager.h"
+#include "../Input/InputManager.h"
 
 /**
  * @brief Main engine class
@@ -74,6 +75,7 @@ public:
     KGraphicsDevice* GetGraphicsDevice() const { return GraphicsDevice.get(); }
     KCamera* GetCamera() const { return Camera.get(); }
     KRenderer* GetRenderer() const { return Renderer.get(); }
+    KInputManager* GetInputManager() const { return InputManager.get(); }
     KSceneManager& GetSceneManager() { return SceneManager; }
     const KSceneManager& GetSceneManager() const { return SceneManager; }
     HWND GetWindowHandle() const { return WindowHandle; }
@@ -192,6 +194,7 @@ private:
     std::unique_ptr<KGraphicsDevice> GraphicsDevice;
     std::unique_ptr<KCamera> Camera;
     std::unique_ptr<KRenderer> Renderer;
+    std::unique_ptr<KInputManager> InputManager;
     KSceneManager SceneManager;
 
     // Engine state

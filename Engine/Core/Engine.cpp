@@ -71,6 +71,15 @@ HRESULT KEngine::Initialize(HINSTANCE InInstanceHandle, const std::wstring& InWi
         EngineConstants::DEFAULT_FAR_PLANE
     );
 
+    // Initialize input manager
+    InputManager = std::make_unique<KInputManager>();
+    hr = InputManager->Initialize(WindowHandle);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Input manager initialization failed");
+        return hr;
+    }
+
     // Initialize scene manager
     hr = SceneManager.Initialize();
     if (FAILED(hr))
@@ -128,6 +137,13 @@ void KEngine::Shutdown()
 
     bIsRunning = false;
 
+    // Cleanup input manager
+    if (InputManager)
+    {
+        InputManager->Shutdown();
+        InputManager.reset();
+    }
+
     // Cleanup components
     if (Renderer)
     {
@@ -167,6 +183,12 @@ void KEngine::Update(float InDeltaTime)
     // Basic update logic
     // Override in derived classes to implement game-specific logic
     TotalTime += InDeltaTime;
+
+    // Update input manager
+    if (InputManager)
+    {
+        InputManager->Update();
+    }
 
     // Update camera
     if (Camera)
@@ -359,6 +381,7 @@ void KEngine::CalculateFrameStats()
 LRESULT CALLBACK WindowProc(HWND WindowHandle, UINT Message, WPARAM WParam, LPARAM LParam)
 {
     KEngine* engine = KEngine::Instance;
+    KInputManager* inputMgr = engine ? engine->GetInputManager() : nullptr;
     
     switch (Message)
     {
@@ -372,9 +395,101 @@ LRESULT CALLBACK WindowProc(HWND WindowHandle, UINT Message, WPARAM WParam, LPAR
         break;
 
     case WM_KEYDOWN:
+        if (inputMgr)
+        {
+            inputMgr->ProcessKeyDown(static_cast<uint32_t>(WParam));
+        }
         if (WParam == VK_ESCAPE)
         {
             PostQuitMessage(0);
+        }
+        break;
+
+    case WM_KEYUP:
+        if (inputMgr)
+        {
+            inputMgr->ProcessKeyUp(static_cast<uint32_t>(WParam));
+        }
+        break;
+
+    case WM_MOUSEMOVE:
+        if (inputMgr)
+        {
+            int32_t x = static_cast<int32_t>(LOWORD(LParam));
+            int32_t y = static_cast<int32_t>(HIWORD(LParam));
+            inputMgr->ProcessMouseMove(x, y);
+        }
+        break;
+
+    case WM_LBUTTONDOWN:
+        if (inputMgr)
+        {
+            inputMgr->ProcessMouseDown(EMouseButton::Left);
+        }
+        SetCapture(WindowHandle);
+        break;
+
+    case WM_LBUTTONUP:
+        if (inputMgr)
+        {
+            inputMgr->ProcessMouseUp(EMouseButton::Left);
+        }
+        ReleaseCapture();
+        break;
+
+    case WM_RBUTTONDOWN:
+        if (inputMgr)
+        {
+            inputMgr->ProcessMouseDown(EMouseButton::Right);
+        }
+        break;
+
+    case WM_RBUTTONUP:
+        if (inputMgr)
+        {
+            inputMgr->ProcessMouseUp(EMouseButton::Right);
+        }
+        break;
+
+    case WM_MBUTTONDOWN:
+        if (inputMgr)
+        {
+            inputMgr->ProcessMouseDown(EMouseButton::Middle);
+        }
+        break;
+
+    case WM_MBUTTONUP:
+        if (inputMgr)
+        {
+            inputMgr->ProcessMouseUp(EMouseButton::Middle);
+        }
+        break;
+
+    case WM_MOUSEWHEEL:
+        if (inputMgr)
+        {
+            int32_t wheelDelta = GET_WHEEL_DELTA_WPARAM(WParam);
+            inputMgr->ProcessMouseWheel(wheelDelta);
+        }
+        break;
+
+    case WM_INPUT:
+        if (inputMgr && inputMgr->IsRawInputEnabled())
+        {
+            HRAWINPUT hRawInput = reinterpret_cast<HRAWINPUT>(LParam);
+            RAWINPUT rawInput;
+            UINT size = sizeof(RAWINPUT);
+            
+            if (GetRawInputData(hRawInput, RID_INPUT, &rawInput, &size, sizeof(RAWINPUTHEADER)) > 0)
+            {
+                if (rawInput.header.dwType == RIM_TYPEMOUSE)
+                {
+                    inputMgr->ProcessRawMouseInput(
+                        rawInput.data.mouse.lLastX,
+                        rawInput.data.mouse.lLastY
+                    );
+                }
+            }
         }
         break;
 

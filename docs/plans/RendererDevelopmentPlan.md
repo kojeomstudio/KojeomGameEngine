@@ -4,9 +4,9 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: All Phases Completed (Phase 1-21)
+- **Status**: All Phases Completed (Phase 1-23)
 - **Base Commit**: fe09afb
-- **Last Updated**: 2026-03-07
+- **Last Updated**: 2026-03-08
 
 ## Overview
 
@@ -1200,6 +1200,121 @@ targetExposure = targetLuminance / avgLuminance
 t = 1.0 - exp(-adaptSpeed * deltaTime)
 currentExposure = currentExposure + (targetExposure - currentExposure) * t
 ```
+
+---
+
+### Phase 22: Input System
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-08  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| Input types and enums | ✅ | | EKeyCode, EMouseButton, EInputState |
+| KInputManager class | ✅ | | Full input manager with keyboard/mouse support |
+| Keyboard input handling | ✅ | | Key down/up, key state tracking |
+| Mouse input handling | ✅ | | Mouse position, delta, buttons, wheel |
+| Raw input support | ✅ | | High-precision mouse input for FPS controls |
+| Action mapping system | ✅ | | Named input actions with modifiers |
+| Engine integration | ✅ | | Window message handling, update cycle |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Input/InputTypes.h` - Key codes, mouse buttons, input state enums
+- `Engine/Input/InputManager.h/cpp` - Input manager with event handling
+
+**Modified Files:**
+- `Engine/Core/Engine.h/cpp` - Added InputManager integration
+- `Engine/Engine.vcxproj` - Added Input files
+
+**Features:**
+- Keyboard input with key state tracking (pressed, held, just pressed, just released)
+- Mouse input with position, delta, button states, wheel
+- Raw input for high-precision mouse movement (FPS-style controls)
+- Action mapping system for named input actions
+- Input callbacks for event-driven input handling
+- Mouse capture and cursor control
+
+#### Technical Details
+
+**Input Manager Features:**
+- Key State Tracking: bIsPressed, bWasPressed for state queries
+- Mouse State: Position, delta, buttons, wheel delta
+- Raw Input: WM_INPUT handling for precise mouse movement
+- Action System: Register actions with primary key and modifiers
+
+**Key Codes:**
+- Function keys (F1-F12)
+- Letter keys (A-Z)
+- Number keys (0-9)
+- Arrow keys, navigation keys
+- Modifiers (Shift, Ctrl, Alt)
+- Mouse buttons (virtual key codes 0x100+)
+
+---
+
+### Phase 23: Audio System
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-08  
+**Commit Hash**: (pending commit)
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| Audio types and structs | ✅ | | FAudioConfig, FSoundParams, FSoundState |
+| KSound class | ✅ | | WAV file loading, audio data management |
+| KAudioManager class | ✅ | | XAudio2-based audio engine |
+| WAV file loading | ✅ | | RIFF/WAVE format parsing |
+| Sound playback | ✅ | | Play, stop, pause, resume |
+| Volume control | ✅ | | Master, sound, music volumes |
+| Voice management | ✅ | | Active voice tracking, cleanup |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Audio/AudioTypes.h` - Audio configuration and parameter structs
+- `Engine/Audio/Sound.h/cpp` - Sound resource with WAV loading
+- `Engine/Audio/AudioManager.h/cpp` - XAudio2-based audio manager
+
+**Modified Files:**
+- `Engine/Engine.vcxproj` - Added Audio files, xaudio2.lib dependency
+
+**Features:**
+- XAudio2 integration for Windows audio
+- WAV file loading and parsing
+- Sound playback with volume, pitch, pan control
+- Looping sounds and music
+- Separate volume controls for master, sound effects, and music
+- Active voice management with automatic cleanup
+- Voice callbacks for stream end detection
+
+#### Technical Details
+
+**Audio Manager Features:**
+- XAudio2 Engine initialization with mastering voice
+- Sound caching by name
+- Voice pool management
+- Per-voice volume/pitch control
+- Music volume category (applied to music sounds)
+
+**Sound Parameters:**
+- Volume: 0.0 - 1.0
+- Pitch: 0.5 - 2.0 (frequency ratio)
+- Pan: -1.0 - 1.0
+- Looping: boolean
+- IsMusic: boolean for music category
+
+**WAV Loading:**
+- RIFF/WAVE format parsing
+- PCM format support
+- 8-bit and 16-bit audio
+- Mono and stereo channels
 
 ---
 
