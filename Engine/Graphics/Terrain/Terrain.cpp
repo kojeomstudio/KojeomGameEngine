@@ -402,7 +402,7 @@ HRESULT KTerrain::GenerateLODMeshes()
 
         D3D11_BUFFER_DESC vbDesc = {};
         vbDesc.Usage = D3D11_USAGE_IMMUTABLE;
-        vbDesc.ByteWidth = sizeof(FTerrainVertex) * vertices.size();
+        vbDesc.ByteWidth = static_cast<UINT>(sizeof(FTerrainVertex) * vertices.size());
         vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
         D3D11_SUBRESOURCE_DATA vbData = {};
@@ -413,7 +413,7 @@ HRESULT KTerrain::GenerateLODMeshes()
 
         D3D11_BUFFER_DESC ibDesc = {};
         ibDesc.Usage = D3D11_USAGE_IMMUTABLE;
-        ibDesc.ByteWidth = sizeof(UINT32) * indices.size();
+        ibDesc.ByteWidth = static_cast<UINT>(sizeof(UINT32) * indices.size());
         ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
         D3D11_SUBRESOURCE_DATA ibData = {};

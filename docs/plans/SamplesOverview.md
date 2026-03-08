@@ -2,6 +2,8 @@
 
 This document provides an overview of the sample programs available in the `samples` folder.
 
+> **Note**: For basic engine usage examples (Triangle, Basic, Advanced), see [ExamplesOverview.md](ExamplesOverview.md).
+
 ## Available Samples
 
 | Sample | Description | Features Demonstrated |
