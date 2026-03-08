@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-21 (Automatic Exposure Added)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-24 (All phases complete)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -466,6 +466,55 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 - Pan: -1.0 - 1.0
 - Looping: boolean
 - IsMusic: boolean for music category
+
+---
+
+### Phase 24: Gameplay Sample
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-08
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| GameplaySample project | ✅ | samples/Gameplay/GameplaySample.cpp |
+| Input system integration | ✅ | KInputManager with action mapping |
+| Player movement | ✅ | WASD movement with rotation |
+| Camera follow | ✅ | Third-person camera following player |
+| Particle effects | ✅ | Movement particles using KParticleEmitter |
+| Collectible system | ✅ | Collision detection and scoring |
+| Jump mechanics | ✅ | Gravity-based jump system |
+
+#### Implementation Notes
+
+- **KInputManager**: Action mapping for named inputs (MoveForward, MoveBackward, etc.)
+- **Player Controller**: Full player movement with rotation
+- **Third-Person Camera**: Camera follows player with configurable distance
+- **Collectibles**: 5 collectible spheres with bobbing animation
+- **Collision**: Simple distance-based collision detection
+- **Particles**: Cone-shaped particle emitter for player movement
+
+#### New Files
+
+- `samples/Gameplay/GameplaySample.cpp`
+- `samples/Gameplay/GameplaySample.vcxproj`
+
+#### Technical Details
+
+**Player Controls:**
+- WASD: Movement
+- Right Mouse: Camera rotation
+- Space: Jump
+- Shift: Sprint (2x speed)
+
+**Gameplay Features:**
+- Player cube with movement particles
+- Collectible yellow spheres
+- Score tracking
+- Jump with gravity
+- Third-person camera
 
 ---
 

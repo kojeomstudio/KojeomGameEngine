@@ -17,6 +17,7 @@ This document provides an overview of the sample programs available in the `samp
 | Sky | Atmospheric scattering / sky rendering | Rayleigh/Mie scattering, sun disk, time of day system, ACES tonemapping |
 | Particles | Particle system with multiple emitters | Fire, smoke, sparks, snow particles, emitter shapes, billboard rendering |
 | SkeletalMesh | Skeletal mesh rendering with animation | GPU skinning, bone hierarchy, animation playback, skeleton debug visualization |
+| Gameplay | Input and Audio system demonstration | Keyboard/mouse controls, player movement, particle effects, collectible system |
 
 ## Building Samples
 
@@ -127,6 +128,17 @@ Each sample is a standalone executable that can be run independently.
   - Skeleton debug visualization
   - Bone hierarchy with bind poses
   - Animation playback system
+
+### Gameplay Sample
+- **File**: `samples/Gameplay/GameplaySample.cpp`
+- **Features**:
+  - Input system integration (WASD movement, mouse look)
+  - Action mapping system (MoveForward, MoveBackward, MoveLeft, MoveRight, Jump, Sprint)
+  - Player character with third-person camera
+  - Collectible system with collision detection
+  - Particle effects for player movement
+  - Audio system integration (ready for sound effects)
+  - Jump mechanics with gravity
 
 ## Adding New Samples
 

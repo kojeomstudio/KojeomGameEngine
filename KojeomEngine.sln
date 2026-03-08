@@ -64,6 +64,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SkeletalMeshSample", "sampl
 		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GameplaySample", "samples\Gameplay\GameplaySample.vcxproj", "{A1000010-F44F-4478-BDAE-6634EFC2CA10}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -122,6 +127,10 @@ Global
 		{A1000009-F44F-4478-BDAE-6634EFC2CA09}.Debug|x64.Build.0 = Debug|x64
 		{A1000009-F44F-4478-BDAE-6634EFC2CA09}.Release|x64.ActiveCfg = Release|x64
 		{A1000009-F44F-4478-BDAE-6634EFC2CA09}.Release|x64.Build.0 = Release|x64
+		{A1000010-F44F-4478-BDAE-6634EFC2CA10}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000010-F44F-4478-BDAE-6634EFC2CA10}.Debug|x64.Build.0 = Debug|x64
+		{A1000010-F44F-4478-BDAE-6634EFC2CA10}.Release|x64.ActiveCfg = Release|x64
+		{A1000010-F44F-4478-BDAE-6634EFC2CA10}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
