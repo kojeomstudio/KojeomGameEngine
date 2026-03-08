@@ -14,6 +14,7 @@ This document provides an overview of the sample programs available in the `samp
 | Water | Water rendering with wave animation | Gerstner waves, reflection/refraction, fresnel effect, foam |
 | Sky | Atmospheric scattering / sky rendering | Rayleigh/Mie scattering, sun disk, time of day system, ACES tonemapping |
 | Particles | Particle system with multiple emitters | Fire, smoke, sparks, snow particles, emitter shapes, billboard rendering |
+| SkeletalMesh | Skeletal mesh rendering with animation | GPU skinning, bone hierarchy, animation playback, skeleton debug visualization |
 
 ## Building Samples
 
@@ -114,6 +115,16 @@ Each sample is a standalone executable that can be run independently.
   - Spark particles (sphere emission)
   - Snow particles (box emission)
   - Bloom effect for bright particles
+
+### SkeletalMesh Sample
+- **File**: `samples/SkeletalMesh/SkeletalMeshSample.cpp`
+- **Features**:
+  - Procedural skeleton creation (12 bones)
+  - GPU skinning with bone matrix palette
+  - Procedural animation (waving arm)
+  - Skeleton debug visualization
+  - Bone hierarchy with bind poses
+  - Animation playback system
 
 ## Adding New Samples
 
