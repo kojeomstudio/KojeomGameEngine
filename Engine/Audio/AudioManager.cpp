@@ -2,6 +2,16 @@
 #include "../Utils/Logger.h"
 #include <xaudio2.h>
 #include <algorithm>
+#include <Windows.h>
+
+static std::string WideStringToUTF8(const std::wstring& WideStr)
+{
+    if (WideStr.empty()) return std::string();
+    int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, WideStr.c_str(), static_cast<int>(WideStr.length()), nullptr, 0, nullptr, nullptr);
+    std::string Result(SizeNeeded, 0);
+    WideCharToMultiByte(CP_UTF8, 0, WideStr.c_str(), static_cast<int>(WideStr.length()), &Result[0], SizeNeeded, nullptr, nullptr);
+    return Result;
+}
 
 class FVoiceCallback : public IXAudio2VoiceCallback
 {
@@ -170,7 +180,7 @@ std::shared_ptr<KSound> KAudioManager::LoadSound(const std::wstring& FilePath, c
     std::string SoundName = Name;
     if (SoundName.empty())
     {
-        SoundName = std::string(FilePath.begin(), FilePath.end());
+        SoundName = WideStringToUTF8(FilePath);
     }
 
     auto ExistingSound = GetSound(SoundName);

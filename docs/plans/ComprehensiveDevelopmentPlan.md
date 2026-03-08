@@ -20,6 +20,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
 5. **C# Editor** - ✅ Completed
+6. **Physics System** - ✅ Completed (Phase 25)
 
 ---
 
@@ -515,6 +516,64 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 - Score tracking
 - Jump with gravity
 - Third-person camera
+
+---
+
+### Phase 25: Physics System
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-08
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| Physics types | ✅ | EColliderType, EPhysicsBodyType, FCollisionInfo, FAABB, FSphere, FBox, FCapsule |
+| RigidBody class | ✅ | KRigidBody with position, velocity, mass, forces |
+| PhysicsWorld class | ✅ | KPhysicsWorld with collision detection and resolution |
+| Sphere-Sphere collision | ✅ | Distance-based sphere collision |
+| Sphere-Box collision | ✅ | Closest point on box algorithm |
+| Box-Box collision | ✅ | AABB overlap detection |
+| Impulse resolution | ✅ | Velocity-based collision response |
+| Positional correction | ✅ | Baumgarte stabilization |
+| Raycast | ✅ | Sphere and Box raycast |
+| Physics Sample | ✅ | samples/Physics/PhysicsSample.cpp |
+
+#### Implementation Notes
+
+- **KPhysicsWorld**: Fixed timestep physics simulation with sub-stepping
+- **KRigidBody**: Dynamic, Static, Kinematic body types
+- **Collision Detection**: Broad phase (AABB) + Narrow phase (primitive tests)
+- **Collision Response**: Impulse-based with restitution and friction
+- **Gravity**: Configurable gravity vector (default: -9.81 m/s²)
+- **Damping**: Linear and angular velocity damping
+
+#### New Files
+
+- `Engine/Physics/PhysicsTypes.h`
+- `Engine/Physics/RigidBody.h/cpp`
+- `Engine/Physics/PhysicsWorld.h/cpp`
+- `samples/Physics/PhysicsSample.cpp`
+- `samples/Physics/PhysicsSample.vcxproj`
+
+#### Technical Details
+
+**Physics Body Types:**
+- Static: Immovable objects (ground, walls)
+- Dynamic: Physics-simulated objects
+- Kinematic: Moving objects that don't respond to physics
+
+**Collider Types:**
+- Sphere: Radius-based collision
+- Box: Half-extents based collision
+- Capsule: Radius + half-height (planned)
+
+**Physics Parameters:**
+- FixedDeltaTime: 1/60s (60 Hz simulation)
+- MaxSubSteps: 4 (for variable frame rates)
+- BaumgarteStabilization: 0.2 (position correction factor)
+- Slop: 0.01 (penetration allowance)
 
 ---
 
