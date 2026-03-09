@@ -18,6 +18,9 @@ This document provides an overview of the sample programs available in the `samp
 | Particles | Particle system with multiple emitters | Fire, smoke, sparks, snow particles, emitter shapes, billboard rendering |
 | SkeletalMesh | Skeletal mesh rendering with animation | GPU skinning, bone hierarchy, animation playback, skeleton debug visualization |
 | Gameplay | Input and Audio system demonstration | Keyboard/mouse controls, player movement, particle effects, collectible system |
+| Physics | Physics simulation demonstration | Rigid body dynamics, collision detection (sphere/box), impulse resolution, gravity |
+| UI | UI system demonstration | Panels, text, buttons, click callbacks, hover states |
+| UI/Layout | UI layout system demonstration | Vertical/horizontal layouts, grid layout, checkbox, slider controls |
 
 ## Building Samples
 
@@ -37,9 +40,13 @@ All samples are built as part of the main solution (`KojeomEngine.sln`). They de
 
 After building, the sample executables will be located in:
 ```
-bin\x64\Debug\
-bin\x64\Release\
+samples/<SampleName>/bin/x64/Debug/
+samples/<SampleName>/bin/x64/Release/
 ```
+
+For example:
+- `samples/BasicRendering/bin/x64/Release/BasicRenderingSample.exe`
+- `samples/Gameplay/bin/x64/Release/GameplaySample.exe`
 
 Each sample is a standalone executable that can be run independently.
 
@@ -139,6 +146,35 @@ Each sample is a standalone executable that can be run independently.
   - Particle effects for player movement
   - Audio system integration (ready for sound effects)
   - Jump mechanics with gravity
+
+### Physics Sample
+- **File**: `samples/Physics/PhysicsSample.cpp`
+- **Features**:
+  - Rigid body dynamics simulation
+  - Sphere and box collision detection
+  - Impulse-based collision resolution
+  - Gravity and damping
+  - Positional correction (Baumgarte stabilization)
+  - Fixed timestep simulation with sub-stepping
+
+### UI Sample
+- **File**: `samples/UI/UISample.cpp`
+- **Features**:
+  - Panel elements with background colors
+  - Text labels with various fonts
+  - Interactive buttons with click callbacks
+  - Hover and pressed states
+  - Click counter demonstration
+
+### UI Layout Sample
+- **File**: `samples/UI/Layout/LayoutSample.cpp`
+- **Features**:
+  - Vertical layout container
+  - Horizontal layout container
+  - Grid layout container
+  - Checkbox controls with value change callbacks
+  - Slider controls with min/max range
+  - Automatic child sizing
 
 ## Adding New Samples
 
