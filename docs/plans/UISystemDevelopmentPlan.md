@@ -260,29 +260,87 @@ samples/
 
 ## Future Enhancements
 
-1. **Layout System**
-   - Vertical/Horizontal layouts
-   - Grid layout
-   - Flexbox-style layout
+1. **Layout System** (✅ Completed in Phase 27)
+   - ✅ Vertical/Horizontal layouts
+   - ✅ Grid layout
+   - ✅ UICheckbox control
+   - ✅ UISlider control
 
-2. **More Elements**
-   - Slider
-   - Checkbox
+2. **More Elements** (Planned)
    - Radio button
    - Dropdown
    - Scroll view
 
-3. **Advanced Features**
+3. **Advanced Features** (Planned)
    - 9-slice scaling for panels
    - Masking and clipping
    - Animations and tweens
    - Data binding
    - Styles and themes
 
-4. **Editor Integration**
+4. **Editor Integration** (Planned)
    - Visual UI editor
    - Drag-and-drop layout
    - Property inspector
+
+## Phase 27: Layout System
+
+**Status**: ✅ Completed
+**Completion Date**: 2026-03-09
+
+### New Files
+
+- `Engine/UI/UILayout.h/cpp` - Base layout class
+- `Engine/UI/UIVerticalLayout.h/cpp` - Vertical stacking layout
+- `Engine/UI/UIHorizontalLayout.h/cpp` - Horizontal stacking layout
+- `Engine/UI/UIGridLayout.h/cpp` - Grid-based layout
+- `Engine/UI/UICheckbox.h/cpp` - Checkbox control
+- `Engine/UI/UISlider.h/cpp` - Slider control
+- `samples/UI/Layout/LayoutSample.cpp` - Layout demonstration
+
+### Features
+
+- **KUILayout**: Base class with children management, spacing, and padding
+- **KUIVerticalLayout**: Stacks children vertically with configurable spacing
+- **KUIHorizontalLayout**: Stacks children horizontally with configurable spacing
+- **KUIGridLayout**: Arranges children in a grid with configurable columns
+- **KUICheckbox**: Toggle control with checked state and value change callback
+- **KUISlider**: Value slider with min/max range, handle, and value change callback
+
+### Layout System API
+
+```cpp
+// Vertical Layout
+auto verticalLayout = std::make_shared<KUIVerticalLayout>();
+verticalLayout->SetSpacing(8.0f);
+verticalLayout->SetPadding(FPadding(5, 5, 5, 5));
+verticalLayout->AddChild(button1);
+verticalLayout->AddChild(button2);
+
+// Horizontal Layout
+auto horizontalLayout = std::make_shared<KUIHorizontalLayout>();
+horizontalLayout->SetSpacing(10.0f);
+horizontalLayout->AddChild(panel1);
+horizontalLayout->AddChild(panel2);
+
+// Grid Layout
+auto gridLayout = std::make_shared<KUIGridLayout>();
+gridLayout->SetColumns(3);
+gridLayout->SetCellSize(80, 40);
+gridLayout->AddChild(button);
+
+// Checkbox
+auto checkbox = std::make_shared<KUICheckbox>();
+checkbox->SetChecked(true);
+checkbox->SetOnValueChangedCallback([](bool bChecked) { /* callback */ });
+
+// Slider
+auto slider = std::make_shared<KUISlider>();
+slider->SetMinValue(0.0f);
+slider->SetMaxValue(100.0f);
+slider->SetValue(50.0f);
+slider->SetOnValueChangedCallback([](float Value) { /* callback */ });
+```
 
 ## Notes
 

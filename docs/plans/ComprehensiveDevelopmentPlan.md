@@ -22,7 +22,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 5. **C# Editor** - ✅ Completed
 6. **Physics System** - ✅ Completed (Phase 25)
 7. **UI System** - ✅ Completed (Phase 26)
-8. **UI Layout System** - 🔲 In Progress (Phase 27)
+8. **UI Layout System** - ✅ Completed (Phase 27)
 
 ---
 
@@ -639,28 +639,42 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ### Phase 27: UI Layout System
 
-**Status**: 🔲 In Progress
+**Status**: ✅ Completed
 **Priority**: High
-**Completion Date**: Pending
+**Completion Date**: 2026-03-09
 
 #### Tasks
 
 | Task | Status | Description |
 |------|--------|-------------|
-| UILayout base class | 🔲 | Base layout class with children management |
-| UIVerticalLayout | 🔲 | Vertical stacking layout |
-| UIHorizontalLayout | 🔲 | Horizontal stacking layout |
-| UIGridLayout | 🔲 | Grid-based layout |
-| UISpacing/Padding | 🔲 | Configurable spacing and padding |
-| Layout sample | 🔲 | samples/UI/LayoutSample.cpp |
+| UILayout base class | ✅ | Base layout class with children management |
+| UIVerticalLayout | ✅ | Vertical stacking layout |
+| UIHorizontalLayout | ✅ | Horizontal stacking layout |
+| UIGridLayout | ✅ | Grid-based layout |
+| UISpacing/Padding | ✅ | Configurable spacing and padding |
+| UICheckbox | ✅ | Toggle checkbox control |
+| UISlider | ✅ | Value slider control |
+| Layout sample | ✅ | samples/UI/Layout/LayoutSample.cpp |
 
 #### Implementation Notes
 
-- **KUILayout**: Base class for layout containers
-- **KUIVerticalLayout**: Stacks children vertically
-- **KUIHorizontalLayout**: Stacks children horizontally
-- **KUIGridLayout**: Grid-based child arrangement
+- **KUILayout**: Base class for layout containers with children management
+- **KUIVerticalLayout**: Stacks children vertically with configurable spacing
+- **KUIHorizontalLayout**: Stacks children horizontally with configurable spacing
+- **KUIGridLayout**: Grid-based child arrangement with configurable columns
+- **KUICheckbox**: Toggle checkbox with callback on value change
+- **KUISlider**: Value slider with min/max range and callback
 - **Automatic Sizing**: Children can auto-size based on content
+
+#### New Files
+
+- `Engine/UI/UILayout.h/cpp` - Base layout class
+- `Engine/UI/UIVerticalLayout.h/cpp` - Vertical layout
+- `Engine/UI/UIHorizontalLayout.h/cpp` - Horizontal layout
+- `Engine/UI/UIGridLayout.h/cpp` - Grid layout
+- `Engine/UI/UICheckbox.h/cpp` - Checkbox control
+- `Engine/UI/UISlider.h/cpp` - Slider control
+- `samples/UI/Layout/LayoutSample.cpp` - Layout demonstration sample
 
 ---
 
