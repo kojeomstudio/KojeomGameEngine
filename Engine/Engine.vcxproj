@@ -149,6 +149,14 @@
     <ClInclude Include="Scene\SceneManager.h" />
     <ClInclude Include="Serialization\BinaryArchive.h" />
     <ClInclude Include="Serialization\JsonArchive.h" />
+    <ClInclude Include="UI\UITypes.h" />
+    <ClInclude Include="UI\UIFont.h" />
+    <ClInclude Include="UI\UICanvas.h" />
+    <ClInclude Include="UI\UIElement.h" />
+    <ClInclude Include="UI\UIPanel.h" />
+    <ClInclude Include="UI\UIText.h" />
+    <ClInclude Include="UI\UIButton.h" />
+    <ClInclude Include="UI\UIImage.h" />
     <ClInclude Include="Utils\Common.h" />
     <ClInclude Include="Utils\Logger.h" />
     <ClInclude Include="Utils\Math.h" />
@@ -205,6 +213,13 @@
     <ClCompile Include="Scene\SceneManager.cpp" />
     <ClCompile Include="Serialization\BinaryArchive.cpp" />
     <ClCompile Include="Serialization\JsonArchive.cpp" />
+    <ClCompile Include="UI\UIFont.cpp" />
+    <ClCompile Include="UI\UICanvas.cpp" />
+    <ClCompile Include="UI\UIElement.cpp" />
+    <ClCompile Include="UI\UIPanel.cpp" />
+    <ClCompile Include="UI\UIText.cpp" />
+    <ClCompile Include="UI\UIButton.cpp" />
+    <ClCompile Include="UI\UIImage.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

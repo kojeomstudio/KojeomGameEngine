@@ -29,8 +29,8 @@ public:
         UINT32 width = GetWindowWidth();
         UINT32 height = GetWindowHeight();
 
-        m_canvas.Initialize(graphicsDevice->GetDevice(), width, height);
-        if (FAILED(m_canvas.Initialize(graphicsDevice->GetDevice(), width, height)))
+        m_canvas = std::make_shared<KUICanvas>();
+        if (FAILED(m_canvas->Initialize(graphicsDevice->GetDevice(), width, height)))
         {
             LOG_ERROR("Failed to initialize UI canvas");
             return E_FAIL;
@@ -42,7 +42,7 @@ public:
             LOG_ERROR("Failed to initialize default font");
             return E_FAIL;
         }
-        m_canvas.SetDefaultFont(m_font);
+        m_canvas->SetDefaultFont(m_font);
 
         CreateUIElements();
 
@@ -62,8 +62,8 @@ public:
         backgroundPanel->SetName("BackgroundPanel");
         backgroundPanel->SetPosition(50, 50);
         backgroundPanel->SetSize(400, 500);
-        backgroundPanel->SetBackgroundColor(FColor(0.1f, 0.1f, 0.15f, 0.0f));
-        m_canvas.AddElement(backgroundPanel);
+        backgroundPanel->SetBackgroundColor(FColor(0.1f, 0.1f, 0.15f, 0.9f));
+        m_canvas->AddElement(backgroundPanel);
 
         auto titleText = std::make_shared<KUIText>();
         titleText->SetName("TitleText");
