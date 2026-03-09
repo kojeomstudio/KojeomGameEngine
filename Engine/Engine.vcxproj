@@ -157,6 +157,12 @@
     <ClInclude Include="UI\UIText.h" />
     <ClInclude Include="UI\UIButton.h" />
     <ClInclude Include="UI\UIImage.h" />
+    <ClInclude Include="UI\UILayout.h" />
+    <ClInclude Include="UI\UIVerticalLayout.h" />
+    <ClInclude Include="UI\UIHorizontalLayout.h" />
+    <ClInclude Include="UI\UIGridLayout.h" />
+    <ClInclude Include="UI\UISlider.h" />
+    <ClInclude Include="UI\UICheckbox.h" />
     <ClInclude Include="Utils\Common.h" />
     <ClInclude Include="Utils\Logger.h" />
     <ClInclude Include="Utils\Math.h" />
@@ -220,6 +226,12 @@
     <ClCompile Include="UI\UIText.cpp" />
     <ClCompile Include="UI\UIButton.cpp" />
     <ClCompile Include="UI\UIImage.cpp" />
+    <ClCompile Include="UI\UILayout.cpp" />
+    <ClCompile Include="UI\UIVerticalLayout.cpp" />
+    <ClCompile Include="UI\UIHorizontalLayout.cpp" />
+    <ClCompile Include="UI\UIGridLayout.cpp" />
+    <ClCompile Include="UI\UISlider.cpp" />
+    <ClCompile Include="UI\UICheckbox.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

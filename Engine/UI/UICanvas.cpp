@@ -295,6 +295,9 @@ void KUICanvas::Render(ID3D11DeviceContext* Context)
 {
     if (!bInitialized || !Context) return;
 
+    BatchedVertices.clear();
+    BatchedIndices.clear();
+
     XMMATRIX projection = XMMatrixOrthographicOffCenterLH(
         0.0f, static_cast<float>(CanvasWidth),
         static_cast<float>(CanvasHeight), 0.0f,
@@ -322,6 +325,8 @@ void KUICanvas::Render(ID3D11DeviceContext* Context)
             element->Render(Context, this);
         }
     }
+    
+    FlushDrawCommands(Context);
 }
 
 void KUICanvas::UpdateConstantBuffer(ID3D11DeviceContext* Context, const XMMATRIX& Transform)
@@ -473,4 +478,40 @@ void KUICanvas::SetFocusedElement(KUIElement* Element)
             FocusedElement->OnFocus();
         }
     }
+}
+
+void KUICanvas::AddQuad(float X, float Y, float Width, float Height, const FColor& Color)
+{
+    XMFLOAT4 color = Color.ToFloat4();
+    uint32 baseIndex = static_cast<uint32>(BatchedVertices.size());
+
+    BatchedVertices.push_back(FUIVertex(XMFLOAT3(X, Y, 0), XMFLOAT2(0, 0), color));
+    BatchedVertices.push_back(FUIVertex(XMFLOAT3(X + Width, Y, 0), XMFLOAT2(1, 0), color));
+    BatchedVertices.push_back(FUIVertex(XMFLOAT3(X + Width, Y + Height, 0), XMFLOAT2(1, 1), color));
+    BatchedVertices.push_back(FUIVertex(XMFLOAT3(X, Y + Height, 0), XMFLOAT2(0, 1), color));
+
+    BatchedIndices.push_back(baseIndex + 0);
+    BatchedIndices.push_back(baseIndex + 1);
+    BatchedIndices.push_back(baseIndex + 2);
+    BatchedIndices.push_back(baseIndex + 0);
+    BatchedIndices.push_back(baseIndex + 2);
+    BatchedIndices.push_back(baseIndex + 3);
+}
+
+void KUICanvas::AddQuad(float X, float Y, float Width, float Height, const FColor& Color, ID3D11ShaderResourceView* Texture)
+{
+    AddQuad(X, Y, Width, Height, Color);
+}
+
+void KUICanvas::FlushDrawCommands(ID3D11DeviceContext* Context)
+{
+    if (BatchedVertices.empty() || BatchedIndices.empty())
+        return;
+
+    UpdateBuffers(Context, BatchedVertices, BatchedIndices);
+
+    Context->DrawIndexed(static_cast<UINT>(BatchedIndices.size()), 0, 0);
+    
+    BatchedVertices.clear();
+    BatchedIndices.clear();
 }

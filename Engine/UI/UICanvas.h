@@ -44,6 +44,11 @@ public:
     KUIFont* GetDefaultFont() const { return DefaultFont.get(); }
 
     void SetDefaultFont(std::shared_ptr<KUIFont> Font) { DefaultFont = Font; }
+    
+    void AddQuad(float X, float Y, float Width, float Height, const FColor& Color);
+    void AddQuad(float X, float Y, float Width, float Height, const FColor& Color, ID3D11ShaderResourceView* Texture);
+    
+    void FlushDrawCommands(ID3D11DeviceContext* Context);
 
 private:
     HRESULT CreateConstantBuffer();
@@ -82,4 +87,7 @@ private:
 
     float MouseX, MouseY;
     bool bInitialized;
+    
+    std::vector<FUIVertex> BatchedVertices;
+    std::vector<uint32> BatchedIndices;
 };
