@@ -99,6 +99,7 @@
     <ClInclude Include="Assets\Skeleton.h" />
     <ClInclude Include="Assets\Animation.h" />
     <ClInclude Include="Assets\AnimationInstance.h" />
+    <ClInclude Include="Assets\AnimationStateMachine.h" />
     <ClInclude Include="Assets\ModelLoader.h" />
     <ClInclude Include="Assets\SkeletalMeshComponent.h" />
     <ClInclude Include="Core\Engine.h" />
@@ -173,6 +174,7 @@
     <ClCompile Include="Assets\Skeleton.cpp" />
     <ClCompile Include="Assets\Animation.cpp" />
     <ClCompile Include="Assets\AnimationInstance.cpp" />
+    <ClCompile Include="Assets\AnimationStateMachine.cpp" />
     <ClCompile Include="Assets\ModelLoader.cpp" />
     <ClCompile Include="Assets\SkeletalMeshComponent.cpp" />
     <ClCompile Include="Core\Engine.cpp" />
