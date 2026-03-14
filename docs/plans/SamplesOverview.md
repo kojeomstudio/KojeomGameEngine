@@ -17,6 +17,7 @@ This document provides an overview of the sample programs available in the `samp
 | Sky | Atmospheric scattering / sky rendering | Rayleigh/Mie scattering, sun disk, time of day system, ACES tonemapping |
 | Particles | Particle system with multiple emitters | Fire, smoke, sparks, snow particles, emitter shapes, billboard rendering |
 | SkeletalMesh | Skeletal mesh rendering with animation | GPU skinning, bone hierarchy, animation playback, skeleton debug visualization |
+| AnimationStateMachine | State-based animation system | Animation states, transitions, parameter-based blending, smooth animation transitions |
 | Gameplay | Input and Audio system demonstration | Keyboard/mouse controls, player movement, particle effects, collectible system |
 | Physics | Physics simulation demonstration | Rigid body dynamics, collision detection (sphere/box), impulse resolution, gravity |
 | UI | UI system demonstration | Panels, text, buttons, click callbacks, hover states |
@@ -135,6 +136,18 @@ Each sample is a standalone executable that can be run independently.
   - Skeleton debug visualization
   - Bone hierarchy with bind poses
   - Animation playback system
+
+### AnimationStateMachine Sample
+- **File**: `samples/AnimationStateMachine/AnimationStateMachineSample.cpp`
+- **Features**:
+  - State-based animation system (Idle, Walk, Run)
+  - Parameter-driven transitions (Speed parameter)
+  - Smooth animation blending between states
+  - Condition-based transition rules (Speed > 0.1, Speed > 2.0, etc.)
+  - Procedural skeleton with 10 bones
+  - Keyboard input for movement (WASD + Shift for run)
+  - Orbiting camera with character tracking
+  - Real-time state debugging display
 
 ### Gameplay Sample
 - **File**: `samples/Gameplay/GameplaySample.cpp`

@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-27 (All phases complete)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-28 (All phases complete)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -23,8 +23,9 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 6. **Physics System** - ✅ Completed (Phase 25)
 7. **UI System** - ✅ Completed (Phase 26)
 8. **UI Layout System** - ✅ Completed (Phase 27)
+9. **Animation State Machine** - ✅ Completed (Phase 28)
 
-**Project Status**: All planned features are complete. The engine is fully functional with 13 sample programs demonstrating all major features.
+**Project Status**: All planned features are complete. The engine is fully functional with 14 sample programs demonstrating all major features.
 
 ---
 
@@ -677,6 +678,54 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 - `Engine/UI/UICheckbox.h/cpp` - Checkbox control
 - `Engine/UI/UISlider.h/cpp` - Slider control
 - `samples/UI/Layout/LayoutSample.cpp` - Layout demonstration sample
+
+---
+
+### Phase 28: Animation State Machine
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-14
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| AnimationState class | ✅ | State with animation, looping, speed, blending |
+| AnimationTransition class | ✅ | Transition with conditions and blend duration |
+| AnimationStateMachine class | ✅ | State machine with parameter system |
+| Parameter system | ✅ | Float and bool parameters for conditions |
+| Animation blending | ✅ | Smooth blending between states |
+| Animation notifies | ✅ | Event callbacks at animation timestamps |
+| State machine sample | ✅ | samples/AnimationStateMachine/AnimationStateMachineSample.cpp |
+
+#### Implementation Notes
+
+- **KAnimationState**: Animation state with transitions, notifies, speed/loop settings
+- **KAnimationTransition**: Transition with conditions (comparison types), exit time, blend duration
+- **KAnimationStateMachine**: State machine with parameter-driven transitions
+- **FAnimNotify**: Animation event with trigger time and callback
+- **FBlendState**: Active blend state for smooth transitions
+- **Parameter System**: Float/bool parameters for transition conditions
+
+#### New Files
+
+- `Engine/Assets/AnimationStateMachine.h/cpp` - Animation state machine system
+- `samples/AnimationStateMachine/AnimationStateMachineSample.cpp` - State machine demonstration
+
+#### Technical Details
+
+**State Machine Features:**
+- Multiple animation states (Idle, Walk, Run, etc.)
+- Parameter-based transitions (Speed > 0.1, Speed > 2.0)
+- Exit time transitions (at animation completion)
+- Smooth blending with configurable duration
+- Animation notifies for events
+
+**Transition Conditions:**
+- Comparison types: Equals, NotEquals, Greater, GreaterOrEquals, Less, LessOrEquals
+- Float parameters for numeric comparisons
+- Bool parameters for boolean conditions
 
 ---
 

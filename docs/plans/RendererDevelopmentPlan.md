@@ -4,9 +4,9 @@
 
 - **Created**: 2026-03-01
 - **Author**: AI Agent
-- **Status**: All Phases Completed (Phase 1-27)
+- **Status**: All Phases Completed (Phase 1-28)
 - **Base Commit**: fe09afb
-- **Last Updated**: 2026-03-09
+- **Last Updated**: 2026-03-14
 
 ## Overview
 
@@ -1472,6 +1472,45 @@ currentExposure = currentExposure + (targetExposure - currentExposure) * t
 - Checkbox with toggle callback
 - Slider with value change callback
 - Auto-sizing based on content
+
+---
+
+### Phase 28: Animation State Machine
+
+**Status**: ✅ Completed  
+**Target Completion**: 2026-03-14  
+**Commit Hash**: 9b978ec
+
+#### Tasks
+
+| Task | Status | Commit Hash | Notes |
+|------|--------|-------------|-------|
+| KAnimationState class | ✅ | 9b978ec | State with animation, looping, speed |
+| KAnimationTransition class | ✅ | 9b978ec | Transition with conditions, blend duration |
+| KAnimationStateMachine class | ✅ | 9b978ec | State machine with states, transitions |
+| Float parameters | ✅ | 9b978ec | Speed-based transitions |
+| Bool parameters | ✅ | 9b978ec | Boolean conditions |
+| Bone matrix blending | ✅ | 9b978ec | Smooth blending between states |
+| State machine sample | ✅ | 9b978ec | samples/AnimationStateMachine/ |
+
+#### Implementation Details
+
+**New Files:**
+- `Engine/Assets/AnimationStateMachine.h/cpp` - Full state machine system
+- `samples/AnimationStateMachine/AnimationStateMachineSample.cpp` - Demo sample
+
+**Features:**
+- State-based animation system (Idle, Walk, Run)
+- Parameter-driven transitions (Speed parameter)
+- Condition-based state changes with comparison operators
+- Smooth animation blending between states
+- Exit time transitions (at animation completion)
+- Animation notifies for events
+
+**Transition Conditions:**
+- Comparison types: Equals, NotEquals, Greater, GreaterOrEquals, Less, LessOrEquals
+- Float parameters for numeric comparisons
+- Bool parameters for boolean conditions
 
 ---
 
