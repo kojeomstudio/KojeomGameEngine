@@ -670,16 +670,15 @@ protected:
 
     void RenderStateMachineDebug()
     {
-        auto renderer = GetRenderer();
-        if (!renderer) return;
-
-        char buffer[256];
-        sprintf_s(buffer, "State: %s | Speed: %.2f | Blending: %s",
-            m_stateMachine ? m_stateMachine->GetCurrentStateName().c_str() : "None",
-            m_currentSpeed,
-            m_stateMachine && m_stateMachine->IsTransitioning() ? "Yes" : "No");
-
-        renderer->DrawScreenText(buffer, 10.0f, 10.0f, XMFLOAT4(1, 1, 1, 1));
+        static float lastPrintTime = 0.0f;
+        if (m_time - lastPrintTime > 0.5f)
+        {
+            lastPrintTime = m_time;
+            printf("State: %s | Speed: %.2f | Blending: %s\n",
+                m_stateMachine ? m_stateMachine->GetCurrentStateName().c_str() : "None",
+                m_currentSpeed,
+                m_stateMachine && m_stateMachine->IsTransitioning() ? "Yes" : "No");
+        }
     }
 
 private:
