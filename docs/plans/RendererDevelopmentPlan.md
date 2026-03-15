@@ -1491,7 +1491,7 @@ currentExposure = currentExposure + (targetExposure - currentExposure) * t
 | Float parameters | ✅ | 9b978ec | Speed-based transitions |
 | Bool parameters | ✅ | 9b978ec | Boolean conditions |
 | Bone matrix blending | ✅ | 9b978ec | Smooth blending between states |
-| State machine sample | ✅ | 9b978ec | samples/AnimationStateMachine/ |
+| State machine sample | ✅ | 50896dc | samples/AnimationStateMachine/ (fixed build) |
 
 #### Implementation Details
 
