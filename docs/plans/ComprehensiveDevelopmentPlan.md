@@ -683,6 +683,100 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ### Phase 28: Animation State Machine
 
+---
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-14
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| AnimationState class | ✅ | State with animation, looping, speed |
+| AnimationTransition class | ✅ | Transition with conditions, blend duration |
+| AnimationStateMachine class | ✅ | State machine with states, transitions |
+| Float parameters | ✅ | Speed-based transitions |
+| Bool parameters | ✅ | Boolean conditions |
+| Bone matrix blending | ✅ | Smooth blending between states |
+| State machine sample | ✅ | samples/AnimationStateMachine/ (fixed build) |
+
+#### Implementation Notes
+
+- **KAnimationState**: Animation state with transitions, notifies, speed/loop settings
+- **KAnimationTransition**: Transition with conditions (comparison types), blend duration, exit time
+- **KAnimationStateMachine**: State machine with parameter-driven transitions
+- **FAnimNotify**: Animation event with trigger time and callback
+- **FBlendState**: Active blend state for smooth transitions
+
+- **Parameter System**: Float/bool parameters for transition conditions
+
+#### New Files
+
+- `Engine/Assets/AnimationStateMachine.h/cpp` - Animation state machine system
+- `samples/AnimationStateMachine/AnimationStateMachineSample.cpp` - State machine demonstration
+
+#### Technical Details
+
+**State Machine Features:**
+- Multiple animation states (Idle, Walk, Run)
+- Parameter-driven transitions (Speed parameter)
+- Condition-based state changes with comparison operators
+- Smooth animation blending between states
+- Exit time transitions (at animation completion)
+- Animation notifies for events at animation timestamps
+
+**Transition Conditions:**
+- Comparison types: Equals, NotEquals, Greater, GreaterOrEquals, Less, LessOrEquals
+- Float parameters for numeric comparisons
+- Bool parameters for boolean conditions
+
+---
+
+### Phase 29: LOD System
+
+---
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-16
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| KLODGenerator class | ✅ | Quadric Error Metric mesh simplification |
+| KLODSystem class | ✅ | LOD management with distance/screen-coverage selection |
+| LOD mesh generation | ✅ | Automatic LOD chain generation |
+| LOD sample | ✅ | samples/LOD/LODSample.cpp demonstration |
+
+#### Implementation Notes
+
+- **KLODGenerator**: Quadric Error Metric based mesh simplification with edge collapse algorithm
+- **KLODSystem**: Distance-based and screen-coverage-based LOD selection with smooth blending
+- **LODSample**: Demonstrates LOD transitions with 25 spheres at varying distances
+
+#### New Files
+
+- `Engine/Graphics/LOD/LODGenerator.h/cpp` - LOD mesh simplification
+- `Engine/Graphics/LOD/LODSystem.h/cpp` - LOD management system
+- `samples/LOD/LODSample.cpp` - LOD demonstration
+
+#### Technical Details
+
+**LOD Generation:**
+- Quadric error matrices per vertex
+- Edge collapse cost calculation using priority queue
+- Midpoint positioning for collapsed vertices
+
+**LOD Parameters:**
+- MaxLODLevels: 4 (default)
+- LODTransitionSpeed: 5.0f
+- LODBias: 1.0f (quality adjustment)
+- BlendDuration: 0.25f (seconds)
+- LODDistances: [50, 100, 200, 400] (default)
+
+
 **Status**: ✅ Completed
 **Priority**: High
 **Completion Date**: 2026-03-14

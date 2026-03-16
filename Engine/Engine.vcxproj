@@ -138,6 +138,8 @@
     <ClInclude Include="Graphics\Terrain\Terrain.h" />
     <ClInclude Include="Graphics\Water\Water.h" />
     <ClInclude Include="Graphics\Sky\SkySystem.h" />
+    <ClInclude Include="Graphics\LOD\LODGenerator.h" />
+    <ClInclude Include="Graphics\LOD\LODSystem.h" />
     <ClInclude Include="Input\InputTypes.h" />
     <ClInclude Include="Input\InputManager.h" />
     <ClInclude Include="Audio\AudioTypes.h" />
@@ -212,6 +214,8 @@
     <ClCompile Include="Graphics\Terrain\Terrain.cpp" />
     <ClCompile Include="Graphics\Water\Water.cpp" />
     <ClCompile Include="Graphics\Sky\SkySystem.cpp" />
+    <ClCompile Include="Graphics\LOD\LODGenerator.cpp" />
+    <ClCompile Include="Graphics\LOD\LODSystem.cpp" />
     <ClCompile Include="Input\InputManager.cpp" />
     <ClCompile Include="Audio\Sound.cpp" />
     <ClCompile Include="Audio\AudioManager.cpp" />
