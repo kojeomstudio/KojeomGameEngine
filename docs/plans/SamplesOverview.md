@@ -22,6 +22,7 @@ This document provides an overview of the sample programs available in the `samp
 | Physics | Physics simulation demonstration | Rigid body dynamics, collision detection (sphere/box), impulse resolution, gravity |
 | UI | UI system demonstration | Panels, text, buttons, click callbacks, hover states |
 | UI/Layout | UI layout system demonstration | Vertical/horizontal layouts, grid layout, checkbox, slider controls |
+| LOD | Level of Detail system demonstration | LOD mesh generation, distance-based LOD selection, smooth LOD blending |
 
 ## Building Samples
 
@@ -188,6 +189,16 @@ Each sample is a standalone executable that can be run independently.
   - Checkbox controls with value change callbacks
   - Slider controls with min/max range
   - Automatic child sizing
+
+### LOD Sample
+- **File**: `samples/LOD/LODSample.cpp`
+- **Features**:
+  - Quadric Error Metric mesh simplification (LOD generation)
+  - Distance-based LOD selection (4 LOD levels)
+  - Smooth LOD blending transitions
+  - 25 spheres at various distances to demonstrate LOD switching
+  - Configurable LOD distances (10, 25, 50, 100 units)
+  - W/S keys to move camera and observe LOD transitions
 
 ## Adding New Samples
 

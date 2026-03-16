@@ -1547,12 +1547,9 @@ currentExposure = currentExposure + (targetExposure - currentExposure) * t
 - BlendDuration: 0.25f (seconds)
 - LODDistances: [50, 100, 200, 400] (default)
 
-**Render Targets:**
-- Vertex Buffer: FVertex with Position, Normal, TexCoord
-- Index Buffer: 32-bit indices
-- LOD textures: Generated at runtime
+---
 
----## Progress Tracking
+## Progress Tracking
 
 ### Commit History Template
 
@@ -1708,6 +1705,9 @@ Engine/Graphics/
 │   └── SkySystem.h/cpp
 └── Water/                      # Water rendering system
     └── Water.h/cpp
+└── LOD/                        # Level of Detail system
+    ├── LODGenerator.h/cpp
+    └── LODSystem.h/cpp
 
 Engine/DebugUI/
 └── DebugUI.h/cpp               # Debug UI system (ImGUI)
@@ -1752,8 +1752,10 @@ samples/
 ├── Sky/                        # Sky/atmosphere
 ├── Particles/                  # Particle system
 ├── SkeletalMesh/               # Skeletal mesh/animation
+├── AnimationStateMachine/      # Animation state machine
 ├── Gameplay/                   # Input and audio
 ├── Physics/                    # Physics simulation
+├── LOD/                        # Level of Detail system
 └── UI/
     ├── UISample.cpp            # UI widgets
     └── Layout/LayoutSample.cpp # UI layouts
