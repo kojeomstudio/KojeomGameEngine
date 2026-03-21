@@ -140,6 +140,7 @@
     <ClInclude Include="Graphics\Sky\SkySystem.h" />
     <ClInclude Include="Graphics\LOD\LODGenerator.h" />
     <ClInclude Include="Graphics\LOD\LODSystem.h" />
+    <ClInclude Include="Graphics\Debug\DebugRenderer.h" />
     <ClInclude Include="Input\InputTypes.h" />
     <ClInclude Include="Input\InputManager.h" />
     <ClInclude Include="Audio\AudioTypes.h" />
@@ -216,6 +217,7 @@
     <ClCompile Include="Graphics\Sky\SkySystem.cpp" />
     <ClCompile Include="Graphics\LOD\LODGenerator.cpp" />
     <ClCompile Include="Graphics\LOD\LODSystem.cpp" />
+    <ClCompile Include="Graphics\Debug\DebugRenderer.cpp" />
     <ClCompile Include="Input\InputManager.cpp" />
     <ClCompile Include="Audio\Sound.cpp" />
     <ClCompile Include="Audio\AudioManager.cpp" />

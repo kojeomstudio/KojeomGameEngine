@@ -15,7 +15,7 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 
 ## Development Priorities
 
-1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-29 (All phases complete)
+1. **Renderer Work** (Highest Priority) - ✅ Completed Phases 1-30 (All phases complete)
 2. **Asset System** (Static/Skeletal Mesh, FBX Loading) - ✅ Completed
 3. **Scene/Map Management** - ✅ Completed
 4. **Serialization System** - ✅ Completed
@@ -25,8 +25,9 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 8. **UI Layout System** - ✅ Completed (Phase 27)
 9. **Animation State Machine** - ✅ Completed (Phase 28)
 10. **LOD System** - ✅ Completed (Phase 29)
+11. **Debug Rendering System** - ✅ Completed (Phase 30)
 
-**Project Status**: All planned features are complete. The engine is fully functional with 15 sample programs demonstrating all major features.
+**Project Status**: All planned features are complete. The engine is fully functional with 16 sample programs demonstrating all major features.
 
 ---
 
@@ -776,6 +777,69 @@ This document outlines the comprehensive development plan for KojeomGameEngine, 
 - LODBias: 1.0f (quality adjustment)
 - BlendDuration: 0.25f (seconds)
 - LODDistances: [50, 100, 200, 400] (default)
+
+---
+
+### Phase 30: Debug Rendering System
+
+---
+
+**Status**: ✅ Completed
+**Priority**: High
+**Completion Date**: 2026-03-21
+
+#### Tasks
+
+| Task | Status | Description |
+|------|--------|-------------|
+| KDebugRenderer class | ✅ | Debug rendering with shape primitives |
+| Line/Ray rendering | ✅ | DrawLine, DrawRay, DrawArrow methods |
+| Shape rendering | ✅ | DrawSphere, DrawBox, DrawCapsule, DrawCone, DrawCylinder |
+| Grid/Axis rendering | ✅ | DrawGrid, DrawAxis, DrawCoordinateSystem |
+| Frustum rendering | ✅ | DrawFrustum from view projection matrix |
+| Lifetime management | ✅ | Persistent and timed debug primitives |
+| Debug rendering sample | ✅ | samples/DebugRendering/DebugRenderingSample.cpp |
+
+#### Implementation Notes
+
+- **KDebugRenderer**: Debug primitive rendering system with dynamic vertex buffer
+- **Primitive Types**: Lines, spheres, boxes, capsules, cones, cylinders, arrows, rays
+- **Lifetime System**: Primitives can be persistent or have a lifetime duration
+- **Grid/Axis**: Configurable grid with major/minor lines, coordinate axis visualization
+- **Performance**: Up to 65536 vertices per frame, dynamic buffer updates
+
+#### New Files
+
+- `Engine/Graphics/Debug/DebugRenderer.h/cpp` - Debug rendering system
+- `samples/DebugRendering/DebugRenderingSample.cpp` - Debug rendering demonstration
+
+#### Technical Details
+
+**Debug Primitive Features:**
+- DrawLine: Basic line with color
+- DrawRay: Directional ray with length
+- DrawArrow: Line with arrow head
+- DrawSphere: Wireframe sphere with configurable segments
+- DrawBox: Wireframe box with optional rotation matrix
+- DrawCapsule: Pill-shaped collision primitive
+- DrawCone: Cone with apex, direction, height, radius
+- DrawCylinder: Cylinder between two points
+- DrawGrid: Ground plane grid with divisions
+- DrawAxis: X/Y/Z coordinate axis
+- DrawFrustum: Camera frustum visualization
+
+**Rendering Pipeline:**
+1. BeginFrame() - Clear frame vertices
+2. Draw*() calls - Accumulate primitives
+3. Render() - Upload and draw all primitives
+4. EndFrame() - Update lifetime of timed primitives
+
+**Sample Demos:**
+- Demo 0: Basic shapes (sphere, box, arrow, capsule)
+- Demo 1: Animated sphere with orbiting boxes
+- Demo 2: Rotating boxes with different axes
+- Demo 3: Arrows and rays animation
+- Demo 4: Capsules, cones, and cylinders showcase
 
 ---
 
