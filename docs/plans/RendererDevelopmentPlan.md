@@ -1508,17 +1508,17 @@ currentExposure = currentExposure + (targetExposure - currentExposure) * t
 
 **Status**: ✅ Completed
 **Target Completion**: 2026-03-16
-**Commit Hash**: (pending)
+**Commit Hash**: 78c127a
 
 #### Tasks
 
 | Task | Status | Commit Hash | Notes |
 |------|--------|-------------|-------|
-| LODGenerator class | ✅ | | KLODGenerator with Quadric Error Metric |
-| LODSystem class | ✅ | | KLODSystem with distance-based LOD selection |
-| LOD blending support | ✅ | | Smooth LOD transitions |
-| Renderer integration | ✅ | | LOD selection in KRenderer |
-| LOD Sample | ✅ | | samples/LOD/ (demonstration) |
+| LODGenerator class | ✅ | 78c127a | KLODGenerator with Quadric Error Metric |
+| LODSystem class | ✅ | 78c127a | KLODSystem with distance-based LOD selection |
+| LOD blending support | ✅ | 78c127a | Smooth LOD transitions |
+| Renderer integration | ✅ | 78c127a | LOD selection in KRenderer |
+| LOD Sample | ✅ | 78c127a | samples/LOD/ (demonstration) |
 
 #### Implementation Details
 
