@@ -25,6 +25,8 @@ docs/
 ### For AI Agents
 
 - [AI Agent Rules](rules/AIAgentRules.md) - **Required reading** for AI agents working on this project
+- `.gemini/GEMINI.md` - Gemini-specific rules
+- `.claude/CLAUDE.md` - Claude-specific rules
 
 ## Documentation Categories
 
