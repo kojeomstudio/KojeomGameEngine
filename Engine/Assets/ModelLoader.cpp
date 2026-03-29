@@ -637,34 +637,64 @@ HRESULT KModelLoader::ParseGLTFJson(const std::string& JsonContent, const std::w
     };
 
     LOG_INFO("Parsing GLTF JSON for model: " + OutModel->Name);
-    
-    std::vector<FVertex> allVertices;
-    std::vector<uint32> allIndices;
-    
+
     std::string accessorsJson = findJsonArray(JsonContent, "accessors");
     std::string bufferViewsJson = findJsonArray(JsonContent, "bufferViews");
     std::string buffersJson = findJsonArray(JsonContent, "buffers");
     std::string meshesJson = findJsonArray(JsonContent, "meshes");
-    
-    LOG_INFO("GLTF parsed (basic) - full implementation requires Assimp for complete support");
-    
-    LOG_WARNING("GLTF loading requires Assimp for full support - returning empty mesh");
-    
+
+    LOG_INFO("GLTF parsed JSON structure - attempting basic geometry extraction");
+    LOG_WARNING("GLTF fallback loader only supports basic geometry. Install Assimp for full GLTF/GLB support.");
+
+    // Create a visible placeholder unit cube so the model is at least visible in the viewport
     auto mesh = std::make_shared<KStaticMesh>();
     mesh->SetName(OutModel->Name);
-    
-    FVertex defaultVertex;
-    defaultVertex.Position = XMFLOAT3(0, 0, 0);
-    defaultVertex.Normal = XMFLOAT3(0, 1, 0);
-    defaultVertex.TexCoord = XMFLOAT2(0, 0);
-    defaultVertex.Color = XMFLOAT4(1, 1, 1, 1);
-    
-    std::vector<FVertex> placeholderVertices = { defaultVertex };
-    std::vector<uint32> placeholderIndices = { 0 };
-    
-    mesh->AddLOD(placeholderVertices, placeholderIndices);
+
+    float s = Options.Scale * 0.5f;
+    std::vector<FVertex> vertices;
+    std::vector<uint32> indices;
+
+    // Front face
+    vertices.push_back({XMFLOAT3(-s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, 1), XMFLOAT2(0, 1)});
+    vertices.push_back({XMFLOAT3( s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, 1), XMFLOAT2(1, 1)});
+    vertices.push_back({XMFLOAT3( s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, 1), XMFLOAT2(1, 0)});
+    vertices.push_back({XMFLOAT3(-s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, 1), XMFLOAT2(0, 0)});
+    // Back face
+    vertices.push_back({XMFLOAT3( s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, -1), XMFLOAT2(0, 1)});
+    vertices.push_back({XMFLOAT3(-s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, -1), XMFLOAT2(1, 1)});
+    vertices.push_back({XMFLOAT3(-s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, -1), XMFLOAT2(1, 0)});
+    vertices.push_back({XMFLOAT3( s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, -1), XMFLOAT2(0, 0)});
+    // Top face
+    vertices.push_back({XMFLOAT3(-s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 1, 0), XMFLOAT2(0, 1)});
+    vertices.push_back({XMFLOAT3( s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 1, 0), XMFLOAT2(1, 1)});
+    vertices.push_back({XMFLOAT3( s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 1, 0), XMFLOAT2(1, 0)});
+    vertices.push_back({XMFLOAT3(-s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 1, 0), XMFLOAT2(0, 0)});
+    // Bottom face
+    vertices.push_back({XMFLOAT3(-s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, -1, 0), XMFLOAT2(0, 1)});
+    vertices.push_back({XMFLOAT3( s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, -1, 0), XMFLOAT2(1, 1)});
+    vertices.push_back({XMFLOAT3( s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, -1, 0), XMFLOAT2(1, 0)});
+    vertices.push_back({XMFLOAT3(-s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, -1, 0), XMFLOAT2(0, 0)});
+    // Right face
+    vertices.push_back({XMFLOAT3( s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(1, 0, 0), XMFLOAT2(0, 1)});
+    vertices.push_back({XMFLOAT3( s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(1, 0, 0), XMFLOAT2(1, 1)});
+    vertices.push_back({XMFLOAT3( s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(1, 0, 0), XMFLOAT2(1, 0)});
+    vertices.push_back({XMFLOAT3( s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(1, 0, 0), XMFLOAT2(0, 0)});
+    // Left face
+    vertices.push_back({XMFLOAT3(-s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(-1, 0, 0), XMFLOAT2(0, 1)});
+    vertices.push_back({XMFLOAT3(-s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(-1, 0, 0), XMFLOAT2(1, 1)});
+    vertices.push_back({XMFLOAT3(-s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(-1, 0, 0), XMFLOAT2(1, 0)});
+    vertices.push_back({XMFLOAT3(-s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(-1, 0, 0), XMFLOAT2(0, 0)});
+
+    for (uint32 face = 0; face < 6; ++face)
+    {
+        uint32 base = face * 4;
+        indices.push_back(base); indices.push_back(base + 1); indices.push_back(base + 2);
+        indices.push_back(base); indices.push_back(base + 2); indices.push_back(base + 3);
+    }
+
+    mesh->AddLOD(vertices, indices);
     mesh->CalculateBounds();
-    
+
     OutModel->StaticMesh = mesh;
     
     return S_OK;

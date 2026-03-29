@@ -125,10 +125,29 @@ public partial class MainWindow : Window
     private void MenuItem_Redo_Click(object sender, RoutedEventArgs e) => Redo();
     private void MenuItem_Delete_Click(object sender, RoutedEventArgs e) => DeleteSelected();
 
-    private void Toolbar_Select_Click(object sender, RoutedEventArgs e) { }
-    private void Toolbar_Move_Click(object sender, RoutedEventArgs e) { }
-    private void Toolbar_Rotate_Click(object sender, RoutedEventArgs e) { }
-    private void Toolbar_Scale_Click(object sender, RoutedEventArgs e) { }
+    private void Toolbar_Select_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.TransformMode = ETransformMode.Select;
+        StatusReady.Text = "Mode: Select";
+    }
+
+    private void Toolbar_Move_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.TransformMode = ETransformMode.Move;
+        StatusReady.Text = "Mode: Move";
+    }
+
+    private void Toolbar_Rotate_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.TransformMode = ETransformMode.Rotate;
+        StatusReady.Text = "Mode: Rotate";
+    }
+
+    private void Toolbar_Scale_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.TransformMode = ETransformMode.Scale;
+        StatusReady.Text = "Mode: Scale";
+    }
 
     private bool _isPlaying;
     private bool _isPaused;

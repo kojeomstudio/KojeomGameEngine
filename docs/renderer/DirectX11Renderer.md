@@ -2,102 +2,157 @@
 
 ## Overview
 
-This document describes the DirectX 11 renderer architecture for the KojeomGameEngine. The renderer is designed to provide a modern, flexible rendering pipeline while maintaining simplicity and performance.
+This document describes the DirectX 11 renderer architecture for KojeomGameEngine. The renderer provides a modern, flexible rendering pipeline with both Forward and Deferred rendering paths, PBR materials, and 20+ advanced rendering sub-systems.
 
-## Current Architecture
+## Architecture
 
 ### Core Components
 
 #### KGraphicsDevice
 The graphics device manager handles all DirectX 11 core objects:
 
-- **ID3D11Device**: Device for creating resources
+- **ID3D11Device**: Device for creating GPU resources
 - **ID3D11DeviceContext**: Device context for rendering commands
 - **IDXGISwapChain**: Swap chain for presenting frames
 - **ID3D11RenderTargetView**: Render target view for the back buffer
 - **ID3D11DepthStencilView**: Depth stencil view for depth testing
 
 ```cpp
-// Initialization example
 KGraphicsDevice GraphicsDevice;
 HRESULT hr = GraphicsDevice.Initialize(hWnd, 1280, 720, true);
 ```
 
 #### KRenderer
-The main renderer class manages the rendering pipeline:
+The central rendering orchestrator manages the full rendering pipeline:
 
-- Frame management (BeginFrame/EndFrame)
-- Object rendering with shaders and textures
-- Default resource creation (shaders, meshes)
-- Lighting integration
+- Frame management (`BeginFrame`/`EndFrame`)
+- Dual render paths: Forward and Deferred
+- Built-in mesh creation (Triangle, Quad, Cube, Sphere)
+- Lighting integration (Directional, Point, Spot)
+- Shadow mapping
+- Post-processing pipeline
+- All 20+ sub-system orchestration
 
 ```cpp
 KRenderer Renderer;
 Renderer.Initialize(&GraphicsDevice);
 
-// Frame rendering
+// Forward rendering
+Renderer.SetRenderPath(ERenderPath::Forward);
 Renderer.BeginFrame(&Camera);
 Renderer.RenderMeshLit(CubeMesh, WorldMatrix, Texture);
-Renderer.EndFrame(true); // with V-Sync
+Renderer.EndFrame(true);
+
+// Deferred rendering
+Renderer.SetRenderPath(ERenderPath::Deferred);
+Renderer.BeginFrame(&Camera);
+Renderer.RenderMeshPBR(CubeMesh, WorldMatrix, Material);
+Renderer.EndFrame(true);
 ```
 
 #### KCamera
-Camera system with view/projection matrix management:
+Camera system with perspective and orthographic projection:
 
-- View matrix calculation
-- Projection matrix (perspective)
-- Camera movement and rotation
+- View matrix calculation with position/rotation
+- Perspective and orthographic projection modes
+- Dirty flag optimization for matrix updates
+- Mouse look and WASD movement support
 
 #### KShaderProgram
-Shader program management:
+HLSL shader compilation and management:
 
-- Vertex and Pixel shader compilation
+- Compile from file or embedded string source
+- Vertex, Pixel, Geometry, Hull, Domain, Compute shader support
 - Input layout creation
 - Constant buffer management
-- Built-in shader creation methods
+- Built-in shader programs: Basic, Phong, PhongShadow, PBR, Skinned, Water, DepthOnly
 
 #### KMesh
-Mesh geometry handling:
+GPU mesh geometry handling:
 
-- Vertex and Index buffers
-- Primitive topology
-- Constant buffer for transform matrices
-- Factory methods for basic shapes (Triangle, Quad, Cube, Sphere)
+- Vertex buffer, index buffer, constant buffer
+- Factory methods: `CreateTriangle()`, `CreateQuad()`, `CreateCube()`, `CreateSphere()`
+- Transform constant buffer updates
 
-#### KTexture
-Texture resource management:
+#### KMaterial / FPBRMaterialParams
+PBR material system with Metallic-Roughness workflow:
 
-- Texture loading from files
-- Sampler state creation
-- Default white texture
+- 7 texture slots: Albedo, Normal, Metallic, Roughness, AO, Emissive, Height
+- Constant buffer with material parameters
+- Material presets: Metal, Plastic, Rubber, Gold, Silver, Copper
+
+#### KTexture / KTextureManager
+Texture resource management with caching:
+
+- File loading from disk
+- Solid color and checkerboard generation
+- Sampler state management
+- TextureManager with path-based caching
 
 ## Rendering Pipeline
 
-### Frame Flow
+### Forward Rendering Path
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         Frame Cycle                          │
+│                    Forward Frame Cycle                        │
 ├─────────────────────────────────────────────────────────────┤
 │  1. BeginFrame()                                            │
-│     ├── Update Camera Matrices                              │
 │     ├── Clear Back Buffer & Depth Buffer                    │
+│     ├── Update Camera Matrices                              │
 │     └── Update Light Constant Buffer                        │
 │                                                             │
-│  2. Render Calls (per object)                               │
-│     ├── Bind Shader Program                                 │
-│     ├── Bind Texture (if any)                               │
-│     ├── Update Mesh Constant Buffer (WVP matrices)          │
-│     └── Draw Indexed                                        │
+│  2. Shadow Pass                                             │
+│     ├── ShadowMap / CascadedShadowMap rendering             │
+│     └── Depth-only pass from light perspective              │
 │                                                             │
-│  3. EndFrame()                                              │
+│  3. Opaque Pass (per object)                                │
+│     ├── Frustum/Occlusion culling check                     │
+│     ├── Bind Shader (Phong/PBR/Skinned)                     │
+│     ├── Bind Material/Textures                              │
+│     ├── Update Transform Constant Buffer                    │
+│     └── DrawIndexed                                         │
+│                                                             │
+│  4. Post-Processing                                         │
+│     ├── HDR -> Bloom -> Auto Exposure                       │
+│     ├── DOF, Motion Blur, Lens Effects                      │
+│     └── Tone mapping -> LDR output                          │
+│                                                             │
+│  5. EndFrame()                                              │
 │     └── Present (with optional V-Sync)                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Shader Constant Buffers
+### Deferred Rendering Path
 
-#### b0: Transform Buffer (per-mesh)
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Deferred Frame Cycle                        │
+├─────────────────────────────────────────────────────────────┤
+│  1. Geometry Pass (G-Buffer)                                │
+│     ├── World Position (RT0)                                │
+│     ├── World Normal (RT1)                                  │
+│     ├── Albedo + Alpha (RT2)                                │
+│     ├── PBR Params (Metallic, Roughness, AO) (RT3)          │
+│     └── Emissive (RT4)                                      │
+│                                                             │
+│  2. Lighting Pass                                           │
+│     ├── SSAO computation                                    │
+│     ├── SSGI computation                                    │
+│     ├── Screen-space lighting accumulation                  │
+│     └── SSR computation                                     │
+│                                                             │
+│  3. Forward+ (transparent objects)                           │
+│                                                             │
+│  4. Post-Processing (same as Forward)                       │
+│                                                             │
+│  5. EndFrame() -> Present                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Shader Constant Buffers
+
+### b0: Transform Buffer (per-object)
 ```hlsl
 cbuffer TransformBuffer : register(b0)
 {
@@ -108,7 +163,7 @@ cbuffer TransformBuffer : register(b0)
 };
 ```
 
-#### b1: Light Buffer (per-frame)
+### b1: Light Buffer (per-frame)
 ```hlsl
 cbuffer LightBuffer : register(b1)
 {
@@ -123,130 +178,125 @@ cbuffer LightBuffer : register(b1)
 };
 ```
 
-## Built-in Shaders
-
-### Basic Color Shader
-Simple shader for rendering with vertex colors:
-- Input: Position, Color
-- No lighting calculations
-- Useful for debugging and UI
-
-### Phong Lighting Shader
-Shader with Phong lighting model:
-- Input: Position, Normal, UV, Tangent, Bitangent
-- Diffuse lighting with directional light
-- Ambient lighting
-- Specular highlights
-- Optional texture mapping
-
-## Mesh Creation
-
-The renderer provides factory methods for creating basic meshes:
-
-```cpp
-// Create basic shapes
-auto Triangle = Renderer.CreateTriangleMesh();
-auto Quad = Renderer.CreateQuadMesh();
-auto Cube = Renderer.CreateCubeMesh();
-auto Sphere = Renderer.CreateSphereMesh(32, 32); // slices, stacks
+### b2+: Material / Custom Buffers
+```hlsl
+cbuffer MaterialBuffer : register(b2)
+{
+    float4 AlbedoColor;
+    float Metallic;
+    float Roughness;
+    float AO;
+    float EmissiveStrength;
+    // ... PBR parameters
+};
 ```
 
-## Advanced Rendering Features
+## Texture Register Conventions
 
-### Shadow System
-- [x] Shadow mapping
-- [x] Cascaded shadow maps
+| Register | Usage |
+|----------|-------|
+| t0 | Albedo/Diffuse |
+| t1 | Normal map |
+| t2 | Metallic map |
+| t3 | Roughness map |
+| t4 | AO map |
+| t5 | Emissive map |
+| t6 | Height map |
 
-### Post-Processing Pipeline
-- [x] HDR rendering (via PostProcessor)
-- [x] Bloom (via LensEffects)
-- [x] Auto Exposure
-- [x] Depth of Field (DOF)
-- [x] Motion Blur
-- [x] Lens Effects
+## Sub-System Details
+
+### Shadow System (`Graphics/Shadow/`)
+- **KShadowMap**: Standard shadow map rendering
+- **KShadowRenderer**: Shadow pass orchestration
+- **KCascadedShadowMap**: Cascaded shadow maps for large scenes
+- **KCascadedShadowRenderer**: CSM pass with cascade splitting
+
+### Post-Processing Pipeline (`Graphics/PostProcess/`)
+- **KPostProcessor**: Central post-processing orchestrator
+- **KLensEffects**: Bloom effect (multi-pass Gaussian blur)
+- **KAutoExposure**: Automatic exposure control
+- **KDepthOfField**: Depth-based blur
+- **KMotionBlur**: Velocity-based motion blur
 
 ### Screen-Space Effects
-- [x] Screen-Space Ambient Occlusion (SSAO)
-- [x] Screen-Space Reflections (SSR)
-- [x] Temporal Anti-Aliasing (TAA)
-- [x] Screen-Space Global Illumination (SSGI)
+- **KSSAO** (`Graphics/SSAO/`): Screen-space ambient occlusion
+- **KSSR** (`Graphics/SSR/`): Screen-space reflections
+- **KTAA** (`Graphics/TAA/`): Temporal anti-aliasing
+- **KSSGI** (`Graphics/SSGI/`): Screen-space global illumination
 
 ### Environment Rendering
-- [x] Procedural Sky
-- [x] Volumetric Fog
-- [x] Water Rendering
-- [x] Terrain Rendering
+- **KSkySystem** (`Graphics/Sky/`): Procedural sky rendering
+- **KVolumetricFog** (`Graphics/Volumetric/`): Volumetric fog
+- **KWater** (`Graphics/Water/`): Water rendering with reflections
+- **KTerrain** (`Graphics/Terrain/`): Heightmap-based terrain
 
-### PBR & IBL
-- [x] PBR Materials (Metallic-Roughness workflow, 7 texture slots, presets)
-- [x] Image-Based Lighting (Irradiance, Prefiltered Environment, BRDF LUT)
+### IBL System (`Graphics/IBL/`)
+- Diffuse irradiance map generation
+- Specular prefiltered environment map
+- BRDF integration LUT
 
-### Animation
-- [x] Skeletal Mesh
-- [x] Animation State Machine
-- [x] Blend & Notify
+### Optimization Systems
+- **KFrustum** (`Graphics/Culling/`): Frustum culling
+- **KOcclusionQuery** (`Graphics/Culling/`): GPU occlusion culling
+- **KInstancedRenderer** (`Graphics/Instanced/`): GPU instanced rendering
+- **KLODSystem/KLODGenerator** (`Graphics/LOD/`): Automatic LOD generation
+- **KParticleEmitter** (`Graphics/Particle/`): GPU particle system
+- **KCommandBuffer** (`Graphics/CommandBuffer/`): Deferred command recording
+- **KGPUTimer** (`Graphics/Performance/`): GPU timing queries
 
-### Optimization
-- [x] Frustum Culling
-- [x] GPU Occlusion Culling
-- [x] GPU Instanced Rendering
-- [x] LOD Generation & System
-- [x] Particle System
-- [x] Debug Renderer
-
-### Command-Based Rendering
-- [x] Deferred command buffer rendering
+### Skeletal Animation Rendering
+- **Skinned shader**: Vertex shader with bone matrix palette
+- **Bone matrix buffer**: Up to 256 bones, 4 influences per vertex
+- **RenderSkeletalMesh()**: Dedicated skeletal mesh rendering path
 
 ## API Reference
 
-### KRenderer Methods
+### KRenderer Key Methods
 
 | Method | Description |
 |--------|-------------|
 | `Initialize(KGraphicsDevice*)` | Initialize renderer with graphics device |
 | `BeginFrame(KCamera*, ClearColor)` | Begin rendering frame |
 | `EndFrame(bVSync)` | End and present frame |
-| `RenderObject(FRenderObject&)` | Render a render object |
 | `RenderMesh(Mesh, WorldMatrix, Texture)` | Render mesh with basic shader |
-| `RenderMeshLit(Mesh, WorldMatrix, Texture)` | Render mesh with lighting |
-| `SetDirectionalLight(Light)` | Set directional light properties |
-| `Cleanup()` | Release all resources |
+| `RenderMeshLit(Mesh, WorldMatrix, Texture)` | Render mesh with Phong lighting |
+| `RenderMeshPBR(Mesh, WorldMatrix, Material)` | Render mesh with PBR |
+| `RenderSkeletalMesh(SkelMesh, Skeleton, AnimInstance, WorldMatrix)` | Render skeletal mesh with GPU skinning |
+| `SetDirectionalLight(Light)` | Set directional light |
+| `AddPointLight(Light)` / `AddSpotLight(Light)` | Add dynamic lights |
+| `SetRenderPath(ERenderPath)` | Switch between Forward/Deferred |
+| `SetShadowEnabled(bool)` | Enable/disable shadow mapping |
+| `SetSSAOEnabled(bool)` | Enable/disable SSAO |
+| `SetPostProcessEnabled(bool)` | Enable/disable post-processing |
+| `SetDebugMode(bool)` | Toggle debug visualization |
+| `GetDrawCallCount()` / `GetVertexCount()` / `GetFrameTime()` | Performance stats |
 
-### FRenderObject Structure
+### Mesh Factory Methods
 
 ```cpp
-struct FRenderObject
-{
-    std::shared_ptr<KMesh> Mesh;
-    std::shared_ptr<KShaderProgram> Shader;
-    std::shared_ptr<KTexture> Texture;
-    XMMATRIX WorldMatrix;
-};
+auto Triangle = Renderer.CreateTriangleMesh();
+auto Quad = Renderer.CreateQuadMesh();
+auto Cube = Renderer.CreateCubeMesh();
+auto Sphere = Renderer.CreateSphereMesh(32, 32);
 ```
 
-## Best Practices
+## Performance Guidelines
 
-1. **Resource Management**: Use `std::shared_ptr` for mesh and texture resources
-2. **Frame Timing**: Always pair `BeginFrame()` with `EndFrame()`
-3. **Shader Binding**: Minimize shader switches by sorting objects by shader
-4. **Constant Buffers**: Update buffers only when data changes
-5. **Debug Layer**: Enable debug layer during development for error messages
+1. **Sort by shader, then texture** to minimize state changes
+2. **Use GPU instancing** for repeated objects via `KInstancedRenderer`
+3. **Map/Unmap** for frequently updated data, `UpdateSubresource` for static data
+4. **Enable frustum culling** for large scenes
+5. **Profile with `KGPUTimer`** to identify bottlenecks
+6. **Use LOD** for distant objects
 
 ## Error Handling
-
-The engine uses HRESULT for error reporting and includes a logging system:
 
 ```cpp
 HRESULT hr = Renderer.Initialize(&GraphicsDevice);
 if (FAILED(hr))
 {
     LOG_ERROR("Failed to initialize renderer");
+    LOG_HRESULT_ERROR(hr);
     return hr;
 }
 ```
-
-## Dependencies
-
-- Windows SDK (DirectX 11)
-- DirectXMath library
-- stb_image for texture loading (planned)

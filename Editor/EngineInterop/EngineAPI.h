@@ -47,7 +47,7 @@ extern "C"
     ENGINEAPI void Camera_GetProjectionMatrix(void* camera, float* matrix);
 
     ENGINEAPI void* Model_Load(void* engine, const wchar_t* path);
-    ENGINEAPI void Model_Unload(void* model);
+    ENGINEAPI void Model_Unload(void* engine, const wchar_t* path);
 
     ENGINEAPI void Renderer_SetRenderPath(void* renderer, int path);
     ENGINEAPI void Renderer_SetDebugMode(void* renderer, bool enabled);

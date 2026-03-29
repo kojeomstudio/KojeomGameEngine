@@ -85,3 +85,17 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 - main 브랜치에 디버그/테스트 코드 커밋
 - 기존 API 파괴적 변경 없이 사용처 업데이트 누락
 - 승인 없는 새로운 의존성 추가
+
+## Build Verification
+
+변경 후 반드시 빌드 테스트를 수행하십시오:
+
+```bash
+# C++ 전체 빌드
+msbuild KojeomEngine.sln /p:Configuration=Debug /p:Platform=x64
+
+# C# 에디터 빌드
+dotnet build Editor/KojeomEditor/KojeomEditor.csproj
+```
+
+빌드 성공 후 커밋하고 오리진에 반영하십시오.

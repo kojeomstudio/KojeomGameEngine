@@ -279,11 +279,11 @@ extern "C"
         return wrapper->ModelLoader->LoadModel(std::wstring(path)).get();
     }
 
-    ENGINEAPI void Model_Unload(void* model)
+    ENGINEAPI void Model_Unload(void* engine, const wchar_t* path)
     {
-        if (!model) return;
-        FLoadedModel* loadedModel = static_cast<FLoadedModel*>(model);
-        delete loadedModel;
+        if (!engine || !path) return;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        wrapper->ModelLoader->UnloadModel(std::wstring(path));
     }
 
     ENGINEAPI void Renderer_SetRenderPath(void* renderer, int path)
@@ -382,11 +382,6 @@ extern "C"
         return nullptr;
     }
 
-    static const char* COMPONENT_NAMES[] = {
-        "Unknown", "Transform", "StaticMesh", "SkeletalMesh",
-        "Light", "Camera", "Audio", "Physics"
-    };
-
     ENGINEAPI void Actor_GetComponentCount(void* actor, int* outCount)
     {
         if (!actor || !outCount) return;
@@ -482,8 +477,8 @@ extern "C"
     ENGINEAPI void* Actor_GetLightComponent(void* actor)
     {
         if (!actor) return nullptr;
-        KActor* kactor = static_cast<KActor*>(actor);
-        return kactor->GetComponent<KActorComponent>();
+        // Light component class not yet implemented - returns nullptr
+        return nullptr;
     }
 
     ENGINEAPI void* StaticMeshComponent_SetMesh(void* component, const wchar_t* meshPath)
@@ -535,8 +530,7 @@ extern "C"
     {
         if (!component) return 0;
         KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
-        if (skmc->HasAnimation("")) return 0;
-        return 0;
+        return static_cast<int>(skmc->GetAnimationCount());
     }
 
     ENGINEAPI void Actor_SetVisibility(void* actor, bool visible)

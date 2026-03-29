@@ -4,14 +4,33 @@ using KojeomEditor.Services;
 
 namespace KojeomEditor.ViewModels;
 
+public enum ETransformMode
+{
+    Select,
+    Move,
+    Rotate,
+    Scale
+}
+
 public class MainViewModel : ViewModelBase
 {
     private SceneViewModel _sceneViewModel;
     private PropertiesViewModel _propertiesViewModel;
     private EngineInterop? _engine;
+    private ETransformMode _transformMode = ETransformMode.Select;
 
     public SceneViewModel SceneViewModel => _sceneViewModel;
     public PropertiesViewModel PropertiesViewModel => _propertiesViewModel;
+
+    public ETransformMode TransformMode
+    {
+        get => _transformMode;
+        set
+        {
+            _transformMode = value;
+            OnPropertyChanged(nameof(TransformMode));
+        }
+    }
 
     public EngineInterop? Engine
     {
