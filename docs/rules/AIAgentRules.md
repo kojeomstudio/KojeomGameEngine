@@ -40,7 +40,6 @@ Engine/
 │   ├── Water/                    # Water rendering
 │   ├── Terrain/                  # Terrain rendering
 │   ├── Culling/                  # Frustum culling, GPU occlusion culling
-│   ├── Debug/                    # Debug renderer
 │   ├── CommandBuffer/            # Deferred command-based rendering
 │   ├── Instanced/                # GPU instanced rendering
 │   ├── IBL/                      # Image-based lighting (irradiance, prefiltered env, BRDF LUT)

@@ -97,7 +97,7 @@ KojeomEngine/
 
 ## Requirements
 
-- **Compiler**: Visual Studio 2022 (v143 toolset, C++17)
+- **Compiler**: Visual Studio 2022 (v145 toolset, C++17)
 - **Platform**: Windows 10/11, x64
 - **SDK**: Windows SDK (DirectX 11, XAudio2)
 - **.NET**: .NET 8.0 SDK (for Editor)

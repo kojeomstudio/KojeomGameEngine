@@ -31,7 +31,7 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 ## Testing
 
 There is **no automated test framework** in this project. No test runner, test framework, or test projects exist. Validation is done through:
-- 15+ sample projects under `samples/`
+- 16 sample projects under `samples/`
 - `LOG_INFO`, `LOG_WARNING`, `LOG_ERROR` macros for debug output
 - `_CrtSetDbgFlag` for debug memory leak detection
 
