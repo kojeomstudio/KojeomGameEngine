@@ -18,4 +18,12 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
   </ItemGroup>
 
+  <Target Name="CopyNativeDlls" AfterTargets="Build">
+    <PropertyGroup>
+      <NativeDllDir>$(ProjectDir)..\EngineInterop\bin\x64\$(Configuration)\</NativeDllDir>
+    </PropertyGroup>
+    <Copy SourceFiles="$(NativeDllDir)EngineInterop.dll" DestinationFolder="$(OutputPath)" Condition="Exists('$(NativeDllDir)EngineInterop.dll')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(NativeDllDir)EngineInterop.pdb" DestinationFolder="$(OutputPath)" Condition="Exists('$(NativeDllDir)EngineInterop.pdb')" SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

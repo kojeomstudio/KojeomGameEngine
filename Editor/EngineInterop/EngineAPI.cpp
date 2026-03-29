@@ -30,9 +30,12 @@ public:
 
 extern "C"
 {
+    static FEngineWrapper* g_EngineWrapper = nullptr;
+
     ENGINEAPI void* Engine_Create()
     {
-        return new FEngineWrapper();
+        g_EngineWrapper = new FEngineWrapper();
+        return g_EngineWrapper;
     }
 
     ENGINEAPI void Engine_Destroy(void* engine)
@@ -40,6 +43,10 @@ extern "C"
         if (engine)
         {
             delete static_cast<FEngineWrapper*>(engine);
+            if (g_EngineWrapper == static_cast<FEngineWrapper*>(engine))
+            {
+                g_EngineWrapper = nullptr;
+            }
         }
     }
 
@@ -50,6 +57,19 @@ extern "C"
         
         HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
         HRESULT hr = wrapper->Engine->Initialize(hInst, L"KojeomEditor", width, height);
+        if (SUCCEEDED(hr))
+        {
+            wrapper->ModelLoader->Initialize();
+        }
+        return hr;
+    }
+
+    ENGINEAPI HRESULT Engine_InitializeEmbedded(void* engine, HWND hwnd, int width, int height)
+    {
+        if (!engine) return E_INVALIDARG;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        
+        HRESULT hr = wrapper->Engine->InitializeWithExternalHwnd(hwnd, width, height);
         if (SUCCEEDED(hr))
         {
             wrapper->ModelLoader->Initialize();
@@ -461,13 +481,26 @@ extern "C"
 
     ENGINEAPI void* Actor_GetLightComponent(void* actor)
     {
-        return nullptr;
+        if (!actor) return nullptr;
+        KActor* kactor = static_cast<KActor*>(actor);
+        return kactor->GetComponent<KActorComponent>();
     }
 
     ENGINEAPI void* StaticMeshComponent_SetMesh(void* component, const wchar_t* meshPath)
     {
         if (!component) return nullptr;
         KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
+        
+        if (g_EngineWrapper && g_EngineWrapper->ModelLoader && meshPath && wcslen(meshPath) > 0)
+        {
+            auto model = g_EngineWrapper->ModelLoader->LoadModel(std::wstring(meshPath));
+            if (model && model->StaticMesh)
+            {
+                smc->SetStaticMesh(model->StaticMesh);
+                return model->StaticMesh.get();
+            }
+        }
+        
         auto staticMesh = std::make_shared<KStaticMesh>();
         std::vector<FVertex> vertices;
         std::vector<uint32> indices;
@@ -482,15 +515,27 @@ extern "C"
 
     ENGINEAPI void* SkeletalMeshComponent_PlayAnimation(void* component, const char* animName)
     {
-        return nullptr;
+        if (!component) return nullptr;
+        KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
+        if (animName)
+        {
+            skmc->PlayAnimation(std::string(animName));
+        }
+        return component;
     }
 
     ENGINEAPI void SkeletalMeshComponent_StopAnimation(void* component)
     {
+        if (!component) return;
+        KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
+        skmc->StopAnimation();
     }
 
     ENGINEAPI int SkeletalMeshComponent_GetAnimationCount(void* component)
     {
+        if (!component) return 0;
+        KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
+        if (skmc->HasAnimation("")) return 0;
         return 0;
     }
 

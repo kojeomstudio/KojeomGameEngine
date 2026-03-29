@@ -48,6 +48,15 @@ public class SceneViewModel : ViewModelBase
         SceneName = "Untitled Scene";
         SelectedActor = null;
 
+        if (_engine != null && _engine.IsInitialized)
+        {
+            var scenePtr = _engine.CreateScene(SceneName);
+            if (scenePtr != IntPtr.Zero)
+            {
+                _engine.SetActiveScene(scenePtr);
+            }
+        }
+
         var dirLight = new ActorViewModel { Name = "Directional Light", ActorType = "Light" };
         dirLight.AddComponent(new LightComponentViewModel { LightType = 0, Intensity = 1.0f });
         Actors.Add(dirLight);
@@ -59,12 +68,31 @@ public class SceneViewModel : ViewModelBase
 
     public void LoadScene(string path)
     {
-        CreateNewScene();
+        Actors.Clear();
         SceneName = System.IO.Path.GetFileNameWithoutExtension(path);
+        SelectedActor = null;
+
+        if (_engine != null && _engine.IsInitialized)
+        {
+            var scenePtr = _engine.LoadScene(path);
+            if (scenePtr != IntPtr.Zero)
+            {
+                _engine.SetActiveScene(scenePtr);
+                RefreshFromEngine();
+            }
+        }
     }
 
     public void SaveScene(string path)
     {
+        if (_engine != null && _engine.IsInitialized)
+        {
+            var scenePtr = _engine.GetActiveScene();
+            if (scenePtr != IntPtr.Zero)
+            {
+                _engine.SaveScene(path, scenePtr);
+            }
+        }
     }
 
     public void AddActor(string name, string type = "Actor")
@@ -151,6 +179,10 @@ public class SceneViewModel : ViewModelBase
 
     private void SyncActorSelectionToEngine()
     {
+        if (_engine == null || !_engine.IsInitialized) return;
+        if (SelectedActor == null || SelectedActor.NativePtr == IntPtr.Zero) return;
+        _engine.SetActorPosition(SelectedActor.NativePtr, SelectedActor.PositionX, SelectedActor.PositionY, SelectedActor.PositionZ);
+        _engine.SetActorScale(SelectedActor.NativePtr, SelectedActor.ScaleX, SelectedActor.ScaleY, SelectedActor.ScaleZ);
     }
 }
 

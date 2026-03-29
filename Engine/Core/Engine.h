@@ -42,6 +42,8 @@ public:
                       UINT32 Width = EngineConstants::DEFAULT_WINDOW_WIDTH,
                       UINT32 Height = EngineConstants::DEFAULT_WINDOW_HEIGHT);
 
+    HRESULT InitializeWithExternalHwnd(HWND InExternalHwnd, UINT32 InWidth, UINT32 InHeight);
+
     /**
      * @brief Run the engine (main loop)
      * @return Application exit code
@@ -200,6 +202,7 @@ private:
     // Engine state
     bool bIsRunning;
     bool bIsInitialized;
+    bool bIsEmbedded = false;
 
     // Timing
     LARGE_INTEGER Frequency;

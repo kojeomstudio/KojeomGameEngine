@@ -8,9 +8,20 @@ public class MainViewModel : ViewModelBase
 {
     private SceneViewModel _sceneViewModel;
     private PropertiesViewModel _propertiesViewModel;
+    private EngineInterop? _engine;
 
     public SceneViewModel SceneViewModel => _sceneViewModel;
     public PropertiesViewModel PropertiesViewModel => _propertiesViewModel;
+
+    public EngineInterop? Engine
+    {
+        get => _engine;
+        set
+        {
+            _engine = value;
+            _sceneViewModel.Engine = value;
+        }
+    }
 
     public MainViewModel()
     {

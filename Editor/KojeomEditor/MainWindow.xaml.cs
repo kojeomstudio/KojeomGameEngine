@@ -19,6 +19,7 @@ public partial class MainWindow : Window
         _viewModel = new MainViewModel();
         DataContext = _viewModel;
         _engine = new EngineInterop();
+        _viewModel.Engine = _engine;
         _engine.LogMessage += OnEngineLogMessage;
 
         Viewport.Engine = _engine;
@@ -87,8 +88,10 @@ public partial class MainWindow : Window
         });
     }
 
-    private void Undo() { }
-    private void Redo() { }
+    private readonly UndoRedoService _undoRedo = new();
+
+    private void Undo() => _undoRedo.Undo();
+    private void Redo() => _undoRedo.Redo();
 
     private void DeleteSelected()
     {
@@ -128,18 +131,43 @@ public partial class MainWindow : Window
     private void Toolbar_Scale_Click(object sender, RoutedEventArgs e) { }
 
     private bool _isPlaying;
+    private bool _isPaused;
+
     private void Toolbar_Play_Click(object sender, RoutedEventArgs e)
     {
-        _isPlaying = true;
+        if (!_isPlaying)
+        {
+            _isPlaying = true;
+            _isPaused = false;
+            StatusReady.Text = "Playing...";
+        }
+        else if (_isPaused)
+        {
+            _isPaused = false;
+            StatusReady.Text = "Playing...";
+        }
     }
 
     private void Toolbar_Pause_Click(object sender, RoutedEventArgs e)
     {
-        _isPlaying = false;
+        if (_isPlaying && !_isPaused)
+        {
+            _isPaused = true;
+            StatusReady.Text = "Paused";
+        }
     }
 
     private void Toolbar_Stop_Click(object sender, RoutedEventArgs e)
     {
-        _isPlaying = false;
+        if (_isPlaying)
+        {
+            _isPlaying = false;
+            _isPaused = false;
+            StatusReady.Text = "Ready";
+            if (_viewModel.SceneViewModel.Engine != null && _viewModel.SceneViewModel.Engine.IsInitialized)
+            {
+                _viewModel.SceneViewModel.RefreshFromEngine();
+            }
+        }
     }
 }

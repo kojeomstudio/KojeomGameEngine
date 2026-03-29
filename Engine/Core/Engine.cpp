@@ -97,6 +97,53 @@ HRESULT KEngine::Initialize(HINSTANCE InInstanceHandle, const std::wstring& InWi
     return S_OK;
 }
 
+HRESULT KEngine::InitializeWithExternalHwnd(HWND InExternalHwnd, UINT32 InWidth, UINT32 InHeight)
+{
+    LOG_INFO("Engine embedded initialization starting...");
+
+    WindowHandle = InExternalHwnd;
+    WindowTitle = L"KojeomEditor";
+    WindowWidth = InWidth;
+    WindowHeight = InHeight;
+    bIsEmbedded = true;
+
+    InstanceHandle = (HINSTANCE)GetWindowLongPtr(InExternalHwnd, GWLP_HINSTANCE);
+
+    HRESULT hr = InitializeGraphics();
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Graphics system initialization failed");
+        return hr;
+    }
+
+    Camera = std::make_unique<KCamera>();
+    Camera->SetPerspective(
+        EngineConstants::DEFAULT_FOV,
+        static_cast<float>(InWidth) / static_cast<float>(InHeight),
+        EngineConstants::DEFAULT_NEAR_PLANE,
+        EngineConstants::DEFAULT_FAR_PLANE
+    );
+
+    InputManager = std::make_unique<KInputManager>();
+    hr = InputManager->Initialize(WindowHandle);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Input manager initialization failed");
+        return hr;
+    }
+
+    hr = SceneManager.Initialize();
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Scene manager initialization failed");
+        return hr;
+    }
+
+    bIsInitialized = true;
+    LOG_INFO("Engine embedded initialization completed");
+    return S_OK;
+}
+
 int32 KEngine::Run()
 {
     if (!bIsInitialized)
@@ -165,16 +212,23 @@ void KEngine::Shutdown()
         GraphicsDevice.reset();
     }
 
-    // Cleanup window
-    if (WindowHandle)
+    // Cleanup window (only if we created it)
+    if (!bIsEmbedded)
     {
-        DestroyWindow(WindowHandle);
-        WindowHandle = nullptr;
-    }
+        if (WindowHandle)
+        {
+            DestroyWindow(WindowHandle);
+            WindowHandle = nullptr;
+        }
 
-    if (InstanceHandle)
+        if (InstanceHandle)
+        {
+            UnregisterClass(L"KojeomEngineWindow", InstanceHandle);
+        }
+    }
+    else
     {
-        UnregisterClass(L"KojeomEngineWindow", InstanceHandle);
+        WindowHandle = nullptr;
     }
 
     bIsInitialized = false;
@@ -378,8 +432,11 @@ void KEngine::CalculateFrameStats()
         FPS = static_cast<float>(FrameCount) / FrameTime;
 
         // Display FPS in window title
-        std::wstring title = WindowTitle + L" - FPS: " + std::to_wstring(static_cast<int>(FPS));
-        SetWindowText(WindowHandle, title.c_str());
+        if (!bIsEmbedded && WindowHandle)
+        {
+            std::wstring title = WindowTitle + L" - FPS: " + std::to_wstring(static_cast<int>(FPS));
+            SetWindowText(WindowHandle, title.c_str());
+        }
 
         FrameCount = 0;
         FrameTime = 0.0f;

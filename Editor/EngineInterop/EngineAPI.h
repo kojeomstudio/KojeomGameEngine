@@ -18,6 +18,8 @@ extern "C"
     ENGINEAPI void Engine_Render(void* engine);
     ENGINEAPI void Engine_Resize(void* engine, int width, int height);
 
+    ENGINEAPI HRESULT Engine_InitializeEmbedded(void* engine, HWND hwnd, int width, int height);
+
     ENGINEAPI void* Engine_GetSceneManager(void* engine);
     ENGINEAPI void* Engine_GetRenderer(void* engine);
 

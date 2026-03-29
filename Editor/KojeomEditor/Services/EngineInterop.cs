@@ -60,6 +60,47 @@ public class EngineInterop : IDisposable
         }
     }
 
+    public bool InitializeEmbedded(IntPtr hwnd, int width, int height)
+    {
+        if (_isInitialized)
+        {
+            return true;
+        }
+
+        try
+        {
+            _enginePtr = Engine_Create();
+            if (_enginePtr == IntPtr.Zero)
+            {
+                LogMessage?.Invoke(this, "Failed to create engine instance");
+                return false;
+            }
+
+            int hr = Engine_InitializeEmbedded(_enginePtr, hwnd, width, height);
+            if (hr < 0)
+            {
+                LogMessage?.Invoke(this, $"Failed to initialize engine: 0x{hr:X8}");
+                Engine_Destroy(_enginePtr);
+                _enginePtr = IntPtr.Zero;
+                return false;
+            }
+
+            _isInitialized = true;
+            LogMessage?.Invoke(this, "Engine initialized successfully (embedded)");
+            return true;
+        }
+        catch (DllNotFoundException ex)
+        {
+            LogMessage?.Invoke(this, $"Engine DLL not found: {ex.Message}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LogMessage?.Invoke(this, $"Engine initialization error: {ex.Message}");
+            return false;
+        }
+    }
+
     public void Tick(float deltaTime)
     {
         if (!_isInitialized || _enginePtr == IntPtr.Zero)
@@ -444,6 +485,18 @@ public class EngineInterop : IDisposable
         if (renderer != IntPtr.Zero) Renderer_SetShadowEnabled(renderer, enabled);
     }
 
+    public IntPtr LoadModel(string path)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return IntPtr.Zero;
+        return Model_Load(_enginePtr, path);
+    }
+
+    public IntPtr SetMesh(IntPtr component, string meshPath)
+    {
+        if (component == IntPtr.Zero) return IntPtr.Zero;
+        return StaticMeshComponent_SetMesh(component, meshPath);
+    }
+
     #region P/Invoke declarations
 
     private const string DllName = "EngineInterop.dll";
@@ -458,6 +511,9 @@ public class EngineInterop : IDisposable
     private static extern int Engine_Initialize(IntPtr engine, IntPtr hwnd, int width, int height);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Engine_InitializeEmbedded(IntPtr engine, IntPtr hwnd, int width, int height);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Engine_Tick(IntPtr engine, float deltaTime);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
@@ -465,6 +521,12 @@ public class EngineInterop : IDisposable
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Engine_Resize(IntPtr engine, int width, int height);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Model_Load(IntPtr engine, [MarshalAs(UnmanagedType.LPWStr)] string path);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr StaticMeshComponent_SetMesh(IntPtr component, [MarshalAs(UnmanagedType.LPWStr)] string path);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr Engine_GetSceneManager(IntPtr engine);

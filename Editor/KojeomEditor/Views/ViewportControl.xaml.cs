@@ -29,6 +29,29 @@ public partial class ViewportControl : UserControl
 
     private readonly HashSet<Key> _pressedKeys = new();
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr CreateWindowEx(
+        uint dwExStyle, string lpClassName, string lpWindowName,
+        uint dwStyle, int x, int y, int nWidth, int nHeight,
+        IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool DestroyWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+
+    private const int WS_CHILD = 0x40000000;
+    private const int WS_VISIBLE = 0x10000000;
+    private const int SW_SHOW = 5;
+    private IntPtr _childHwnd = IntPtr.Zero;
+
     public static readonly DependencyProperty EngineProperty =
         DependencyProperty.Register(nameof(Engine), typeof(EngineInterop), typeof(ViewportControl),
             new PropertyMetadata(null, OnEngineChanged));
@@ -96,6 +119,11 @@ public partial class ViewportControl : UserControl
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         StopRendering();
+        if (_childHwnd != IntPtr.Zero)
+        {
+            DestroyWindow(_childHwnd);
+            _childHwnd = IntPtr.Zero;
+        }
         _hwndSource?.Dispose();
         _hwndSource = null;
     }
@@ -110,13 +138,25 @@ public partial class ViewportControl : UserControl
 
         contentPresenter.Loaded += (s, e) =>
         {
-            if (contentPresenter.IsLoaded)
+            if (contentPresenter.IsLoaded && _engine != null && !_engine.IsInitialized)
             {
                 var helper = new WindowInteropHelper(Window.GetWindow(this));
-                if (helper.Handle != IntPtr.Zero && _engine != null && !_engine.IsInitialized)
+                IntPtr parentHwnd = helper.Handle;
+                if (parentHwnd == IntPtr.Zero) return;
+
+                int width = (int)ActualWidth;
+                int height = (int)ActualHeight;
+                if (width <= 0 || height <= 0) return;
+
+                _childHwnd = CreateWindowEx(
+                    0, "Static", "KojeomViewport",
+                    WS_CHILD | WS_VISIBLE,
+                    0, 0, width, height,
+                    parentHwnd, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+
+                if (_childHwnd != IntPtr.Zero)
                 {
-                    var rect = GetViewportRect();
-                    _engine.Initialize(helper.Handle, (int)rect.Width, (int)rect.Height);
+                    _engine.InitializeEmbedded(_childHwnd, width, height);
                     StartRendering();
                 }
             }
@@ -481,6 +521,10 @@ public partial class ViewportControl : UserControl
         if (_engine?.IsInitialized == true && sizeInfo.NewSize.Width > 0 && sizeInfo.NewSize.Height > 0)
         {
             _engine.Resize((int)sizeInfo.NewSize.Width, (int)sizeInfo.NewSize.Height);
+            if (_childHwnd != IntPtr.Zero)
+            {
+                MoveWindow(_childHwnd, 0, 0, (int)sizeInfo.NewSize.Width, (int)sizeInfo.NewSize.Height, true);
+            }
         }
     }
 }
