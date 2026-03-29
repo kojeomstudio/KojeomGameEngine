@@ -10,7 +10,7 @@ C++17 / DirectX 11 game engine with a WPF-based editor (C# / .NET 8.0). Supports
 - **Core Engine:** `Engine/` (static library, .lib)
 - **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL exposing flat C API for P/Invoke)
 - **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, x64)
-- **Samples:** `samples/` (15+ sample projects demonstrating engine features)
+- **Samples:** `samples/` (16 sample projects demonstrating engine features)
 
 ## Build Commands
 
