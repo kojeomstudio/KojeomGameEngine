@@ -138,6 +138,8 @@ public:
     void SetCastShadow(bool bCast) { bCastShadow = bCast; }
     bool GetCastShadow() const { return bCastShadow; }
 
+    virtual EComponentType GetComponentTypeID() const override { return EComponentType::SkeletalMesh; }
+
     void AddAnimation(const std::string& Name, std::shared_ptr<KAnimation> Animation);
     std::shared_ptr<KAnimation> GetAnimation(const std::string& Name) const;
     bool HasAnimation(const std::string& Name) const;

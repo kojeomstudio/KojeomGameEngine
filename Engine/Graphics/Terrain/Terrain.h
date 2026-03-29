@@ -180,6 +180,8 @@ public:
 
     KTerrain* GetTerrain() const { return Terrain.get(); }
 
+    virtual EComponentType GetComponentTypeID() const override { return EComponentType::Terrain; }
+
     void Serialize(KBinaryArchive& Archive) override;
     void Deserialize(KBinaryArchive& Archive) override;
 

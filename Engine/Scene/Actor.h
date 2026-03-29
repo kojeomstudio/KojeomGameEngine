@@ -14,8 +14,19 @@ class KActor;
 class KActorComponent;
 class KScene;
 
+enum class EComponentType : uint32
+{
+    Base = 0,
+    StaticMesh = 1,
+    SkeletalMesh = 2,
+    Water = 3,
+    Terrain = 4,
+};
+
 using ActorPtr = std::shared_ptr<KActor>;
 using ComponentPtr = std::shared_ptr<KActorComponent>;
+
+ComponentPtr CreateComponentByType(EComponentType Type);
 
 constexpr uint32 SCENE_VERSION = 1;
 
@@ -27,11 +38,13 @@ public:
     virtual void Tick(float DeltaTime) {}
     virtual void Render(class KRenderer* Renderer) {}
 
+    virtual EComponentType GetComponentTypeID() const { return EComponentType::Base; }
+
     void SetOwner(KActor* InOwner) { Owner = InOwner; }
     KActor* GetOwner() const { return Owner; }
 
-    virtual void Serialize(KBinaryArchive& Archive) {}
-    virtual void Deserialize(KBinaryArchive& Archive) {}
+    virtual void Serialize(KBinaryArchive& Archive);
+    virtual void Deserialize(KBinaryArchive& Archive);
 
 protected:
     KActor* Owner = nullptr;

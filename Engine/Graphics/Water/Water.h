@@ -205,6 +205,8 @@ public:
     void SetRefractionTexture(ID3D11ShaderResourceView* Texture) { RefractionTexture = Texture; }
     void SetDepthTexture(ID3D11ShaderResourceView* Texture) { DepthTexture = Texture; }
 
+    virtual EComponentType GetComponentTypeID() const override { return EComponentType::Water; }
+
     void Serialize(KBinaryArchive& Archive) override;
     void Deserialize(KBinaryArchive& Archive) override;
 

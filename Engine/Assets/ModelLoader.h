@@ -4,6 +4,7 @@
 #include "../Assets/StaticMesh.h"
 #include "../Assets/Skeleton.h"
 #include "../Assets/Animation.h"
+#include "../Assets/SkeletalMeshComponent.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -13,6 +14,7 @@
 struct FLoadedModel
 {
     std::shared_ptr<KStaticMesh> StaticMesh;
+    std::shared_ptr<KSkeletalMesh> SkeletalMesh;
     std::shared_ptr<KSkeleton> Skeleton;
     std::vector<std::shared_ptr<KAnimation>> Animations;
     std::string Name;

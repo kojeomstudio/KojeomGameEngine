@@ -633,6 +633,7 @@ void KTerrainComponent::Render(KRenderer* Renderer)
 
 void KTerrainComponent::Serialize(KBinaryArchive& Archive)
 {
+    KActorComponent::Serialize(Archive);
     Archive << Config.Resolution;
     Archive << Config.Scale;
     Archive << Config.HeightScale;
@@ -644,6 +645,7 @@ void KTerrainComponent::Serialize(KBinaryArchive& Archive)
 
 void KTerrainComponent::Deserialize(KBinaryArchive& Archive)
 {
+    KActorComponent::Deserialize(Archive);
     Archive >> Config.Resolution;
     Archive >> Config.Scale;
     Archive >> Config.HeightScale;

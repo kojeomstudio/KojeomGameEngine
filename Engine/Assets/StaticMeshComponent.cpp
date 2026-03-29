@@ -31,10 +31,12 @@ void KStaticMeshComponent::SetStaticMesh(std::shared_ptr<KStaticMesh> InMesh)
 
 void KStaticMeshComponent::Serialize(KBinaryArchive& Archive)
 {
+    KActorComponent::Serialize(Archive);
+
     std::string meshPath;
     if (StaticMesh)
     {
-        // Store mesh path for later loading
+        meshPath = StaticMesh->GetName();
     }
     Archive << meshPath;
     Archive << bCastShadow;
@@ -42,8 +44,9 @@ void KStaticMeshComponent::Serialize(KBinaryArchive& Archive)
 
 void KStaticMeshComponent::Deserialize(KBinaryArchive& Archive)
 {
+    KActorComponent::Deserialize(Archive);
+
     std::string meshPath;
     Archive >> meshPath;
     Archive >> bCastShadow;
-    // Mesh loading would be done by asset manager
 }

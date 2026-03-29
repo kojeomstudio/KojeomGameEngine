@@ -397,6 +397,7 @@ void KWaterComponent::Render(KRenderer* Renderer)
 
 void KWaterComponent::Serialize(KBinaryArchive& Archive)
 {
+    KActorComponent::Serialize(Archive);
     Archive << Config.Resolution;
     Archive << Config.Width;
     Archive << Config.Depth;
@@ -413,6 +414,7 @@ void KWaterComponent::Serialize(KBinaryArchive& Archive)
 
 void KWaterComponent::Deserialize(KBinaryArchive& Archive)
 {
+    KActorComponent::Deserialize(Archive);
     Archive >> Config.Resolution;
     Archive >> Config.Width;
     Archive >> Config.Depth;

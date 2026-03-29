@@ -762,60 +762,121 @@ std::shared_ptr<KStaticMesh> KModelLoader::ProcessMesh(void* AssimpMesh, void* A
         }
     }
 
-    for (uint32 i = 0; i < mesh->mNumVertices; ++i)
+    if (mesh->HasBones() && OutModel->Skeleton)
     {
-        FVertex vertex;
-        
-        vertex.Position = XMFLOAT3(
-            mesh->mVertices[i].x * Options.Scale,
-            mesh->mVertices[i].y * Options.Scale,
-            mesh->mVertices[i].z * Options.Scale
-        );
+        ProcessBones(mesh, OutModel, 0);
+    }
 
-        if (mesh->HasNormals())
-        {
-            vertex.Normal = XMFLOAT3(
-                mesh->mNormals[i].x,
-                mesh->mNormals[i].y,
-                mesh->mNormals[i].z
-            );
-        }
-        else
-        {
-            vertex.Normal = XMFLOAT3(0, 1, 0);
-        }
+    if (mesh->HasBones() && OutModel->Skeleton && !vertexBoneWeights.empty())
+    {
+        std::vector<FSkinnedVertex> skinnedVertices;
+        skinnedVertices.resize(mesh->mNumVertices);
 
-        if (mesh->HasTextureCoords(0))
+        for (uint32 i = 0; i < mesh->mNumVertices; ++i)
         {
-            vertex.TexCoord = XMFLOAT2(
-                mesh->mTextureCoords[0][i].x,
-                mesh->mTextureCoords[0][i].y
+            skinnedVertices[i].Position = XMFLOAT3(
+                mesh->mVertices[i].x * Options.Scale,
+                mesh->mVertices[i].y * Options.Scale,
+                mesh->mVertices[i].z * Options.Scale
             );
-            if (Options.bFlipUVs)
+
+            if (mesh->HasNormals())
             {
-                vertex.TexCoord.y = 1.0f - vertex.TexCoord.y;
+                skinnedVertices[i].Normal = XMFLOAT3(
+                    mesh->mNormals[i].x,
+                    mesh->mNormals[i].y,
+                    mesh->mNormals[i].z
+                );
+            }
+
+            if (mesh->HasTextureCoords(0))
+            {
+                skinnedVertices[i].TexCoord = XMFLOAT2(
+                    mesh->mTextureCoords[0][i].x,
+                    mesh->mTextureCoords[0][i].y
+                );
+                if (Options.bFlipUVs)
+                {
+                    skinnedVertices[i].TexCoord.y = 1.0f - skinnedVertices[i].TexCoord.y;
+                }
+            }
+
+            if (mesh->HasTangentsAndBitangents())
+            {
+                skinnedVertices[i].Tangent = XMFLOAT3(
+                    mesh->mTangents[i].x,
+                    mesh->mTangents[i].y,
+                    mesh->mTangents[i].z
+                );
+                skinnedVertices[i].Bitangent = XMFLOAT3(
+                    mesh->mBitangents[i].x,
+                    mesh->mBitangents[i].y,
+                    mesh->mBitangents[i].z
+                );
+            }
+
+            skinnedVertices[i].Color = XMFLOAT4(1, 1, 1, 1);
+
+            for (size_t w = 0; w < vertexBoneWeights[i].size() && w < MAX_BONE_INFLUENCES; ++w)
+            {
+                skinnedVertices[i].BoneIndices[w] = vertexBoneWeights[i][w].first;
+                skinnedVertices[i].BoneWeights[w] = vertexBoneWeights[i][w].second;
             }
         }
-        else
-        {
-            vertex.TexCoord = XMFLOAT2(0, 0);
-        }
 
-        vertex.Color = XMFLOAT4(1, 1, 1, 1);
-        vertices.push_back(vertex);
+        auto skeletalMesh = std::make_shared<KSkeletalMesh>();
+        skeletalMesh->CreateFromData(nullptr, skinnedVertices, indices);
+        skeletalMesh->SetName(meshName);
+        OutModel->SkeletalMesh = skeletalMesh;
     }
-
-    for (uint32 i = 0; i < mesh->mNumFaces; ++i)
+    else
     {
-        const aiFace& face = mesh->mFaces[i];
-        for (uint32 j = 0; j < face.mNumIndices; ++j)
+        for (uint32 i = 0; i < mesh->mNumVertices; ++i)
         {
-            indices.push_back(face.mIndices[j]);
-        }
-    }
+            FVertex vertex;
+            
+            vertex.Position = XMFLOAT3(
+                mesh->mVertices[i].x * Options.Scale,
+                mesh->mVertices[i].y * Options.Scale,
+                mesh->mVertices[i].z * Options.Scale
+            );
 
-    staticMesh->AddLOD(vertices, indices);
-    staticMesh->CalculateBounds();
+            if (mesh->HasNormals())
+            {
+                vertex.Normal = XMFLOAT3(
+                    mesh->mNormals[i].x,
+                    mesh->mNormals[i].y,
+                    mesh->mNormals[i].z
+                );
+            }
+            else
+            {
+                vertex.Normal = XMFLOAT3(0, 1, 0);
+            }
+
+            if (mesh->HasTextureCoords(0))
+            {
+                vertex.TexCoord = XMFLOAT2(
+                    mesh->mTextureCoords[0][i].x,
+                    mesh->mTextureCoords[0][i].y
+                );
+                if (Options.bFlipUVs)
+                {
+                    vertex.TexCoord.y = 1.0f - vertex.TexCoord.y;
+                }
+            }
+            else
+            {
+                vertex.TexCoord = XMFLOAT2(0, 0);
+            }
+
+            vertex.Color = XMFLOAT4(1, 1, 1, 1);
+            vertices.push_back(vertex);
+        }
+
+        staticMesh->AddLOD(vertices, indices);
+        staticMesh->CalculateBounds();
+    }
 
     if (mesh->HasBones() && OutModel->Skeleton)
     {
@@ -838,7 +899,25 @@ void KModelLoader::ProcessBones(void* AssimpMesh, FLoadedModel* OutModel, uint32
         return;
     }
 
-    LOG_INFO("Processing " + std::to_string(mesh->mNumBones) + " bones for mesh");
+    LOG_INFO("Processing " + std::to_string(mesh->mNumBones) + " bones for mesh " + std::to_string(MeshIndex));
+
+    for (uint32 boneIdx = 0; boneIdx < mesh->mNumBones; ++boneIdx)
+    {
+        aiBone* aiBone = mesh->mBones[boneIdx];
+        std::string boneName = aiBone->mName.C_Str();
+        
+        int32 skelBoneIdx = OutModel->Skeleton->GetBoneIndex(boneName);
+        if (skelBoneIdx >= 0)
+        {
+            FBone* bone = OutModel->Skeleton->GetBoneMutable(static_cast<uint32>(skelBoneIdx));
+            if (bone)
+            {
+                bone->InverseBindPose = AiMatrixToXMMatrix(aiBone->mOffsetMatrix);
+            }
+        }
+    }
+
+    OutModel->Skeleton->CalculateBindPoses();
 #endif
 }
 
@@ -1313,6 +1392,15 @@ HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* Ou
     }
 
     pos = 0;
+    struct FBXAnimCurve
+    {
+        std::string CurveName;
+        std::string TargetProperty;
+        std::vector<float> Times;
+        std::vector<float> Values;
+    };
+    std::vector<FBXAnimCurve> animCurves;
+
     while ((pos = Content.find("AnimationCurve: ", pos)) != std::string::npos)
     {
         size_t animEnd = Content.find('}', pos);
@@ -1325,17 +1413,139 @@ HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* Ou
 
         if (keyCountPos != std::string::npos && keyTimePos != std::string::npos && keyValuePos != std::string::npos)
         {
+            FBXAnimCurve curve;
             auto times = extractFloatArray(keyTimePos);
             auto values = extractFloatArray(keyValuePos);
 
-            for (size_t i = 0; i < std::min(times.size(), values.size()); ++i)
+            curve.Times = std::move(times);
+            curve.Values = std::move(values);
+
+            size_t nameStart = Content.find('"', pos + 16);
+            if (nameStart != std::string::npos)
             {
-                (void)times[i];
-                (void)values[i];
+                size_t nameEnd = Content.find('"', nameStart + 1);
+                if (nameEnd != std::string::npos)
+                {
+                    curve.CurveName = Content.substr(nameStart + 1, nameEnd - nameStart - 1);
+                }
             }
+
+            animCurves.push_back(std::move(curve));
         }
 
         pos = animEnd + 1;
+    }
+
+    if (!animCurves.empty() && !boneNames.empty())
+    {
+        LOG_INFO("FBX: Found " + std::to_string(animCurves.size()) + " animation curves, " + std::to_string(boneNames.size()) + " bones");
+
+        std::unordered_map<std::string, std::vector<size_t>> boneCurves;
+        pos = 0;
+        while ((pos = Content.find("Connect: ", pos)) != std::string::npos)
+        {
+            size_t lineEnd = Content.find('\n', pos);
+            if (lineEnd == std::string::npos) break;
+            std::string line = Content.substr(pos, lineEnd - pos);
+
+            size_t cPos = line.find("C, \"OO\",");
+            if (cPos != std::string::npos)
+            {
+                size_t firstQuote = line.find('"', cPos + 8);
+                size_t secondQuote = line.find('"', firstQuote + 1);
+                size_t thirdQuote = line.find('"', secondQuote + 1);
+                size_t fourthQuote = line.find('"', thirdQuote + 1);
+
+                if (firstQuote != std::string::npos && secondQuote != std::string::npos &&
+                    thirdQuote != std::string::npos && fourthQuote != std::string::npos)
+                {
+                    std::string curveID = line.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+                    std::string targetID = line.substr(thirdQuote + 1, fourthQuote - thirdQuote - 1);
+
+                    for (size_t ci = 0; ci < animCurves.size(); ++ci)
+                    {
+                        if (animCurves[ci].CurveName == curveID)
+                        {
+                            for (size_t bi = 0; bi < boneNames.size(); ++bi)
+                            {
+                                if (boneNames[bi].find(targetID) != std::string::npos)
+                                {
+                                    boneCurves[boneNames[bi]].push_back(ci);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            pos = lineEnd + 1;
+        }
+
+        if (!boneCurves.empty())
+        {
+            auto animation = std::make_shared<KAnimation>();
+            animation->SetName(OutModel->Name + "_Anim");
+
+            float maxDuration = 0.0f;
+            for (const auto& [boneName, curveIndices] : boneCurves)
+            {
+                int32 boneIdx = INVALID_BONE_INDEX;
+                for (size_t bi = 0; bi < boneNames.size(); ++bi)
+                {
+                    if (boneNames[bi] == boneName)
+                    {
+                        boneIdx = static_cast<int32>(bi);
+                        break;
+                    }
+                }
+                if (boneIdx == INVALID_BONE_INDEX) continue;
+
+                FAnimationChannel channel;
+                channel.BoneName = boneName;
+                channel.BoneIndex = static_cast<uint32>(boneIdx);
+
+                for (size_t ci = 0; ci < curveIndices.size() && ci < 3; ++ci)
+                {
+                    const auto& curve = animCurves[curveIndices[ci]];
+                    for (size_t k = 0; k < std::min(curve.Times.size(), curve.Values.size()); ++k)
+                    {
+                        FTransformKey key;
+                        key.Time = curve.Times[k];
+
+                        if (k < channel.PositionKeys.size())
+                        {
+                            if (ci == 0) channel.PositionKeys[k].Position.x = curve.Values[k];
+                            else if (ci == 1) channel.PositionKeys[k].Position.y = curve.Values[k];
+                            else channel.PositionKeys[k].Position.z = curve.Values[k];
+                        }
+                        else
+                        {
+                            key.Position = XMFLOAT3(0, 0, 0);
+                            if (ci == 0) key.Position.x = curve.Values[k];
+                            else if (ci == 1) key.Position.y = curve.Values[k];
+                            else key.Position.z = curve.Values[k];
+                            channel.PositionKeys.push_back(key);
+                        }
+
+                        if (key.Time > maxDuration) maxDuration = key.Time;
+                    }
+                }
+
+                if (!channel.PositionKeys.empty())
+                {
+                    animation->AddChannel(channel);
+                }
+            }
+
+            if (animation->GetChannelCount() > 0)
+            {
+                animation->SetDuration(maxDuration > 0.0f ? maxDuration : 1.0f);
+                animation->SetTicksPerSecond(30.0f);
+                animation->BuildBoneIndexMap(OutModel->Skeleton.get());
+                OutModel->Animations.push_back(animation);
+                LOG_INFO("FBX: Created animation with " + std::to_string(animation->GetChannelCount()) + " channels, duration=" + std::to_string(maxDuration));
+            }
+        }
     }
 
     if (positions.empty())

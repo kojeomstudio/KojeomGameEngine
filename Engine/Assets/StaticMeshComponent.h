@@ -22,6 +22,8 @@ public:
     void SetCastShadow(bool bCast) { bCastShadow = bCast; }
     bool GetCastShadow() const { return bCastShadow; }
 
+    virtual EComponentType GetComponentTypeID() const override { return EComponentType::StaticMesh; }
+
     virtual void Serialize(KBinaryArchive& Archive) override;
     virtual void Deserialize(KBinaryArchive& Archive) override;
 

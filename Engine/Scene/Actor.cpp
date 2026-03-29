@@ -1,5 +1,36 @@
 #include "Actor.h"
 #include "../Graphics/Renderer.h"
+#include "../Assets/StaticMeshComponent.h"
+#include "../Assets/SkeletalMeshComponent.h"
+#include "../Graphics/Water/Water.h"
+#include "../Graphics/Terrain/Terrain.h"
+
+void KActorComponent::Serialize(KBinaryArchive& Archive)
+{
+    uint32 typeID = static_cast<uint32>(GetComponentTypeID());
+    Archive << typeID;
+}
+
+void KActorComponent::Deserialize(KBinaryArchive& Archive)
+{
+}
+
+ComponentPtr CreateComponentByType(EComponentType Type)
+{
+    switch (Type)
+    {
+    case EComponentType::StaticMesh:
+        return std::make_shared<KStaticMeshComponent>();
+    case EComponentType::SkeletalMesh:
+        return std::make_shared<KSkeletalMeshComponent>();
+    case EComponentType::Water:
+        return std::make_shared<KWaterComponent>();
+    case EComponentType::Terrain:
+        return std::make_shared<KTerrainComponent>();
+    default:
+        return nullptr;
+    }
+}
 
 void KActor::Tick(float DeltaTime)
 {
@@ -123,8 +154,15 @@ void KActor::Deserialize(KBinaryArchive& Archive)
 
     for (uint32 i = 0; i < NumComponents; ++i)
     {
-        // Note: Component deserialization requires component factory
-        // This is a simplified version
+        uint32 componentTypeID = 0;
+        Archive >> componentTypeID;
+
+        ComponentPtr component = CreateComponentByType(static_cast<EComponentType>(componentTypeID));
+        if (component)
+        {
+            component->Deserialize(Archive);
+            AddComponent(component);
+        }
     }
 
     uint32 NumChildren;

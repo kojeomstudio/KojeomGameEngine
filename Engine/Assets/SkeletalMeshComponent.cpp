@@ -267,6 +267,7 @@ bool KSkeletalMeshComponent::HasAnimation(const std::string& Name) const
 
 void KSkeletalMeshComponent::Serialize(KBinaryArchive& Archive)
 {
+    KActorComponent::Serialize(Archive);
     Archive << CurrentAnimationName;
     Archive << bAnimationPlaying;
     Archive << bCastShadow;
@@ -274,6 +275,7 @@ void KSkeletalMeshComponent::Serialize(KBinaryArchive& Archive)
 
 void KSkeletalMeshComponent::Deserialize(KBinaryArchive& Archive)
 {
+    KActorComponent::Deserialize(Archive);
     Archive >> CurrentAnimationName;
     Archive >> bAnimationPlaying;
     Archive >> bCastShadow;

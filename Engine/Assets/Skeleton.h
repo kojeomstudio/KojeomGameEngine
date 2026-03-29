@@ -53,6 +53,9 @@ public:
     const std::vector<FBone>& GetBones() const { return Bones; }
     std::vector<FBone>& GetBonesMutable() { return Bones; }
 
+    void SetName(const std::string& InName) { Name = InName; }
+    const std::string& GetName() const { return Name; }
+
     void CalculateBindPoses();
     void CalculateInverseBindPoses();
 
@@ -69,6 +72,7 @@ private:
     void CalculateBoneBindPoseRecursive(uint32 BoneIndex);
 
 private:
+    std::string Name;
     std::vector<FBone> Bones;
     std::unordered_map<std::string, uint32> BoneNameToIndex;
 };

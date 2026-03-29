@@ -136,6 +136,7 @@ void KSkeleton::SetBoneMatrix(uint32 Index, const XMMATRIX& Matrix)
 
 void KSkeleton::Serialize(KBinaryArchive& Archive)
 {
+    Archive << Name;
     uint32 boneCount = static_cast<uint32>(Bones.size());
     Archive << boneCount;
     
@@ -147,6 +148,7 @@ void KSkeleton::Serialize(KBinaryArchive& Archive)
 
 void KSkeleton::Deserialize(KBinaryArchive& Archive)
 {
+    Archive >> Name;
     uint32 boneCount;
     Archive >> boneCount;
     
