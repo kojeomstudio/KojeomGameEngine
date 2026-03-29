@@ -12,7 +12,6 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 - **Core Engine:** `Engine/` (Static Library, .lib)
 - **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop)
 - **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0)
-- **Examples:** `Examples/` (3 legacy examples)
 - **Samples:** `samples/` (16 sample projects demonstrating engine features)
 
 ## Engine Module Structure
@@ -31,7 +30,7 @@ Engine/
 │   ├── Light.h                   # Directional, Point, Spot light structures
 │   ├── Shadow/                   # Shadow maps, cascaded shadow maps
 │   ├── Deferred/                 # G-Buffer, deferred renderer
-│   ├── PostProcess/              # HDR, bloom, auto exposure, DOF, motion blur, lens effects
+│   ├── PostProcess/              # HDR, lens effects (bloom), auto exposure, DOF, motion blur
 │   ├── SSAO/                     # Screen-space ambient occlusion
 │   ├── SSR/                      # Screen-space reflections
 │   ├── TAA/                      # Temporal anti-aliasing
@@ -41,6 +40,7 @@ Engine/
 │   ├── Water/                    # Water rendering
 │   ├── Terrain/                  # Terrain rendering
 │   ├── Culling/                  # Frustum culling, GPU occlusion culling
+│   ├── Debug/                    # Debug renderer
 │   ├── CommandBuffer/            # Deferred command-based rendering
 │   ├── Instanced/                # GPU instanced rendering
 │   ├── IBL/                      # Image-based lighting (irradiance, prefiltered env, BRDF LUT)

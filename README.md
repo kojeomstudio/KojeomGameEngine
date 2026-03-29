@@ -88,7 +88,6 @@ KojeomEngine/
 │   ├── EngineInterop/          # C#/C++ 브릿지 DLL
 │   └── KojeomEditor/           # WPF 에디터 (.NET 8.0)
 ├── samples/                    # 샘플 프로젝트 (16개)
-├── Examples/                   # 레거시 예제 (3개)
 ├── docs/                       # 문서
 │   ├── rules/                  # AI 에이전트 규칙
 │   └── renderer/               # 렌더러 기술 문서

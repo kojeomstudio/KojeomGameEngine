@@ -151,25 +151,51 @@ auto Cube = Renderer.CreateCubeMesh();
 auto Sphere = Renderer.CreateSphereMesh(32, 32); // slices, stacks
 ```
 
-## Future Development Plans
+## Advanced Rendering Features
 
-### Phase 1: Core Enhancements
-- [ ] Deferred rendering pipeline
-- [ ] Multiple render targets (G-Buffer)
-- [ ] Point and Spot lights
-- [ ] Shadow mapping
+### Shadow System
+- [x] Shadow mapping
+- [x] Cascaded shadow maps
 
-### Phase 2: Advanced Features
-- [ ] Post-processing effects
-- [ ] HDR rendering
-- [ ] PBR materials
-- [ ] Screen-space reflections
+### Post-Processing Pipeline
+- [x] HDR rendering (via PostProcessor)
+- [x] Bloom (via LensEffects)
+- [x] Auto Exposure
+- [x] Depth of Field (DOF)
+- [x] Motion Blur
+- [x] Lens Effects
 
-### Phase 3: Optimization
-- [ ] Frustum culling
-- [ ] Occlusion culling
-- [ ] Instanced rendering
-- [ ] GPU particle systems
+### Screen-Space Effects
+- [x] Screen-Space Ambient Occlusion (SSAO)
+- [x] Screen-Space Reflections (SSR)
+- [x] Temporal Anti-Aliasing (TAA)
+- [x] Screen-Space Global Illumination (SSGI)
+
+### Environment Rendering
+- [x] Procedural Sky
+- [x] Volumetric Fog
+- [x] Water Rendering
+- [x] Terrain Rendering
+
+### PBR & IBL
+- [x] PBR Materials (Metallic-Roughness workflow, 7 texture slots, presets)
+- [x] Image-Based Lighting (Irradiance, Prefiltered Environment, BRDF LUT)
+
+### Animation
+- [x] Skeletal Mesh
+- [x] Animation State Machine
+- [x] Blend & Notify
+
+### Optimization
+- [x] Frustum Culling
+- [x] GPU Occlusion Culling
+- [x] GPU Instanced Rendering
+- [x] LOD Generation & System
+- [x] Particle System
+- [x] Debug Renderer
+
+### Command-Based Rendering
+- [x] Deferred command buffer rendering
 
 ## API Reference
 

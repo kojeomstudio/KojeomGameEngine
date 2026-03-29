@@ -154,9 +154,11 @@ private:
 Engine/
 ├── Core/           # KEngine - window, main loop, subsystem ownership
 ├── Graphics/       # Device, renderer, camera, shader, mesh, material, texture, light
+│   ├── CommandBuffer/# Deferred command-based rendering
+│   ├── Debug/      # Debug renderer
 │   ├── Shadow/     # Shadow maps, cascaded shadow maps
 │   ├── Deferred/   # G-Buffer, deferred renderer
-│   ├── PostProcess/# HDR, bloom, auto exposure, DOF, motion blur
+│   ├── PostProcess/# HDR, lens effects (bloom), auto exposure, DOF, motion blur
 │   ├── SSAO/       # Screen-space ambient occlusion
 │   ├── SSR/        # Screen-space reflections
 │   ├── TAA/        # Temporal anti-aliasing
