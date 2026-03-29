@@ -63,4 +63,19 @@ extern "C"
     ENGINEAPI void Material_SetAlbedo(void* material, float r, float g, float b, float a);
     ENGINEAPI void Material_SetMetallic(void* material, float value);
     ENGINEAPI void Material_SetRoughness(void* material, float value);
+
+    ENGINEAPI void* Actor_AddComponent(void* actor, int componentType);
+    ENGINEAPI void* Actor_GetStaticMeshComponent(void* actor);
+    ENGINEAPI void* Actor_GetSkeletalMeshComponent(void* actor);
+    ENGINEAPI void* Actor_GetLightComponent(void* actor);
+    ENGINEAPI void* StaticMeshComponent_SetMesh(void* component, const wchar_t* meshPath);
+    ENGINEAPI void* SkeletalMeshComponent_PlayAnimation(void* component, const char* animName);
+    ENGINEAPI void SkeletalMeshComponent_StopAnimation(void* component);
+    ENGINEAPI int SkeletalMeshComponent_GetAnimationCount(void* component);
+    ENGINEAPI void Actor_SetVisibility(void* actor, bool visible);
+    ENGINEAPI bool Actor_IsVisible(void* actor);
+    ENGINEAPI void* Model_LoadAndGetStaticMesh(void* engine, const wchar_t* path);
+    ENGINEAPI void Renderer_SetSSAOEnabled(void* renderer, bool enabled);
+    ENGINEAPI void Renderer_SetPostProcessEnabled(void* renderer, bool enabled);
+    ENGINEAPI void Renderer_SetShadowEnabled(void* renderer, bool enabled);
 }

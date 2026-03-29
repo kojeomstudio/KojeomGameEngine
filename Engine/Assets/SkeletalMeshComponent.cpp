@@ -137,6 +137,31 @@ void KSkeletalMeshComponent::Render(KRenderer* Renderer)
     {
         return;
     }
+
+    KGraphicsDevice* graphicsDevice = Renderer->GetGraphicsDevice();
+    if (!graphicsDevice)
+    {
+        return;
+    }
+
+    ID3D11DeviceContext* context = graphicsDevice->GetContext();
+    if (!context)
+    {
+        return;
+    }
+
+    if (bAnimationPlaying && BoneMatrixBuffer)
+    {
+        UpdateBoneMatrices(context);
+    }
+
+    XMMATRIX worldMatrix = XMMatrixIdentity();
+    if (Owner)
+    {
+        worldMatrix = Owner->GetWorldMatrix();
+    }
+
+    Renderer->RenderSkeletalMesh(SkeletalMesh.get(), worldMatrix, BoneMatrixBuffer.Get());
 }
 
 void KSkeletalMeshComponent::SetSkeletalMesh(std::shared_ptr<KSkeletalMesh> InMesh)

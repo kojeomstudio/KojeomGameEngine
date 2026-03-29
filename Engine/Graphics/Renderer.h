@@ -128,6 +128,8 @@ public:
     KShaderProgram* GetSkinnedShader() const { return SkinnedShader.get(); }
     void Cleanup();
 
+    KGraphicsDevice* GetGraphicsDevice() const { return GraphicsDevice; }
+
     KShaderProgram* GetBasicShader() const { return BasicShader.get(); }
     KTextureManager* GetTextureManager() { return &TextureManager; }
 

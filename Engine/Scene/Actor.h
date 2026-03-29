@@ -95,6 +95,7 @@ public:
     void AddChild(ActorPtr Child);
     void RemoveChild(KActor* Child);
     const std::vector<ActorPtr>& GetChildren() const { return Children; }
+    const std::vector<ComponentPtr>& GetComponents() const { return Components; }
 
     bool IsVisible() const { return bVisible; }
     void SetVisible(bool bInVisible) { bVisible = bInVisible; }

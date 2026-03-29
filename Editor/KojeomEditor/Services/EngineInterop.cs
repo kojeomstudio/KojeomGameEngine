@@ -396,6 +396,46 @@ public class EngineInterop : IDisposable
         Dispose();
     }
 
+    public void AddComponent(IntPtr actor, int componentType)
+    {
+        if (actor != IntPtr.Zero)
+        {
+            Actor_AddComponent(actor, componentType);
+        }
+    }
+
+    public void SetActorVisibility(IntPtr actor, bool visible)
+    {
+        if (actor != IntPtr.Zero)
+        {
+            Actor_SetVisibility(actor, visible);
+        }
+    }
+
+    public bool IsActorVisible(IntPtr actor)
+    {
+        if (actor == IntPtr.Zero) return false;
+        return Actor_IsVisible(actor);
+    }
+
+    public void SetSSAOEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetSSAOEnabled(renderer, enabled);
+    }
+
+    public void SetPostProcessEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetPostProcessEnabled(renderer, enabled);
+    }
+
+    public void SetShadowEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetShadowEnabled(renderer, enabled);
+    }
+
     #region P/Invoke declarations
 
     private const string DllName = "EngineInterop.dll";
@@ -518,6 +558,25 @@ public class EngineInterop : IDisposable
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Material_SetRoughness(IntPtr material, float value);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Actor_AddComponent(IntPtr actor, int componentType);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Actor_SetVisibility(IntPtr actor, [MarshalAs(UnmanagedType.I1)] bool visible);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Actor_IsVisible(IntPtr actor);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetSSAOEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetPostProcessEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetShadowEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
 
     #endregion
 }

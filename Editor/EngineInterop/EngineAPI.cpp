@@ -7,6 +7,8 @@
 #include <Engine/Assets/ModelLoader.h>
 #include <Engine/Scene/SceneManager.h>
 #include <Engine/Scene/Actor.h>
+#include <Engine/Assets/StaticMeshComponent.h>
+#include <Engine/Assets/SkeletalMeshComponent.h>
 
 class FEngineWrapper
 {
@@ -351,22 +353,44 @@ extern "C"
         return nullptr;
     }
 
+    static const char* COMPONENT_NAMES[] = {
+        "Unknown", "Transform", "StaticMesh", "SkeletalMesh",
+        "Light", "Camera", "Audio", "Physics"
+    };
+
     ENGINEAPI void Actor_GetComponentCount(void* actor, int* outCount)
     {
         if (!actor || !outCount) return;
         KActor* kactor = static_cast<KActor*>(actor);
-        *outCount = 0;
+        *outCount = static_cast<int>(kactor->GetComponents().size());
     }
 
     ENGINEAPI const char* Actor_GetComponentName(void* actor, int index)
     {
         if (!actor) return "";
-        return "Component";
+        KActor* kactor = static_cast<KActor*>(actor);
+        const auto& components = kactor->GetComponents();
+        if (index >= 0 && index < static_cast<int>(components.size()))
+        {
+            KActorComponent* comp = components[index].get();
+            if (auto* smc = dynamic_cast<KStaticMeshComponent*>(comp)) return "StaticMesh";
+            if (auto* skmc = dynamic_cast<KSkeletalMeshComponent*>(comp)) return "SkeletalMesh";
+            return "Component";
+        }
+        return "";
     }
 
     ENGINEAPI int Actor_GetComponentType(void* actor, int index)
     {
         if (!actor) return 0;
+        KActor* kactor = static_cast<KActor*>(actor);
+        const auto& components = kactor->GetComponents();
+        if (index >= 0 && index < static_cast<int>(components.size()))
+        {
+            KActorComponent* comp = components[index].get();
+            if (dynamic_cast<KStaticMeshComponent*>(comp)) return 2;
+            if (dynamic_cast<KSkeletalMeshComponent*>(comp)) return 3;
+        }
         return 0;
     }
 
@@ -389,5 +413,112 @@ extern "C"
         if (!material) return;
         FPBRMaterialParams* mat = static_cast<FPBRMaterialParams*>(material);
         mat->Roughness = value;
+    }
+
+    ENGINEAPI void* Actor_AddComponent(void* actor, int componentType)
+    {
+        if (!actor) return nullptr;
+        KActor* kactor = static_cast<KActor*>(actor);
+        ComponentPtr newComp;
+        switch (componentType)
+        {
+        case 2:
+            newComp = std::make_shared<KStaticMeshComponent>();
+            break;
+        case 3:
+            newComp = std::make_shared<KSkeletalMeshComponent>();
+            break;
+        default:
+            newComp = std::make_shared<KActorComponent>();
+            break;
+        }
+        kactor->AddComponent(newComp);
+        return newComp.get();
+    }
+
+    ENGINEAPI void* Actor_GetStaticMeshComponent(void* actor)
+    {
+        if (!actor) return nullptr;
+        KActor* kactor = static_cast<KActor*>(actor);
+        return kactor->GetComponent<KStaticMeshComponent>();
+    }
+
+    ENGINEAPI void* Actor_GetSkeletalMeshComponent(void* actor)
+    {
+        if (!actor) return nullptr;
+        KActor* kactor = static_cast<KActor*>(actor);
+        return kactor->GetComponent<KSkeletalMeshComponent>();
+    }
+
+    ENGINEAPI void* Actor_GetLightComponent(void* actor)
+    {
+        return nullptr;
+    }
+
+    ENGINEAPI void* StaticMeshComponent_SetMesh(void* component, const wchar_t* meshPath)
+    {
+        if (!component || !meshPath) return nullptr;
+        return nullptr;
+    }
+
+    ENGINEAPI void* SkeletalMeshComponent_PlayAnimation(void* component, const char* animName)
+    {
+        return nullptr;
+    }
+
+    ENGINEAPI void SkeletalMeshComponent_StopAnimation(void* component)
+    {
+    }
+
+    ENGINEAPI int SkeletalMeshComponent_GetAnimationCount(void* component)
+    {
+        return 0;
+    }
+
+    ENGINEAPI void Actor_SetVisibility(void* actor, bool visible)
+    {
+        if (!actor) return;
+        KActor* kactor = static_cast<KActor*>(actor);
+        kactor->SetVisible(visible);
+    }
+
+    ENGINEAPI bool Actor_IsVisible(void* actor)
+    {
+        if (!actor) return false;
+        KActor* kactor = static_cast<KActor*>(actor);
+        return kactor->IsVisible();
+    }
+
+    ENGINEAPI void* Model_LoadAndGetStaticMesh(void* engine, const wchar_t* path)
+    {
+        if (!engine || !path) return nullptr;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        if (model && model->StaticMesh)
+        {
+            return model->StaticMesh.get();
+        }
+        return nullptr;
+    }
+
+    ENGINEAPI void Renderer_SetSSAOEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetSSAOEnabled(enabled);
+    }
+
+    ENGINEAPI void Renderer_SetPostProcessEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetPostProcessEnabled(enabled);
+    }
+
+    ENGINEAPI void Renderer_SetShadowEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetShadowEnabled(enabled);
     }
 }

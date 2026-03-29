@@ -5,272 +5,147 @@
 [![Language: C++](https://img.shields.io/badge/Language-C++17-purple.svg)](https://isocpp.org/)
 [![API: DirectX 11](https://img.shields.io/badge/API-DirectX%2011-green.svg)](https://docs.microsoft.com/en-us/windows/win32/direct3d11)
 
-A lightweight, modular C++ game engine built on DirectX 11. Designed with simplicity, extensibility, and clean code principles in mind.
+DirectX 11 기반의 C++ 게임 엔진입니다. 모듈성과 확장성을 중시하여 설계되었으며, WPF 기반 에디터를 포함합니다.
 
-DirectX 11 기반의 경량화된 C++ 게임 엔진입니다. 모듈성과 확장성을 중시하여 설계되었으며, 간결한 코드 스타일과 쉬운 사용법을 목표로 합니다.
+## Features
 
-## 🎯 Features / 주요 특징
+### Graphics
+- **DirectX 11 Rendering**: Forward/Deferred 렌더링 파이프라인
+- **PBR Materials**: Metallic-Roughness 워크플로우, 7개 텍스처 슬롯, 프리셋
+- **Shadow System**: Shadow Map, Cascaded Shadow Maps
+- **Post-Processing**: HDR, Bloom, Auto Exposure, DOF, Motion Blur, Lens Effects
+- **Screen-Space Effects**: SSAO, SSR, TAA, SSGI
+- **Environment**: Procedural Sky, Volumetric Fog, Water, Terrain
+- **IBL**: Image-based Lighting (Irradiance, Prefiltered Env, BRDF LUT)
+- **Optimization**: GPU Instancing, Frustum Culling, Occlusion Culling, LOD System
+- **Particle System**: 파티클 이미터
 
-### Core Features
-- **Lightweight Design**: Minimal dependencies - only DirectX 11 and standard C++ libraries
-- **Modular Architecture**: Use only the components you need
-- **Safe Resource Management**: Automatic memory management using ComPtr
-- **Clean API**: Simple, intuitive interface for complex rendering operations
+### Core Systems
+- **Actor-Component Architecture**: KActor, KActorComponent, KScene
+- **Input System**: Keyboard, Mouse, Raw Input, Action Mapping
+- **Audio System**: XAudio2, 3D Sound, Master/Sound/Music 볼륨 채널
+- **Physics**: Rigid Body, Collision Detection (Sphere/Box), Raycast
+- **Animation**: Skeletal Mesh, Animation State Machine, Blend, Notify
 
-### Graphics System
-- **DirectX 11 Rendering**: Full DirectX 11 support with feature level 11.0+
-- **3D Camera System**: Perspective and orthographic projection support
-- **Shader Management**: Runtime shader compilation with HLSL support
-- **Mesh System**: Built-in primitives (triangle, cube, sphere, quad)
-- **Texture System**: Runtime texture generation and caching
-- **Lighting**: Directional light with Phong shading model
+### Editor
+- **WPF-based Editor** (.NET 8.0, C#)
+- **3D Viewport**: DirectX 11 렌더링을 WPF에 임베드
+- **Scene Hierarchy**: 씬 트리 뷰, Actor 추가/삭제/재정렬
+- **Properties Panel**: Transform, Material, Light, Camera 속성 편집
+- **Material Editor**: PBR 파라미터 편집
+- **Content Browser**: 에셋 브라우저
+- **Undo/Redo**: 액션 기반 실행 취소/다시 실행 시스템
+- **Engine Interop**: C++ 엔진과 C# 에디터 간 P/Invoke 브릿지
 
-## 🏗️ Project Structure / 프로젝트 구조
+### Serialization
+- **Binary Archive**: 씬, 메시, 스켈레톤 데이터 직렬화
+- **JSON Archive**: 커스텀 DOM 기반 파서
+
+## Project Structure
 
 ```
 KojeomEngine/
-├── Engine/                     # Engine Core Library
-│   ├── Core/
-│   │   ├── Engine.h/cpp       # Main engine class
-│   │   └── Engine.vcxproj     # Engine library project
-│   ├── Graphics/
-│   │   ├── GraphicsDevice.h/cpp  # DirectX 11 device management
-│   │   ├── Camera.h/cpp          # 3D camera system
-│   │   ├── Renderer.h/cpp        # Integrated rendering system
-│   │   ├── Shader.h/cpp          # Shader management
-│   │   ├── Mesh.h/cpp            # Mesh rendering system
-│   │   ├── Texture.h/cpp         # Texture management
-│   │   └── Light.h               # Lighting structures
-│   └── Utils/
-│       ├── Common.h           # Common headers and macros
-│       └── Logger.h           # Logging system
-├── Examples/                   # Example Applications
-│   ├── BasicExample.cpp       # Basic window and rendering
-│   ├── TriangleExample.cpp    # 3D triangle rendering
-│   └── AdvancedExample.cpp    # Full-featured demo
-├── KojeomEngine.sln           # Visual Studio Solution
-├── LICENSE                    # MIT License
-└── README.md                  # This file
+├── Engine/                     # Engine Core Library (C++17, Static Library)
+│   ├── Core/                   # KEngine - 윈도우, 메인 루프
+│   ├── Graphics/               # 렌더링 파이프라인
+│   │   ├── Renderer.h/cpp      # 중앙 렌더링 오케스트레이터
+│   │   ├── GraphicsDevice.h/cpp # DirectX 11 디바이스 관리
+│   │   ├── Camera.h/cpp        # 카메라 시스템
+│   │   ├── Shader.h/cpp        # 셰이더 관리
+│   │   ├── Mesh.h/cpp          # 메시 시스템
+│   │   ├── Material.h/cpp      # PBR 재질
+│   │   ├── Texture.h/cpp       # 텍스처 관리
+│   │   ├── Light.h             # 조명 구조체
+│   │   ├── Shadow/             # 그림자 시스템
+│   │   ├── Deferred/           # 디퍼드 렌더링
+│   │   ├── PostProcess/        # 후처리 효과
+│   │   ├── SSAO/               # Screen-Space AO
+│   │   ├── SSR/                # Screen-Space Reflections
+│   │   ├── TAA/                # Temporal AA
+│   │   ├── SSGI/               # Screen-Space GI
+│   │   ├── Sky/                # 프로시저럴 스카이
+│   │   ├── Volumetric/         # 볼류메트릭 포그
+│   │   ├── Water/              # 워터 렌더링
+│   │   ├── Terrain/            # 터레인 렌더링
+│   │   ├── Culling/            # 프러스텀/오클루전 컬링
+│   │   ├── CommandBuffer/      # 커맨드 버퍼 렌더링
+│   │   ├── Instanced/          # GPU 인스턴싱
+│   │   ├── IBL/                # Image-based Lighting
+│   │   ├── LOD/                # LOD 생성/관리
+│   │   ├── Particle/           # 파티클 시스템
+│   │   ├── Performance/        # GPU 타이머, 프레임 스탯
+│   │   └── Debug/              # 디버그 렌더러
+│   ├── Input/                  # 입력 시스템
+│   ├── Audio/                  # 오디오 시스템 (XAudio2)
+│   ├── Physics/                # 물리 엔진
+│   ├── Scene/                  # Actor-Component 시스템
+│   ├── Assets/                 # 메시, 스켈레톤, 애니메이션, 모델 로더
+│   ├── Serialization/          # 바이너리/JSON 직렬화
+│   ├── UI/                     # 캔버스 기반 UI 시스템
+│   ├── DebugUI/                # ImGui 디버그 UI
+│   └── Utils/                  # 유틸리티 (Common, Logger, Math)
+├── Editor/
+│   ├── EngineInterop/          # C#/C++ 브릿지 DLL
+│   └── KojeomEditor/           # WPF 에디터 (.NET 8.0)
+├── samples/                    # 샘플 프로젝트 (16개)
+├── Examples/                   # 레거시 예제 (3개)
+├── docs/                       # 문서
+│   ├── rules/                  # AI 에이전트 규칙
+│   └── renderer/               # 렌더러 기술 문서
+├── KojeomEngine.sln            # Visual Studio 솔루션
+└── LICENSE                     # MIT License
 ```
 
-## 🛠️ Requirements / 빌드 요구사항
+## Requirements
 
-- **Compiler**: Visual Studio 2019 or later (C++17 support)
-- **Platform**: Windows 10/11
-- **SDK**: Windows SDK (includes DirectX 11)
-- **Optional**: Git for cloning the repository
+- **Compiler**: Visual Studio 2022 (v143 toolset, C++17)
+- **Platform**: Windows 10/11, x64
+- **SDK**: Windows SDK (DirectX 11, XAudio2)
+- **.NET**: .NET 8.0 SDK (for Editor)
+- **Optional**: Assimp (for model loading)
 
-## 🚀 Getting Started / 시작하기
+## Build
 
-### Clone the Repository
+### Visual Studio
 
-```bash
-git clone https://github.com/YOUR_USERNAME/KojeomEngine.git
-cd KojeomEngine
-```
+1. `KojeomEngine.sln`을 Visual Studio 2022에서 열기
+2. Build Configuration 선택 (Debug/Release, x64)
+3. 솔루션 빌드 (Ctrl+Shift+B)
 
-### Build with Visual Studio
-
-1. Open `KojeomEngine.sln` in Visual Studio 2019 or later
-2. Select your build configuration (Debug or Release)
-3. Build the solution (Ctrl+Shift+B)
-4. Run any example project (BasicExample, TriangleExample, or AdvancedExample)
-
-### Build from Command Line
+### Command Line
 
 ```cmd
-# Debug build
 msbuild KojeomEngine.sln /p:Configuration=Debug /p:Platform=x64
-
-# Release build
 msbuild KojeomEngine.sln /p:Configuration=Release /p:Platform=x64
 ```
 
-## 📖 Usage / 사용법
+### Editor
 
-### Basic Application
-
-```cpp
-#include "Engine/Core/Engine.h"
-
-class MyGame : public KEngine
-{
-public:
-    void Update(float deltaTime) override
-    {
-        KEngine::Update(deltaTime);
-        // Your game logic here
-    }
-
-protected:
-    void RenderFrame_Internal() override
-    {
-        auto renderer = GetRenderer();
-        auto camera = GetCamera();
-        
-        // Render your objects here
-        auto cube = renderer->CreateCubeMesh();
-        XMMATRIX world = XMMatrixIdentity();
-        renderer->RenderMeshLit(cube, world);
-    }
-};
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
-{
-    return KEngine::RunApplication<MyGame>(
-        hInstance,
-        L"My Game",
-        1024, 768
-    );
-}
+```cmd
+cd Editor/KojeomEditor
+dotnet build
 ```
 
-### Camera Control
+## Code Style
 
-```cpp
-// Get camera from engine
-KCamera* camera = GetCamera();
+| Type | Convention | Example |
+|------|------------|---------|
+| Classes | `K` prefix | `KRenderer`, `KActor` |
+| Structs | `F` prefix | `FVertex`, `FDirectionalLight` |
+| Enums | `E` prefix | `EKeyCode`, `ERenderPath` |
+| Functions | PascalCase | `Initialize()`, `BeginFrame()` |
+| Variables | camelCase | `graphicsDevice` |
+| Member bools | `b` prefix | `bInitialized` |
 
-// Set position
-camera->SetPosition(XMFLOAT3(0.0f, 5.0f, -10.0f));
+## Documentation
 
-// Look at target
-camera->LookAt(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+- AI Agent 규칙: `docs/rules/AIAgentRules.md`
+- 렌더러 문서: `docs/renderer/DirectX11Renderer.md`
+- Claude 규칙: `.claude/CLAUDE.md`
+- Gemini 규칙: `.gemini/GEMINI.md`
 
-// Set perspective projection
-camera->SetPerspective(XM_PIDIV4, 16.0f/9.0f, 0.1f, 1000.0f);
-```
+## License
 
-### Creating and Rendering Meshes
+MIT License - see [LICENSE](LICENSE) for details.
 
-```cpp
-// Create meshes
-auto triangle = renderer->CreateTriangleMesh();
-auto cube = renderer->CreateCubeMesh();
-auto sphere = renderer->CreateSphereMesh(32, 16);
-
-// Render with basic shader (no lighting)
-XMMATRIX world = XMMatrixRotationY(angle);
-renderer->RenderMeshBasic(triangle, world);
-
-// Render with Phong lighting
-renderer->RenderMeshLit(cube, world);
-
-// Render with texture
-auto texture = renderer->GetTextureManager()->GetCheckerboardTexture();
-renderer->RenderMeshLit(sphere, world, texture);
-```
-
-### Lighting Setup
-
-```cpp
-FDirectionalLight light;
-light.Direction = XMFLOAT3(0.5f, -1.0f, 0.5f);
-light.Color = XMFLOAT4(1.0f, 0.95f, 0.9f, 1.0f);
-light.AmbientColor = XMFLOAT4(0.1f, 0.1f, 0.15f, 1.0f);
-
-renderer->SetDirectionalLight(light);
-```
-
-## 🎮 Examples / 예제
-
-### BasicExample
-A minimal example that creates a window and displays an FPS counter.
-- Window creation and initialization
-- Basic rendering loop
-- FPS display in window title
-
-### TriangleExample
-Demonstrates 3D triangle rendering with custom shaders.
-- Custom vertex and pixel shaders
-- Basic mesh creation and rendering
-- Matrix transformations
-
-### AdvancedExample
-A comprehensive demo showcasing all engine features.
-- Multiple mesh types (triangle, cube, sphere)
-- Phong lighting with directional light
-- Texture mapping with procedural checkerboard
-- Orbital camera movement
-- Animated objects
-
-## 📁 Core Components / 핵심 컴포넌트
-
-### KEngine
-The main engine class responsible for initialization, main loop, and window management.
-
-### KGraphicsDevice
-Manages DirectX 11 device, device context, and swap chain.
-
-### KCamera
-3D camera system with view and projection matrix management.
-
-### KRenderer
-Integrated rendering system that manages all graphics components.
-
-### KShaderProgram
-HLSL shader compilation and management.
-
-### KMesh
-3D mesh container with vertex and index buffers.
-
-### KTexture / KTextureManager
-Texture resource management with caching support.
-
-### KLogger
-Debug logging system with console and Visual Studio output support.
-
-## 📝 Coding Style / 코딩 스타일
-
-- **Naming Convention**: 
-  - Classes: `K` prefix (e.g., `KEngine`, `KCamera`)
-  - Functions: PascalCase (e.g., `Initialize()`, `RenderFrame()`)
-  - Variables: camelCase with `m_` prefix for members (e.g., `m_rotationAngle`)
-  - Constants: `UPPER_CASE` or `PascalCase` in namespaces
-- **Comments**: Doxygen-style documentation for public APIs
-- **Error Handling**: HRESULT-based error handling with logging
-
-## 🗺️ Roadmap / 향후 계획
-
-### Completed ✅
-- [x] Core engine framework
-- [x] DirectX 11 rendering pipeline
-- [x] Camera system
-- [x] Shader management
-- [x] Mesh rendering system
-- [x] Texture management
-- [x] Basic lighting (Phong)
-
-### Planned 🚧
-- [ ] 3D model loading (.obj, .fbx)
-- [ ] Image file loading (.png, .jpg, .dds)
-- [ ] Input system (keyboard, mouse)
-- [ ] Audio system
-- [ ] Scene graph and transform hierarchy
-- [ ] Animation system
-- [ ] Advanced lighting (PBR)
-- [ ] Post-processing effects
-- [ ] ImGui integration
-- [ ] Physics engine integration
-
-## 🤝 Contributing / 기여하기
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License / 라이선스
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 📧 Contact / 연락처
-
-For questions or suggestions, please open an issue on GitHub.
-
----
-
-Made with ❤️ by Kojeom
+Made with love by Kojeom

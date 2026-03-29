@@ -86,6 +86,10 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModel(const std::wstring& Path, 
         {
             hr = LoadGLTFFallback(Path, model.get(), Options);
         }
+        else if (ext == "fbx")
+        {
+            hr = LoadFBXFallback(Path, model.get(), Options);
+        }
         else
         {
             LOG_ERROR("Unsupported model format: " + ext + " (Assimp not available)");
@@ -923,4 +927,479 @@ void KModelLoader::ProcessAnimations(void* AssimpScene, FLoadedModel* OutModel)
 
     LOG_INFO("Processed " + std::to_string(OutModel->Animations.size()) + " animations");
 #endif
+}
+
+HRESULT KModelLoader::LoadFBXFallback(const std::wstring& Path, FLoadedModel* OutModel, const FModelLoadOptions& Options)
+{
+    std::ifstream file(Path);
+    if (!file.is_open())
+    {
+        LOG_ERROR("Failed to open FBX file: " + StringUtils::WideToMultiByte(Path));
+        return E_FAIL;
+    }
+
+    std::string content((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+    file.close();
+
+    if (content.find("FBX") == std::string::npos)
+    {
+        LOG_ERROR("Not a valid FBX file: " + StringUtils::WideToMultiByte(Path));
+        return E_FAIL;
+    }
+
+    if (content.find("FBXHeader") != std::string::npos)
+    {
+        LOG_INFO("Loading ASCII FBX file");
+        return ParseFBXAscii(content, OutModel, Options);
+    }
+
+    LOG_ERROR("Binary FBX not supported without Assimp. Use ASCII FBX format.");
+    return E_FAIL;
+}
+
+HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* OutModel, const FModelLoadOptions& Options)
+{
+    std::vector<XMFLOAT3> positions;
+    std::vector<XMFLOAT3> normals;
+    std::vector<XMFLOAT2> texcoords;
+    std::vector<int32> indices;
+    std::vector<std::string> boneNames;
+    std::vector<int32> boneParentIndices;
+    std::vector<XMFLOAT3> boneLocalPositions;
+    std::vector<XMFLOAT4> boneLocalRotations;
+    std::unordered_map<std::string, std::vector<std::pair<float, XMFLOAT3>>> bonePositionKeys;
+    std::unordered_map<std::string, std::vector<std::pair<float, XMFLOAT4>>> boneRotationKeys;
+    std::unordered_map<std::string, int32> boneNameToIndex;
+
+    auto findSection = [&Content](const std::string& sectionName) -> size_t {
+        std::string search = sectionName + ": ";
+        size_t pos = Content.find(search);
+        if (pos == std::string::npos)
+        {
+            search = sectionName + ":\n";
+            pos = Content.find(search);
+        }
+        return pos;
+    };
+
+    auto extractFloatArray = [&Content](size_t startPos) -> std::vector<float> {
+        std::vector<float> result;
+        size_t pos = Content.find('*');
+        if (pos != std::string::npos && pos >= startPos)
+        {
+            size_t braceOpen = Content.find('{', pos);
+            size_t braceClose = Content.find('}', braceOpen);
+            if (braceOpen != std::string::npos && braceClose != std::string::npos)
+            {
+                std::string data = Content.substr(braceOpen + 1, braceClose - braceOpen - 1);
+                std::istringstream iss(data);
+                float val;
+                char comma;
+                while (iss >> val)
+                {
+                    result.push_back(val);
+                    if (iss >> comma && comma != ',')
+                    {
+                        iss.putback(comma);
+                    }
+                }
+            }
+        }
+        else
+        {
+            size_t braceOpen = Content.find('{', startPos);
+            size_t braceClose = Content.find('}', braceOpen);
+            if (braceOpen != std::string::npos && braceClose != std::string::npos)
+            {
+                std::string data = Content.substr(braceOpen + 1, braceClose - braceOpen - 1);
+                std::istringstream iss(data);
+                float val;
+                char comma;
+                while (iss >> val)
+                {
+                    result.push_back(val);
+                    if (iss >> comma && comma != ',')
+                    {
+                        iss.putback(comma);
+                    }
+                }
+            }
+        }
+        return result;
+    };
+
+    auto extractIntArray = [&Content](size_t startPos) -> std::vector<int32> {
+        std::vector<int32> result;
+        size_t pos = Content.find('*');
+        if (pos != std::string::npos && pos >= startPos)
+        {
+            size_t braceOpen = Content.find('{', pos);
+            size_t braceClose = Content.find('}', braceOpen);
+            if (braceOpen != std::string::npos && braceClose != std::string::npos)
+            {
+                std::string data = Content.substr(braceOpen + 1, braceClose - braceOpen - 1);
+                std::istringstream iss(data);
+                int32 val;
+                char comma;
+                while (iss >> val)
+                {
+                    result.push_back(val);
+                    if (iss >> comma && comma != ',')
+                    {
+                        iss.putback(comma);
+                    }
+                }
+            }
+        }
+        else
+        {
+            size_t braceOpen = Content.find('{', startPos);
+            size_t braceClose = Content.find('}', braceOpen);
+            if (braceOpen != std::string::npos && braceClose != std::string::npos)
+            {
+                std::string data = Content.substr(braceOpen + 1, braceClose - braceOpen - 1);
+                std::istringstream iss(data);
+                int32 val;
+                char comma;
+                while (iss >> val)
+                {
+                    result.push_back(val);
+                    if (iss >> comma && comma != ',')
+                    {
+                        iss.putback(comma);
+                    }
+                }
+            }
+        }
+        return result;
+    };
+
+    auto extractStringProperty = [&Content](size_t startPos) -> std::string {
+        size_t quote1 = Content.find('"', startPos);
+        if (quote1 == std::string::npos) return "";
+        size_t quote2 = Content.find('"', quote1 + 1);
+        if (quote2 == std::string::npos) return "";
+        return Content.substr(quote1 + 1, quote2 - quote1 - 1);
+    };
+
+    size_t pos = 0;
+    while ((pos = Content.find("Model: ", pos)) != std::string::npos)
+    {
+        size_t modelNameStart = pos + 7;
+        size_t modelNameEnd = Content.find(',', modelNameStart);
+        if (modelNameEnd == std::string::npos) modelNameEnd = Content.find('\n', modelNameStart);
+        if (modelNameEnd == std::string::npos) { pos++; continue; }
+        
+        std::string modelName = Content.substr(modelNameStart, modelNameEnd - modelNameStart);
+        if (modelName.empty()) { pos++; continue; }
+        while (!modelName.empty() && modelName.back() == ' ') modelName.pop_back();
+        if (modelName.front() == modelName.back() && (modelName.front() == '"' || modelName.front() == '\''))
+        {
+            modelName = modelName.substr(1, modelName.length() - 2);
+        }
+
+        size_t modelEnd = Content.find('}', pos);
+        if (modelEnd == std::string::npos) { pos++; continue; }
+        std::string modelBlock = Content.substr(pos, modelEnd - pos + 1);
+
+        size_t typePos = modelBlock.find("Type: \"");
+        if (typePos != std::string::npos)
+        {
+            size_t typeStart = typePos + 7;
+            size_t typeEnd = modelBlock.find('"', typeStart);
+            std::string modelType = modelBlock.substr(typeStart, typeEnd - typeStart);
+
+            if (modelType == "Mesh")
+            {
+                size_t vertPos = modelBlock.find("Vertices: *");
+                if (vertPos != std::string::npos)
+                {
+                    auto floats = extractFloatArray(vertPos);
+                    for (size_t i = 0; i + 2 < floats.size(); i += 3)
+                    {
+                        positions.push_back(XMFLOAT3(floats[i] * Options.Scale, floats[i+1] * Options.Scale, floats[i+2] * Options.Scale));
+                    }
+                }
+
+                size_t normPos = modelBlock.find("Normals: *");
+                if (normPos != std::string::npos)
+                {
+                    auto floats = extractFloatArray(normPos);
+                    for (size_t i = 0; i + 2 < floats.size(); i += 3)
+                    {
+                        normals.push_back(XMFLOAT3(floats[i], floats[i+1], floats[i+2]));
+                    }
+                }
+
+                size_t uvPos = modelBlock.find("UV");
+                if (uvPos != std::string::npos)
+                {
+                    size_t uvDataPos = modelBlock.find("UVIndex:", uvPos);
+                    if (uvDataPos == std::string::npos) uvDataPos = modelBlock.find("UV: *", uvPos);
+                    if (uvDataPos != std::string::npos)
+                    {
+                        auto floats = extractFloatArray(uvDataPos);
+                        for (size_t i = 0; i + 1 < floats.size(); i += 2)
+                        {
+                            texcoords.push_back(XMFLOAT2(floats[i], Options.bFlipUVs ? (1.0f - floats[i+1]) : floats[i+1]));
+                        }
+                    }
+                }
+
+                size_t idxPos = modelBlock.find("PolygonVertexIndex: *");
+                if (idxPos != std::string::npos)
+                {
+                    auto idxArray = extractIntArray(idxPos);
+                    for (int32 idx : idxArray)
+                    {
+                        if (idx < 0)
+                        {
+                            indices.push_back(~idx);
+                            size_t currentFaceStart = indices.size();
+                            if (currentFaceStart >= 3)
+                            {
+                                int32 v0 = indices[currentFaceStart - 3];
+                                int32 v1 = indices[currentFaceStart - 2];
+                                int32 v2 = indices[currentFaceStart - 1];
+                            }
+                        }
+                        else
+                        {
+                            indices.push_back(idx);
+                        }
+                    }
+
+                    size_t faceCount = 0;
+                    std::vector<int32> polygonIndices;
+                    for (size_t i = 0; i < idxArray.size(); ++i)
+                    {
+                        polygonIndices.push_back(idxArray[i] >= 0 ? idxArray[i] : ~idxArray[i]);
+                        if (idxArray[i] < 0 || i == idxArray.size() - 1)
+                        {
+                            faceCount++;
+                            if (polygonIndices.size() >= 3)
+                            {
+                                int32 v0 = polygonIndices[0];
+                                for (size_t j = 1; j + 1 < polygonIndices.size(); ++j)
+                                {
+                                    if (j == 1)
+                                    {
+                                    }
+                                }
+                            }
+                            polygonIndices.clear();
+                        }
+                    }
+
+                    std::vector<int32> triangleIndices;
+                    std::vector<int32> currentPoly;
+                    for (int32 idx : idxArray)
+                    {
+                        if (idx >= 0)
+                        {
+                            currentPoly.push_back(idx);
+                        }
+                        else
+                        {
+                            currentPoly.push_back(~idx);
+                            if (currentPoly.size() == 3)
+                            {
+                                triangleIndices.push_back(currentPoly[0]);
+                                triangleIndices.push_back(currentPoly[1]);
+                                triangleIndices.push_back(currentPoly[2]);
+                            }
+                            else if (currentPoly.size() == 4)
+                            {
+                                triangleIndices.push_back(currentPoly[0]);
+                                triangleIndices.push_back(currentPoly[1]);
+                                triangleIndices.push_back(currentPoly[2]);
+                                triangleIndices.push_back(currentPoly[0]);
+                                triangleIndices.push_back(currentPoly[2]);
+                                triangleIndices.push_back(currentPoly[3]);
+                            }
+                            else if (currentPoly.size() > 4)
+                            {
+                                for (size_t j = 1; j + 1 < currentPoly.size(); ++j)
+                                {
+                                    triangleIndices.push_back(currentPoly[0]);
+                                    triangleIndices.push_back(currentPoly[j]);
+                                    triangleIndices.push_back(currentPoly[j + 1]);
+                                }
+                            }
+                            currentPoly.clear();
+                        }
+                    }
+                    indices = triangleIndices;
+                }
+            }
+            else if (modelType == "LimbNode" || modelType == "Root")
+            {
+                uint32 boneIdx = static_cast<uint32>(boneNames.size());
+                boneNames.push_back(modelName);
+                boneParentIndices.push_back(-1);
+                boneLocalPositions.push_back(XMFLOAT3(0, 0, 0));
+                boneLocalRotations.push_back(XMFLOAT4(0, 0, 0, 1));
+                boneNameToIndex[modelName] = boneIdx;
+
+                size_t lclTransPos = modelBlock.find("Lcl Translation");
+                if (lclTransPos != std::string::npos)
+                {
+                    auto floats = extractFloatArray(lclTransPos + 14);
+                    if (floats.size() >= 3)
+                    {
+                        boneLocalPositions[boneIdx] = XMFLOAT3(floats[0], floats[1], floats[2]);
+                    }
+                }
+
+                size_t lclRotPos = modelBlock.find("Lcl Rotation");
+                if (lclRotPos != std::string::npos)
+                {
+                    auto floats = extractFloatArray(lclRotPos + 12);
+                    if (floats.size() >= 3)
+                    {
+                        float pitch = floats[0] * XM_PI / 180.0f;
+                        float yaw = floats[1] * XM_PI / 180.0f;
+                        float roll = floats[2] * XM_PI / 180.0f;
+                        XMFLOAT4 quat;
+                        XMStoreFloat4(&quat, XMQuaternionRotationRollPitchYaw(pitch, yaw, roll));
+                        boneLocalRotations[boneIdx] = quat;
+                    }
+                }
+            }
+        }
+
+        pos = modelEnd + 1;
+    }
+
+    pos = 0;
+    while ((pos = Content.find("Connect: ", pos)) != std::string::npos)
+    {
+        size_t lineEnd = Content.find('\n', pos);
+        if (lineEnd == std::string::npos) break;
+        std::string line = Content.substr(pos, lineEnd - pos);
+
+        size_t cPos = line.find("C, \"OS\",");
+        size_t pPos = line.find("P, \"Model::");
+        
+        if (cPos != std::string::npos && pPos != std::string::npos)
+        {
+            size_t childNameStart = line.find('"', cPos + 7);
+            size_t childNameEnd = line.find('"', childNameStart + 1);
+            if (childNameStart != std::string::npos && childNameEnd != std::string::npos)
+            {
+                std::string childName = line.substr(childNameStart + 1, childNameEnd - childNameStart - 1);
+                
+                size_t parentNameStart = line.find("Model::", pPos);
+                if (parentNameStart != std::string::npos)
+                {
+                    parentNameStart += 7;
+                    size_t parentNameEnd = line.find('"', parentNameStart);
+                    if (parentNameEnd != std::string::npos)
+                    {
+                        std::string parentName = line.substr(parentNameStart, parentNameEnd - parentNameStart);
+                        
+                        auto childIt = boneNameToIndex.find(childName);
+                        auto parentIt = boneNameToIndex.find(parentName);
+                        if (childIt != boneNameToIndex.end() && parentIt != boneNameToIndex.end())
+                        {
+                            boneParentIndices[childIt->second] = parentIt->second;
+                        }
+                    }
+                }
+            }
+        }
+        pos = lineEnd + 1;
+    }
+
+    pos = 0;
+    while ((pos = Content.find("AnimationCurve: ", pos)) != std::string::npos)
+    {
+        size_t animEnd = Content.find('}', pos);
+        if (animEnd == std::string::npos) break;
+        std::string animBlock = Content.substr(pos, animEnd - pos + 1);
+
+        size_t keyCountPos = animBlock.find("KeyCount:");
+        size_t keyTimePos = animBlock.find("KeyTime:");
+        size_t keyValuePos = animBlock.find("KeyValueFloat:");
+
+        if (keyCountPos != std::string::npos && keyTimePos != std::string::npos && keyValuePos != std::string::npos)
+        {
+            auto times = extractFloatArray(keyTimePos);
+            auto values = extractFloatArray(keyValuePos);
+
+            for (size_t i = 0; i < std::min(times.size(), values.size()); ++i)
+            {
+                (void)times[i];
+                (void)values[i];
+            }
+        }
+
+        pos = animEnd + 1;
+    }
+
+    if (positions.empty())
+    {
+        LOG_WARNING("FBX: No vertices found");
+        return E_FAIL;
+    }
+
+    while (normals.size() < positions.size())
+    {
+        normals.push_back(XMFLOAT3(0, 1, 0));
+    }
+    while (texcoords.size() < positions.size())
+    {
+        texcoords.push_back(XMFLOAT2(0, 0));
+    }
+
+    std::vector<FVertex> vertices;
+    for (size_t i = 0; i < positions.size(); ++i)
+    {
+        FVertex v;
+        v.Position = positions[i];
+        v.Normal = normals[i];
+        v.TexCoord = texcoords[i];
+        v.Color = XMFLOAT4(1, 1, 1, 1);
+        vertices.push_back(v);
+    }
+
+    std::vector<uint32> triIndices;
+    for (int32 idx : indices)
+    {
+        if (idx >= 0 && idx < static_cast<int32>(vertices.size()))
+        {
+            triIndices.push_back(static_cast<uint32>(idx));
+        }
+    }
+
+    auto mesh = std::make_shared<KStaticMesh>();
+    mesh->SetName(OutModel->Name);
+    mesh->AddLOD(vertices, triIndices);
+    mesh->CalculateBounds();
+    OutModel->StaticMesh = mesh;
+
+    if (!boneNames.empty())
+    {
+        auto skeleton = std::make_shared<KSkeleton>();
+
+        for (size_t i = 0; i < boneNames.size(); ++i)
+        {
+            FBone bone;
+            bone.Name = boneNames[i];
+            bone.ParentIndex = boneParentIndices[i];
+            bone.LocalPosition = boneLocalPositions[i];
+            bone.LocalRotation = boneLocalRotations[i];
+            bone.LocalScale = XMFLOAT3(1, 1, 1);
+            bone.BindPose = XMMatrixIdentity();
+            bone.InverseBindPose = XMMatrixIdentity();
+            skeleton->AddBone(bone);
+        }
+
+        skeleton->CalculateBindPoses();
+        OutModel->Skeleton = skeleton;
+    }
+
+    LOG_INFO("Loaded FBX: " + std::to_string(vertices.size()) + " vertices, " + std::to_string(triIndices.size()) + " indices, " + std::to_string(boneNames.size()) + " bones");
+    return S_OK;
 }

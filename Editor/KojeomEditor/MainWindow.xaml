@@ -32,10 +32,10 @@
                 <MenuItem Header="E_xit" Click="MenuItem_Exit_Click"/>
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="_Undo" InputGestureText="Ctrl+Z"/>
-                <MenuItem Header="_Redo" InputGestureText="Ctrl+Y"/>
+                <MenuItem Header="_Undo" InputGestureText="Ctrl+Z" Click="MenuItem_Undo_Click"/>
+                <MenuItem Header="_Redo" InputGestureText="Ctrl+Y" Click="MenuItem_Redo_Click"/>
                 <Separator/>
-                <MenuItem Header="_Delete" InputGestureText="Delete"/>
+                <MenuItem Header="_Delete" InputGestureText="Delete" Click="MenuItem_Delete_Click"/>
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="Scene Hierarchy" IsCheckable="True" IsChecked="True"/>
@@ -49,27 +49,27 @@
 
         <ToolBarTray Grid.Row="1" Background="#2D2D30">
             <ToolBar Band="0" BandIndex="0" Background="#2D2D30">
-                <Button ToolTip="Select" Padding="5">
+                <Button ToolTip="Select (Q)" Padding="5" Click="Toolbar_Select_Click">
                     <TextBlock Text="Select" FontWeight="Bold"/>
                 </Button>
-                <Button ToolTip="Move" Padding="5">
+                <Button ToolTip="Move (W)" Padding="5" Click="Toolbar_Move_Click">
                     <TextBlock Text="Move" FontWeight="Bold"/>
                 </Button>
-                <Button ToolTip="Rotate" Padding="5">
+                <Button ToolTip="Rotate (E)" Padding="5" Click="Toolbar_Rotate_Click">
                     <TextBlock Text="Rotate" FontWeight="Bold"/>
                 </Button>
-                <Button ToolTip="Scale" Padding="5">
+                <Button ToolTip="Scale (R)" Padding="5" Click="Toolbar_Scale_Click">
                     <TextBlock Text="Scale" FontWeight="Bold"/>
                 </Button>
                 <Separator/>
-                <Button ToolTip="Play" Padding="5">
-                    <TextBlock Text="▶" FontSize="14"/>
+                <Button ToolTip="Play" Padding="5" Click="Toolbar_Play_Click">
+                    <TextBlock Text="&#x25B6;" FontSize="14"/>
                 </Button>
-                <Button ToolTip="Pause" Padding="5">
-                    <TextBlock Text="⏸" FontSize="14"/>
+                <Button ToolTip="Pause" Padding="5" Click="Toolbar_Pause_Click">
+                    <TextBlock Text="&#x23F8;" FontSize="14"/>
                 </Button>
-                <Button ToolTip="Stop" Padding="5">
-                    <TextBlock Text="⏹" FontSize="14"/>
+                <Button ToolTip="Stop" Padding="5" Click="Toolbar_Stop_Click">
+                    <TextBlock Text="&#x23F9;" FontSize="14"/>
                 </Button>
             </ToolBar>
         </ToolBarTray>
@@ -110,7 +110,7 @@
 
         <StatusBar Grid.Row="3" Background="#007ACC" Foreground="White">
             <StatusBarItem>
-                <TextBlock Text="Ready"/>
+                <TextBlock x:Name="StatusReady" Text="Ready"/>
             </StatusBarItem>
             <Separator/>
             <StatusBarItem>

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using KojeomEditor.Services;
 
 namespace KojeomEditor.ViewModels;
 
@@ -6,6 +7,7 @@ public class SceneViewModel : ViewModelBase
 {
     private string _sceneName = "Untitled Scene";
     private ActorViewModel? _selectedActor;
+    private EngineInterop? _engine;
 
     public string SceneName
     {
@@ -20,9 +22,19 @@ public class SceneViewModel : ViewModelBase
         get => _selectedActor;
         set
         {
-            _selectedActor = value;
-            OnPropertyChanged(nameof(SelectedActor));
+            if (_selectedActor != value)
+            {
+                _selectedActor = value;
+                OnPropertyChanged(nameof(SelectedActor));
+                SyncActorSelectionToEngine();
+            }
         }
+    }
+
+    public EngineInterop? Engine
+    {
+        get => _engine;
+        set { _engine = value; }
     }
 
     public SceneViewModel()
@@ -34,9 +46,15 @@ public class SceneViewModel : ViewModelBase
     {
         Actors.Clear();
         SceneName = "Untitled Scene";
-        
-        Actors.Add(new ActorViewModel { Name = "Directional Light", ActorType = "Light" });
-        Actors.Add(new ActorViewModel { Name = "Main Camera", ActorType = "Camera" });
+        SelectedActor = null;
+
+        var dirLight = new ActorViewModel { Name = "Directional Light", ActorType = "Light" };
+        dirLight.AddComponent(new LightComponentViewModel { LightType = 0, Intensity = 1.0f });
+        Actors.Add(dirLight);
+
+        var mainCam = new ActorViewModel { Name = "Main Camera", ActorType = "Camera" };
+        mainCam.AddComponent(new CameraComponentViewModel());
+        Actors.Add(mainCam);
     }
 
     public void LoadScene(string path)
@@ -51,7 +69,13 @@ public class SceneViewModel : ViewModelBase
 
     public void AddActor(string name, string type = "Actor")
     {
-        Actors.Add(new ActorViewModel { Name = name, ActorType = type });
+        var actor = new ActorViewModel { Name = name, ActorType = type };
+        if (type == "StaticMesh")
+        {
+            actor.AddComponent(new StaticMeshComponentViewModel());
+        }
+        Actors.Add(actor);
+        SelectedActor = actor;
     }
 
     public void RemoveActor(ActorViewModel actor)
@@ -73,6 +97,60 @@ public class SceneViewModel : ViewModelBase
 
         Actors.RemoveAt(draggedIndex);
         Actors.Insert(targetIndex, draggedActor);
+    }
+
+    public void RefreshFromEngine()
+    {
+        if (_engine == null || !_engine.IsInitialized) return;
+
+        Actors.Clear();
+
+        int actorCount = _engine.GetActorCount();
+        for (int i = 0; i < actorCount; i++)
+        {
+            var actorPtr = _engine.GetActorAt(i);
+            if (actorPtr == IntPtr.Zero) continue;
+
+            string? name = _engine.GetActorName(actorPtr);
+            var vm = new ActorViewModel
+            {
+                Name = name ?? $"Actor_{i}",
+                NativePtr = actorPtr
+            };
+
+            var (px, py, pz) = _engine.GetActorPosition(actorPtr);
+            vm.PositionX = px;
+            vm.PositionY = py;
+            vm.PositionZ = pz;
+
+            _engine.GetActorRotation(actorPtr, out float rx, out float ry, out float rz, out float rw);
+            vm.RotationX = rx;
+            vm.RotationY = ry;
+            vm.RotationZ = rz;
+
+            _engine.GetActorScale(actorPtr, out float sx, out float sy, out float sz);
+            vm.ScaleX = sx;
+            vm.ScaleY = sy;
+            vm.ScaleZ = sz;
+
+            int compCount = _engine.GetComponentCount(actorPtr);
+            for (int j = 0; j < compCount; j++)
+            {
+                string? compName = _engine.GetComponentName(actorPtr, j);
+                int compType = _engine.GetComponentType(actorPtr, j);
+                vm.AddComponent(new ComponentViewModel
+                {
+                    Name = compName ?? "Component",
+                    ComponentType = (EComponentType)compType
+                });
+            }
+
+            Actors.Add(vm);
+        }
+    }
+
+    private void SyncActorSelectionToEngine()
+    {
     }
 }
 
