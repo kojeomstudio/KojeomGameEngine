@@ -43,10 +43,6 @@ using uint64 = uint64_t;
 #define LOG_INFO(msg) KLogger::Info(msg)
 #define LOG_WARNING(msg) KLogger::Warning(msg)
 
-using GraphicsDevicePtr = std::unique_ptr<class GraphicsDevice>;
-using RendererPtr = std::unique_ptr<class Renderer>;
-using CameraPtr = std::unique_ptr<class Camera>;
-
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
 

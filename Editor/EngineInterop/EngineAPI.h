@@ -28,6 +28,7 @@ extern "C"
     ENGINEAPI void* Scene_GetActive(void* sceneMgr);
 
     ENGINEAPI void* Actor_Create(void* scene, const char* name);
+    ENGINEAPI void Actor_Destroy(void* scene, void* actor);
     ENGINEAPI void Actor_SetPosition(void* actor, float x, float y, float z);
     ENGINEAPI void Actor_SetRotation(void* actor, float x, float y, float z, float w);
     ENGINEAPI void Actor_SetScale(void* actor, float x, float y, float z);

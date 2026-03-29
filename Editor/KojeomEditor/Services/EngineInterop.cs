@@ -404,6 +404,14 @@ public class EngineInterop : IDisposable
         }
     }
 
+    public void DestroyActor(IntPtr scene, IntPtr actor)
+    {
+        if (scene != IntPtr.Zero && actor != IntPtr.Zero)
+        {
+            Actor_Destroy(scene, actor);
+        }
+    }
+
     public void SetActorVisibility(IntPtr actor, bool visible)
     {
         if (actor != IntPtr.Zero)
@@ -483,6 +491,9 @@ public class EngineInterop : IDisposable
     private static extern IntPtr Actor_Create(IntPtr scene, [MarshalAs(UnmanagedType.LPStr)] string name);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Actor_Destroy(IntPtr scene, IntPtr actor);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Actor_SetPosition(IntPtr actor, float x, float y, float z);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
@@ -501,7 +512,7 @@ public class EngineInterop : IDisposable
     private static extern void Renderer_SetRenderPath(IntPtr renderer, int path);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    private static extern void Renderer_SetDebugMode(IntPtr renderer, bool enabled);
+    private static extern void Renderer_SetDebugMode(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Renderer_GetStats(IntPtr renderer, ref int drawCalls, ref int vertexCount, ref float frameTime);

@@ -1,5 +1,4 @@
 #define NOMINMAX
-#define ENGINEAPI_EXPORTS
 #include "EngineAPI.h"
 #include <Engine/Core/Engine.h>
 #include <Engine/Graphics/Renderer.h>
@@ -137,6 +136,14 @@ extern "C"
         return kscene->CreateActor(std::string(name)).get();
     }
 
+    ENGINEAPI void Actor_Destroy(void* scene, void* actor)
+    {
+        if (!scene || !actor) return;
+        KScene* kscene = static_cast<KScene*>(scene);
+        KActor* kactor = static_cast<KActor*>(actor);
+        kscene->RemoveActor(kactor);
+    }
+
     ENGINEAPI void Actor_SetPosition(void* actor, float x, float y, float z)
     {
         if (!actor) return;
@@ -193,7 +200,9 @@ extern "C"
     {
         if (!actor) return "";
         KActor* kactor = static_cast<KActor*>(actor);
-        return kactor->GetName().c_str();
+        static thread_local std::string nameBuffer;
+        nameBuffer = kactor->GetName();
+        return nameBuffer.c_str();
     }
 
     ENGINEAPI void* Camera_GetMain(void* engine)
@@ -457,8 +466,18 @@ extern "C"
 
     ENGINEAPI void* StaticMeshComponent_SetMesh(void* component, const wchar_t* meshPath)
     {
-        if (!component || !meshPath) return nullptr;
-        return nullptr;
+        if (!component) return nullptr;
+        KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
+        auto staticMesh = std::make_shared<KStaticMesh>();
+        std::vector<FVertex> vertices;
+        std::vector<uint32> indices;
+        for (uint32 i = 0; i < 24; ++i)
+        {
+            vertices.push_back(FVertex());
+        }
+        staticMesh->AddLOD(vertices, indices);
+        smc->SetStaticMesh(staticMesh);
+        return staticMesh.get();
     }
 
     ENGINEAPI void* SkeletalMeshComponent_PlayAnimation(void* component, const char* animName)

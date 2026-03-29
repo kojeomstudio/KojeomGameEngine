@@ -61,11 +61,6 @@ void KActor::SetParent(KActor* InParent)
     }
 
     Parent = InParent;
-
-    if (Parent)
-    {
-        Parent->AddChild(ActorPtr());
-    }
 }
 
 void KActor::AddChild(ActorPtr Child)

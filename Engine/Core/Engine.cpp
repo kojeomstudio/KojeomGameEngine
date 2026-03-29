@@ -1,4 +1,7 @@
 ﻿#include "Engine.h"
+#include "../Graphics/GraphicsDevice.h"
+#include "../Graphics/Camera.h"
+#include "../Graphics/Renderer.h"
 
 // Global instance definition
 KEngine* KEngine::Instance = nullptr;
@@ -195,6 +198,9 @@ void KEngine::Update(float InDeltaTime)
     {
         Camera->UpdateMatrices();
     }
+
+    // Update scene
+    SceneManager.Tick(InDeltaTime);
 }
 
 void KEngine::Render()
@@ -207,6 +213,9 @@ void KEngine::Render()
     // Begin frame
     float ClearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f }; // Dark blue
     Renderer->BeginFrame(Camera.get(), ClearColor);
+
+    // Render scene actors
+    SceneManager.Render(Renderer.get());
 
     // Basic rendering logic
     // Override in derived classes to implement actual rendering
