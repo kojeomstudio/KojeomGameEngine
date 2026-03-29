@@ -4,21 +4,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Engine", "Engine\Engine.vcxproj", "{B12702AD-ABFB-343A-A199-8E24837244A3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BasicExample", "Examples\BasicExample.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA88}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TriangleExample", "Examples\TriangleExample.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA89}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AdvancedExample", "Examples\AdvancedExample.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA90}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
-	EndProjectSection
-EndProject
+
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BasicRenderingSample", "samples\BasicRendering\BasicRenderingSample.vcxproj", "{A1000001-F44F-4478-BDAE-6634EFC2CA01}"
 	ProjectSection(ProjectDependencies) = postProject
 		{B12702AD-ABFB-343A-A199-8E24837244A3} = {B12702AD-ABFB-343A-A199-8E24837244A3}
@@ -116,18 +102,6 @@ Global
 		{B12702AD-ABFB-343A-A199-8E24837244A3}.Debug|x64.Build.0 = Debug|x64
 		{B12702AD-ABFB-343A-A199-8E24837244A3}.Release|x64.ActiveCfg = Release|x64
 		{B12702AD-ABFB-343A-A199-8E24837244A3}.Release|x64.Build.0 = Release|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x64.ActiveCfg = Debug|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x64.Build.0 = Debug|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x64.ActiveCfg = Release|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x64.Build.0 = Release|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA89}.Debug|x64.ActiveCfg = Debug|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA89}.Debug|x64.Build.0 = Debug|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA89}.Release|x64.ActiveCfg = Release|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA89}.Release|x64.Build.0 = Release|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA90}.Debug|x64.ActiveCfg = Debug|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA90}.Debug|x64.Build.0 = Debug|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA90}.Release|x64.ActiveCfg = Release|x64
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA90}.Release|x64.Build.0 = Release|x64
 		{A1000001-F44F-4478-BDAE-6634EFC2CA01}.Debug|x64.ActiveCfg = Debug|x64
 		{A1000001-F44F-4478-BDAE-6634EFC2CA01}.Debug|x64.Build.0 = Debug|x64
 		{A1000001-F44F-4478-BDAE-6634EFC2CA01}.Release|x64.ActiveCfg = Release|x64
