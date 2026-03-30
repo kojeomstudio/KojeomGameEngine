@@ -34,6 +34,8 @@ bld/
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
+build_*.txt
+nul
 
 # NuGet Packages
 *.nupkg
