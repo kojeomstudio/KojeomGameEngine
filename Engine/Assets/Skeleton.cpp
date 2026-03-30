@@ -84,9 +84,38 @@ const FBone* KSkeleton::GetBoneByName(const std::string& Name) const
 
 void KSkeleton::CalculateBindPoses()
 {
+    // Process bones in hierarchical order: roots first, then children
+    // This ensures parent bind poses are computed before their children depend on them
+    std::vector<bool> processed(Bones.size(), false);
+
+    // Process root bones first (ParentIndex == INVALID_BONE_INDEX)
     for (uint32 i = 0; i < Bones.size(); ++i)
     {
-        CalculateBoneBindPoseRecursive(i);
+        if (Bones[i].ParentIndex < 0)
+        {
+            CalculateBoneBindPoseRecursive(i);
+            processed[i] = true;
+        }
+    }
+
+    // Iteratively process child bones until all are processed
+    bool bProgress = true;
+    while (bProgress)
+    {
+        bProgress = false;
+        for (uint32 i = 0; i < Bones.size(); ++i)
+        {
+            if (!processed[i])
+            {
+                int32 parentIdx = Bones[i].ParentIndex;
+                if (parentIdx >= 0 && static_cast<uint32>(parentIdx) < Bones.size() && processed[parentIdx])
+                {
+                    CalculateBoneBindPoseRecursive(i);
+                    processed[i] = true;
+                    bProgress = true;
+                }
+            }
+        }
     }
 }
 

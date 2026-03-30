@@ -34,6 +34,10 @@ void KRenderer::BeginFrame(KCamera* InCamera, const float ClearColor[4])
     CurrentCamera = InCamera;
     bInFrame = true;
 
+    // Reset per-frame counters
+    DrawCallCount = 0;
+    VertexCount = 0;
+
     CurrentCamera->UpdateMatrices();
 
     XMMATRIX viewProjection = CurrentCamera->GetViewMatrix() * CurrentCamera->GetProjectionMatrix();
@@ -116,6 +120,9 @@ void KRenderer::RenderObject(const FRenderObject& RenderObject)
     );
 
     RenderObject.Mesh->Render(Context);
+
+    DrawCallCount++;
+    VertexCount += static_cast<int32>(RenderObject.Mesh->GetVertexCount());
 
     if (RenderObject.Texture)
     {
@@ -230,25 +237,30 @@ void KRenderer::RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
     }
     else
     {
-        FPBRMaterialParams DefaultParams;
-        ID3D11Buffer* pDefaultBuffer = nullptr;
-        D3D11_BUFFER_DESC desc = {};
-        desc.ByteWidth = sizeof(FPBRMaterialParams);
-        desc.Usage = D3D11_USAGE_IMMUTABLE;
-        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        
-        D3D11_SUBRESOURCE_DATA initData = {};
-        initData.pSysMem = &DefaultParams;
-        
-        GraphicsDevice->GetDevice()->CreateBuffer(&desc, &initData, &pDefaultBuffer);
-        if (pDefaultBuffer)
+        // Create default material buffer once and reuse it
+        if (!DefaultMaterialBuffer)
         {
-            Context->PSSetConstantBuffers(4, 1, &pDefaultBuffer);
-            pDefaultBuffer->Release();
+            FPBRMaterialParams DefaultParams;
+            D3D11_BUFFER_DESC desc = {};
+            desc.ByteWidth = sizeof(FPBRMaterialParams);
+            desc.Usage = D3D11_USAGE_IMMUTABLE;
+            desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+            D3D11_SUBRESOURCE_DATA initData = {};
+            initData.pSysMem = &DefaultParams;
+
+            GraphicsDevice->GetDevice()->CreateBuffer(&desc, &initData, &DefaultMaterialBuffer);
+        }
+        if (DefaultMaterialBuffer)
+        {
+            Context->PSSetConstantBuffers(4, 1, DefaultMaterialBuffer.GetAddressOf());
         }
     }
 
     InMesh->Render(Context);
+
+    DrawCallCount++;
+    VertexCount += static_cast<int32>(InMesh->GetVertexCount());
 
     ID3D11ShaderResourceView* nullSRVs[7] = {};
     Context->PSSetShaderResources(0, 7, nullSRVs);
@@ -271,30 +283,44 @@ void KRenderer::RenderSkeletalMesh(KSkeletalMesh* InMesh, const XMMATRIX& WorldM
 
     ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
 
-    if (ShadowRenderer.IsInitialized() && bShadowsEnabled)
-    {
-    }
+    // TODO: Skeletal mesh shadow casting requires extending FShadowCaster
+    // to support KSkeletalMesh vertex buffers with bone matrix transforms.
+    // For now, skeletal meshes will not cast shadows.
 
     SkinnedShader->Bind(Context);
 
-    FConstantBuffer TransformBuffer;
-    TransformBuffer.WorldMatrix = XMMatrixTranspose(WorldMatrix);
-    TransformBuffer.ViewMatrix = XMMatrixTranspose(CurrentCamera->GetViewMatrix());
-    TransformBuffer.ProjectionMatrix = XMMatrixTranspose(CurrentCamera->GetProjectionMatrix());
+    FConstantBuffer TransformData;
+    TransformData.WorldMatrix = XMMatrixTranspose(WorldMatrix);
+    TransformData.ViewMatrix = XMMatrixTranspose(CurrentCamera->GetViewMatrix());
+    TransformData.ProjectionMatrix = XMMatrixTranspose(CurrentCamera->GetProjectionMatrix());
 
-    D3D11_MAPPED_SUBRESOURCE mappedResource;
-    HRESULT hr = Context->Map(ShadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-    if (SUCCEEDED(hr))
+    // Use dedicated skeletal transform buffer instead of reusing shadow buffer
+    if (!SkeletalTransformBuffer)
     {
-        memcpy(mappedResource.pData, &TransformBuffer, sizeof(FConstantBuffer));
-        Context->Unmap(ShadowConstantBuffer.Get(), 0);
+        D3D11_BUFFER_DESC bd = {};
+        bd.Usage = D3D11_USAGE_DYNAMIC;
+        bd.ByteWidth = sizeof(FConstantBuffer);
+        bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        GraphicsDevice->GetDevice()->CreateBuffer(&bd, nullptr, &SkeletalTransformBuffer);
     }
 
-    Context->VSSetConstantBuffers(0, 1, ShadowConstantBuffer.GetAddressOf());
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    HRESULT hr = Context->Map(SkeletalTransformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    if (SUCCEEDED(hr))
+    {
+        memcpy(mappedResource.pData, &TransformData, sizeof(FConstantBuffer));
+        Context->Unmap(SkeletalTransformBuffer.Get(), 0);
+    }
+
+    Context->VSSetConstantBuffers(0, 1, SkeletalTransformBuffer.GetAddressOf());
     Context->PSSetConstantBuffers(1, 1, LightConstantBuffer.GetAddressOf());
     Context->VSSetConstantBuffers(5, 1, &BoneMatrixBuffer);
 
     InMesh->Render(Context);
+
+    DrawCallCount++;
+    VertexCount += static_cast<int32>(InMesh->GetVertexCount());
 
     SkinnedShader->Unbind(Context);
 }
@@ -388,6 +414,8 @@ void KRenderer::Cleanup()
     DeferredRenderer.Cleanup();
     ShadowRenderer.Cleanup();
     ShadowConstantBuffer.Reset();
+    SkeletalTransformBuffer.Reset();
+    DefaultMaterialBuffer.Reset();
     ShadowSamplerState.Reset();
     MaterialSamplerState.Reset();
     LightConstantBuffer.Reset();

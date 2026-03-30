@@ -7,11 +7,14 @@
 #include <functional>
 #include "../Utils/Common.h"
 #include "../Utils/Logger.h"
+#include "Subsystem.h"
 #include "../Graphics/GraphicsDevice.h"
 #include "../Graphics/Camera.h"
 #include "../Graphics/Renderer.h"
 #include "../Scene/SceneManager.h"
 #include "../Input/InputManager.h"
+#include "../Audio/AudioSubsystem.h"
+#include "../Physics/PhysicsSubsystem.h"
 
 /**
  * @brief Main engine class
@@ -80,15 +83,31 @@ public:
     KInputManager* GetInputManager() const { return InputManager.get(); }
     KSceneManager& GetSceneManager() { return SceneManager; }
     const KSceneManager& GetSceneManager() const { return SceneManager; }
+    KAudioSubsystem* GetAudioSubsystem() const { return AudioSubsystem.get(); }
+    KPhysicsSubsystem* GetPhysicsSubsystem() const { return PhysicsSubsystem.get(); }
     HWND GetWindowHandle() const { return WindowHandle; }
-    
+
     UINT32 GetWindowWidth() const { return WindowWidth; }
     UINT32 GetWindowHeight() const { return WindowHeight; }
-    
+
     bool IsRunning() const { return bIsRunning; }
 
     // Static accessor (global engine instance)
     static KEngine* GetInstance() { return Instance; }
+
+    // Subsystem registry access
+    KSubsystemRegistry& GetSubsystemRegistry() { return SubsystemRegistry; }
+
+    /**
+     * @brief Get a subsystem by type from the registry
+     * @tparam T Subsystem type (must derive from ISubsystem)
+     * @return Pointer to subsystem or nullptr
+     */
+    template<typename T>
+    T* GetSubsystem()
+    {
+        return SubsystemRegistry.Get<T>();
+    }
 
     /**
      * @brief Application execution helper function (template)
@@ -163,6 +182,11 @@ protected:
      */
     HRESULT InitializeGraphics();
 
+    /**
+     * @brief Register engine subsystems with the registry
+     */
+    void RegisterSubsystems();
+
     /// <summary>
 	/// render frame implementation
     /// </summary>
@@ -198,6 +222,13 @@ private:
     std::unique_ptr<KRenderer> Renderer;
     std::unique_ptr<KInputManager> InputManager;
     KSceneManager SceneManager;
+
+    // Modular subsystems
+    std::shared_ptr<KAudioSubsystem> AudioSubsystem;
+    std::shared_ptr<KPhysicsSubsystem> PhysicsSubsystem;
+
+    // Subsystem registry for modular engine architecture
+    KSubsystemRegistry SubsystemRegistry;
 
     // Engine state
     bool bIsRunning;

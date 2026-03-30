@@ -237,10 +237,12 @@ private:
     std::vector<FSpotLight> SpotLights;
     ComPtr<ID3D11Buffer> LightConstantBuffer;
 
+    ComPtr<ID3D11Buffer> DefaultMaterialBuffer;
     KShadowRenderer ShadowRenderer;
     KDeferredRenderer DeferredRenderer;
     KPostProcessor PostProcessor;
     ComPtr<ID3D11Buffer> ShadowConstantBuffer;
+    ComPtr<ID3D11Buffer> SkeletalTransformBuffer;
     ComPtr<ID3D11SamplerState> ShadowSamplerState;
     ComPtr<ID3D11SamplerState> MaterialSamplerState;
     XMFLOAT3 ShadowSceneCenter = { 0.0f, 0.0f, 0.0f };

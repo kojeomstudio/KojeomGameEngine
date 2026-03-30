@@ -103,6 +103,7 @@
     <ClInclude Include="Assets\ModelLoader.h" />
     <ClInclude Include="Assets\SkeletalMeshComponent.h" />
     <ClInclude Include="Core\Engine.h" />
+    <ClInclude Include="Core\Subsystem.h" />
     <ClInclude Include="Graphics\Camera.h" />
     <ClInclude Include="Graphics\GraphicsDevice.h" />
     <ClInclude Include="Graphics\Light.h" />
@@ -146,9 +147,11 @@
     <ClInclude Include="Audio\AudioTypes.h" />
     <ClInclude Include="Audio\Sound.h" />
     <ClInclude Include="Audio\AudioManager.h" />
+    <ClInclude Include="Audio\AudioSubsystem.h" />
     <ClInclude Include="Physics\PhysicsTypes.h" />
     <ClInclude Include="Physics\RigidBody.h" />
     <ClInclude Include="Physics\PhysicsWorld.h" />
+    <ClInclude Include="Physics\PhysicsSubsystem.h" />
     <ClInclude Include="Scene\Actor.h" />
     <ClInclude Include="Scene\SceneManager.h" />
     <ClInclude Include="Serialization\BinaryArchive.h" />

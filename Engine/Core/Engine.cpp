@@ -91,8 +91,19 @@ HRESULT KEngine::Initialize(HINSTANCE InInstanceHandle, const std::wstring& InWi
         return hr;
     }
 
+    // Register and initialize modular subsystems
+    RegisterSubsystems();
+
     bIsInitialized = true;
-    LOG_INFO("Engine initialization completed");
+
+    // Initialize registered subsystems
+    hr = SubsystemRegistry.InitializeAll();
+    if (FAILED(hr))
+    {
+        LOG_WARNING("One or more subsystems failed to initialize");
+    }
+
+    LOG_INFO("Engine initialization completed (" + std::to_string(SubsystemRegistry.GetCount()) + " subsystems registered)");
 
     return S_OK;
 }
@@ -139,8 +150,19 @@ HRESULT KEngine::InitializeWithExternalHwnd(HWND InExternalHwnd, UINT32 InWidth,
         return hr;
     }
 
+    // Register and initialize modular subsystems
+    RegisterSubsystems();
+
     bIsInitialized = true;
-    LOG_INFO("Engine embedded initialization completed");
+
+    // Initialize registered subsystems
+    hr = SubsystemRegistry.InitializeAll();
+    if (FAILED(hr))
+    {
+        LOG_WARNING("One or more subsystems failed to initialize");
+    }
+
+    LOG_INFO("Engine embedded initialization completed (" + std::to_string(SubsystemRegistry.GetCount()) + " subsystems registered)");
     return S_OK;
 }
 
@@ -186,6 +208,13 @@ void KEngine::Shutdown()
     LOG_INFO("Engine shutdown starting...");
 
     bIsRunning = false;
+
+    // Shutdown all registered subsystems (in reverse order)
+    SubsystemRegistry.ShutdownAll();
+
+    // Release subsystem shared pointers
+    AudioSubsystem.reset();
+    PhysicsSubsystem.reset();
 
     // Cleanup input manager
     if (InputManager)
@@ -255,6 +284,9 @@ void KEngine::Update(float InDeltaTime)
 
     // Update scene
     SceneManager.Tick(InDeltaTime);
+
+    // Tick all registered subsystems
+    SubsystemRegistry.TickAll(InDeltaTime);
 }
 
 void KEngine::Render()
@@ -609,8 +641,21 @@ void KEngine::CleanupDebugEnvironment()
 {
 #ifdef _DEBUG
     LOG_INFO("Cleaning up debug environment...");
-    
+
     // Cleanup console
     FreeConsole();
 #endif
-} 
+}
+
+void KEngine::RegisterSubsystems()
+{
+    // Create and register Audio subsystem
+    AudioSubsystem = std::make_shared<KAudioSubsystem>();
+    SubsystemRegistry.Register<KAudioSubsystem>(AudioSubsystem);
+
+    // Create and register Physics subsystem
+    PhysicsSubsystem = std::make_shared<KPhysicsSubsystem>();
+    SubsystemRegistry.Register<KPhysicsSubsystem>(PhysicsSubsystem);
+
+    LOG_INFO("Registered " + std::to_string(SubsystemRegistry.GetCount()) + " engine subsystems");
+}
