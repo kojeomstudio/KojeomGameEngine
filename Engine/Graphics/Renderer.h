@@ -286,6 +286,8 @@ private:
     bool bLensEffectsEnabled = false;
     bool bDebugUIEnabled = false;
     bool bSkyEnabled = false;
+
+    XMMATRIX PreviousViewProjection = XMMatrixIdentity();
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;

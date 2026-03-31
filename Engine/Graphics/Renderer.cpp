@@ -1150,7 +1150,6 @@ void KRenderer::ApplyTAA()
         return;
     }
 
-    static XMMATRIX PreviousViewProjection = XMMatrixIdentity();
     XMMATRIX CurrentViewProjection = CurrentCamera->GetViewMatrix() * CurrentCamera->GetProjectionMatrix();
 
     TAA.ApplyTAA(

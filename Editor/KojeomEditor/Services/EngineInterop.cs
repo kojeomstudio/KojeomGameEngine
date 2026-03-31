@@ -485,6 +485,171 @@ public class EngineInterop : IDisposable
         if (renderer != IntPtr.Zero) Renderer_SetShadowEnabled(renderer, enabled);
     }
 
+    public void SetSkyEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetSkyEnabled(renderer, enabled);
+    }
+
+    public void SetTAAEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetTAAEnabled(renderer, enabled);
+    }
+
+    public void SetDebugUIEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetDebugUIEnabled(renderer, enabled);
+    }
+
+    public void SetSSREnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetSSREnabled(renderer, enabled);
+    }
+
+    public void SetVolumetricFogEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetVolumetricFogEnabled(renderer, enabled);
+    }
+
+    public void SetCameraFOV(float fovY)
+    {
+        var camera = GetMainCamera();
+        if (camera != IntPtr.Zero) Camera_SetFOV(camera, fovY);
+    }
+
+    public float GetCameraFOV()
+    {
+        var camera = GetMainCamera();
+        return camera == IntPtr.Zero ? 0 : Camera_GetFOV(camera);
+    }
+
+    public void SetCameraNearFar(float nearZ, float farZ)
+    {
+        var camera = GetMainCamera();
+        if (camera != IntPtr.Zero) Camera_SetNearFar(camera, nearZ, farZ);
+    }
+
+    public (float near, float far) GetCameraNearFar()
+    {
+        var camera = GetMainCamera();
+        if (camera == IntPtr.Zero) return (0.1f, 1000);
+        return (Camera_GetNearZ(camera), Camera_GetFarZ(camera));
+    }
+
+    public void SetDirectionalLight(float dirX, float dirY, float dirZ,
+                                     float colorR, float colorG, float colorB, float colorA,
+                                     float ambR, float ambG, float ambB, float ambA)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero)
+            Renderer_SetDirectionalLight(renderer, dirX, dirY, dirZ, colorR, colorG, colorB, colorA, ambR, ambG, ambB, ambA);
+    }
+
+    public void AddPointLight(float posX, float posY, float posZ,
+                               float colorR, float colorG, float colorB, float intensity,
+                               float radius, float falloff)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero)
+            Renderer_AddPointLight(renderer, posX, posY, posZ, colorR, colorG, colorB, intensity, radius, falloff);
+    }
+
+    public void ClearPointLights()
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_ClearPointLights(renderer);
+    }
+
+    public void AddSpotLight(float posX, float posY, float posZ,
+                              float dirX, float dirY, float dirZ,
+                              float colorR, float colorG, float colorB, float intensity,
+                              float innerCone, float outerCone, float radius, float falloff)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero)
+            Renderer_AddSpotLight(renderer, posX, posY, posZ, dirX, dirY, dirZ, colorR, colorG, colorB, intensity, innerCone, outerCone, radius, falloff);
+    }
+
+    public void ClearSpotLights()
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_ClearSpotLights(renderer);
+    }
+
+    public void SetShadowSceneBounds(float centerX, float centerY, float centerZ, float radius)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetShadowSceneBounds(renderer, centerX, centerY, centerZ, radius);
+    }
+
+    public IntPtr LoadTexture(string path)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return IntPtr.Zero;
+        return Texture_Load(_enginePtr, path);
+    }
+
+    public void PauseAnimation(IntPtr component)
+    {
+        if (component != IntPtr.Zero) SkeletalMeshComponent_PauseAnimation(component);
+    }
+
+    public void ResumeAnimation(IntPtr component)
+    {
+        if (component != IntPtr.Zero) SkeletalMeshComponent_ResumeAnimation(component);
+    }
+
+    public string? GetAnimationName(IntPtr component, int index)
+    {
+        if (component == IntPtr.Zero) return null;
+        return Marshal.PtrToStringAnsi(SkeletalMeshComponent_GetAnimationName(component, index));
+    }
+
+    public int ModelHasSkeleton(IntPtr model)
+    {
+        if (model == IntPtr.Zero) return 0;
+        return Model_HasSkeleton(model);
+    }
+
+    public int GetModelAnimationCount(IntPtr model)
+    {
+        if (model == IntPtr.Zero) return 0;
+        return Model_GetAnimationCount(model);
+    }
+
+    public string? GetModelAnimationName(IntPtr model, int index)
+    {
+        if (model == IntPtr.Zero) return null;
+        return Marshal.PtrToStringAnsi(Model_GetAnimationName(model, index));
+    }
+
+    public void AddChild(IntPtr parent, IntPtr child)
+    {
+        if (parent != IntPtr.Zero && child != IntPtr.Zero)
+            Actor_AddChild(parent, child);
+    }
+
+    public int GetChildCount(IntPtr actor)
+    {
+        if (actor == IntPtr.Zero) return 0;
+        return Actor_GetChildCount(actor);
+    }
+
+    public IntPtr GetChild(IntPtr actor, int index)
+    {
+        if (actor == IntPtr.Zero) return IntPtr.Zero;
+        return Actor_GetChild(actor, index);
+    }
+
+    public IntPtr GetParent(IntPtr actor)
+    {
+        if (actor == IntPtr.Zero) return IntPtr.Zero;
+        return Actor_GetParent(actor);
+    }
+
     public IntPtr LoadModel(string path)
     {
         if (!_isInitialized || _enginePtr == IntPtr.Zero) return IntPtr.Zero;
@@ -650,6 +815,106 @@ public class EngineInterop : IDisposable
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Renderer_SetShadowEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetSkyEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetTAAEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetDebugUIEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetSSREnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetVolumetricFogEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Camera_SetFOV(IntPtr camera, float fovY);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float Camera_GetFOV(IntPtr camera);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Camera_SetNearFar(IntPtr camera, float nearZ, float farZ);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float Camera_GetNearZ(IntPtr camera);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float Camera_GetFarZ(IntPtr camera);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetDirectionalLight(IntPtr renderer, float dirX, float dirY, float dirZ,
+                                                              float colorR, float colorG, float colorB, float colorA,
+                                                              float ambR, float ambG, float ambB, float ambA);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_AddPointLight(IntPtr renderer, float posX, float posY, float posZ,
+                                                       float colorR, float colorG, float colorB, float intensity,
+                                                       float radius, float falloff);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_ClearPointLights(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_AddSpotLight(IntPtr renderer, float posX, float posY, float posZ,
+                                                      float dirX, float dirY, float dirZ,
+                                                      float colorR, float colorG, float colorB, float intensity,
+                                                      float innerCone, float outerCone, float radius, float falloff);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_ClearSpotLights(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetShadowSceneBounds(IntPtr renderer, float centerX, float centerY, float centerZ, float radius);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Texture_Load(IntPtr engine, [MarshalAs(UnmanagedType.LPWStr)] string path);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Texture_Unload(IntPtr engine, [MarshalAs(UnmanagedType.LPWStr)] string path);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void SkeletalMeshComponent_PauseAnimation(IntPtr component);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void SkeletalMeshComponent_ResumeAnimation(IntPtr component);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr SkeletalMeshComponent_GetAnimationName(IntPtr component, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Model_HasSkeleton(IntPtr model);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Model_GetAnimationCount(IntPtr model);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Model_GetAnimationName(IntPtr model, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Actor_AddChild(IntPtr parent, IntPtr child);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Actor_GetChildCount(IntPtr actor);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Actor_GetChild(IntPtr actor, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Actor_GetParent(IntPtr actor);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetDirectionalLightDirection(IntPtr renderer, float x, float y, float z);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetDirectionalLightColor(IntPtr renderer, float r, float g, float b, float a);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetDirectionalLightAmbient(IntPtr renderer, float r, float g, float b, float a);
 
     #endregion
 }

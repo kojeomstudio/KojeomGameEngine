@@ -81,4 +81,50 @@ extern "C"
     ENGINEAPI void Renderer_SetSSAOEnabled(void* renderer, bool enabled);
     ENGINEAPI void Renderer_SetPostProcessEnabled(void* renderer, bool enabled);
     ENGINEAPI void Renderer_SetShadowEnabled(void* renderer, bool enabled);
+
+    ENGINEAPI void Renderer_SetSkyEnabled(void* renderer, bool enabled);
+    ENGINEAPI void Renderer_SetTAAEnabled(void* renderer, bool enabled);
+    ENGINEAPI void Renderer_SetDebugUIEnabled(void* renderer, bool enabled);
+    ENGINEAPI void Renderer_SetSSREnabled(void* renderer, bool enabled);
+    ENGINEAPI void Renderer_SetVolumetricFogEnabled(void* renderer, bool enabled);
+
+    ENGINEAPI void Camera_SetFOV(void* camera, float fovY);
+    ENGINEAPI float Camera_GetFOV(void* camera);
+    ENGINEAPI void Camera_SetNearFar(void* camera, float nearZ, float farZ);
+    ENGINEAPI float Camera_GetNearZ(void* camera);
+    ENGINEAPI float Camera_GetFarZ(void* camera);
+
+    ENGINEAPI void Renderer_SetDirectionalLight(void* renderer, float dirX, float dirY, float dirZ,
+                                                 float colorR, float colorG, float colorB, float colorA,
+                                                 float ambR, float ambG, float ambB, float ambA);
+    ENGINEAPI void Renderer_AddPointLight(void* renderer, float posX, float posY, float posZ,
+                                           float colorR, float colorG, float colorB, float intensity,
+                                           float radius, float falloff);
+    ENGINEAPI void Renderer_ClearPointLights(void* renderer);
+    ENGINEAPI void Renderer_AddSpotLight(void* renderer, float posX, float posY, float posZ,
+                                          float dirX, float dirY, float dirZ,
+                                          float colorR, float colorG, float colorB, float intensity,
+                                          float innerCone, float outerCone, float radius, float falloff);
+    ENGINEAPI void Renderer_ClearSpotLights(void* renderer);
+    ENGINEAPI void Renderer_SetShadowSceneBounds(void* renderer, float centerX, float centerY, float centerZ, float radius);
+
+    ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path);
+    ENGINEAPI void Texture_Unload(void* engine, const wchar_t* path);
+
+    ENGINEAPI void SkeletalMeshComponent_PauseAnimation(void* component);
+    ENGINEAPI void SkeletalMeshComponent_ResumeAnimation(void* component);
+    ENGINEAPI const char* SkeletalMeshComponent_GetAnimationName(void* component, int index);
+
+    ENGINEAPI int Model_HasSkeleton(void* model);
+    ENGINEAPI int Model_GetAnimationCount(void* model);
+    ENGINEAPI const char* Model_GetAnimationName(void* model, int index);
+
+    ENGINEAPI void Actor_AddChild(void* parent, void* child);
+    ENGINEAPI int Actor_GetChildCount(void* actor);
+    ENGINEAPI void* Actor_GetChild(void* actor, int index);
+    ENGINEAPI void* Actor_GetParent(void* actor);
+
+    ENGINEAPI void Renderer_SetDirectionalLightDirection(void* renderer, float x, float y, float z);
+    ENGINEAPI void Renderer_SetDirectionalLightColor(void* renderer, float r, float g, float b, float a);
+    ENGINEAPI void Renderer_SetDirectionalLightAmbient(void* renderer, float r, float g, float b, float a);
 }

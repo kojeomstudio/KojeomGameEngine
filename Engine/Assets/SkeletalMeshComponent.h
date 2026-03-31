@@ -144,6 +144,7 @@ public:
     std::shared_ptr<KAnimation> GetAnimation(const std::string& Name) const;
     bool HasAnimation(const std::string& Name) const;
     size_t GetAnimationCount() const { return Animations.size(); }
+    std::string GetAnimationName(int Index) const;
 
     virtual void Serialize(KBinaryArchive& Archive) override;
     virtual void Deserialize(KBinaryArchive& Archive) override;

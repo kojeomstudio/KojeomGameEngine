@@ -87,6 +87,79 @@ public:
     size_t GetSize() const { return Buffer.size(); }
     const uint8* GetData() const { return Buffer.data(); }
 
+    template<typename T>
+    KBinaryArchive& operator<<(const std::vector<T>& Value)
+    {
+        uint32 Count = static_cast<uint32>(Value.size());
+        *this << Count;
+        for (const auto& elem : Value)
+        {
+            *this << elem;
+        }
+        return *this;
+    }
+
+    template<typename T>
+    KBinaryArchive& operator>>(std::vector<T>& Value)
+    {
+        uint32 Count;
+        *this >> Count;
+        Value.resize(Count);
+        for (uint32 i = 0; i < Count; ++i)
+        {
+            *this >> Value[i];
+        }
+        return *this;
+    }
+
+    KBinaryArchive& operator<<(const XMFLOAT3& Value)
+    {
+        *this << Value.x << Value.y << Value.z;
+        return *this;
+    }
+
+    KBinaryArchive& operator>>(XMFLOAT3& Value)
+    {
+        *this >> Value.x >> Value.y >> Value.z;
+        return *this;
+    }
+
+    KBinaryArchive& operator<<(const XMFLOAT4& Value)
+    {
+        *this << Value.x << Value.y << Value.z << Value.w;
+        return *this;
+    }
+
+    KBinaryArchive& operator>>(XMFLOAT4& Value)
+    {
+        *this >> Value.x >> Value.y >> Value.z >> Value.w;
+        return *this;
+    }
+
+    KBinaryArchive& operator<<(const XMFLOAT4X4& Value)
+    {
+        for (int32 i = 0; i < 4; ++i)
+        {
+            for (int32 j = 0; j < 4; ++j)
+            {
+                *this << Value.m[i][j];
+            }
+        }
+        return *this;
+    }
+
+    KBinaryArchive& operator>>(XMFLOAT4X4& Value)
+    {
+        for (int32 i = 0; i < 4; ++i)
+        {
+            for (int32 j = 0; j < 4; ++j)
+            {
+                *this >> Value.m[i][j];
+            }
+        }
+        return *this;
+    }
+
 private:
     void Write(const void* Data, size_t Size);
     void Read(void* Data, size_t Size);

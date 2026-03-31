@@ -3,6 +3,8 @@
 #include <Engine/Core/Engine.h>
 #include <Engine/Graphics/Renderer.h>
 #include <Engine/Graphics/Camera.h>
+#include <Engine/Graphics/Texture.h>
+#include <Engine/Graphics/Light.h>
 #include <Engine/Assets/ModelLoader.h>
 #include <Engine/Scene/SceneManager.h>
 #include <Engine/Scene/Actor.h>
@@ -578,5 +580,267 @@ extern "C"
         if (!renderer) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
         krenderer->SetShadowEnabled(enabled);
+    }
+
+    ENGINEAPI void Renderer_SetSkyEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetSkyEnabled(enabled);
+    }
+
+    ENGINEAPI void Renderer_SetTAAEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetTAAEnabled(enabled);
+    }
+
+    ENGINEAPI void Renderer_SetDebugUIEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetDebugUIEnabled(enabled);
+    }
+
+    ENGINEAPI void Renderer_SetSSREnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetSSREnabled(enabled);
+    }
+
+    ENGINEAPI void Renderer_SetVolumetricFogEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetVolumetricFogEnabled(enabled);
+    }
+
+    ENGINEAPI void Camera_SetFOV(void* camera, float fovY)
+    {
+        if (!camera) return;
+        KCamera* kcam = static_cast<KCamera*>(camera);
+        kcam->SetPerspective(fovY, kcam->GetAspectRatio(), kcam->GetNearZ(), kcam->GetFarZ());
+    }
+
+    ENGINEAPI float Camera_GetFOV(void* camera)
+    {
+        if (!camera) return 0.0f;
+        KCamera* kcam = static_cast<KCamera*>(camera);
+        return kcam->GetFovY();
+    }
+
+    ENGINEAPI void Camera_SetNearFar(void* camera, float nearZ, float farZ)
+    {
+        if (!camera) return;
+        KCamera* kcam = static_cast<KCamera*>(camera);
+        kcam->SetPerspective(kcam->GetFovY(), kcam->GetAspectRatio(), nearZ, farZ);
+    }
+
+    ENGINEAPI float Camera_GetNearZ(void* camera)
+    {
+        if (!camera) return 0.0f;
+        return static_cast<KCamera*>(camera)->GetNearZ();
+    }
+
+    ENGINEAPI float Camera_GetFarZ(void* camera)
+    {
+        if (!camera) return 0.0f;
+        return static_cast<KCamera*>(camera)->GetFarZ();
+    }
+
+    ENGINEAPI void Renderer_SetDirectionalLight(void* renderer, float dirX, float dirY, float dirZ,
+                                                 float colorR, float colorG, float colorB, float colorA,
+                                                 float ambR, float ambG, float ambB, float ambA)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        FDirectionalLight light;
+        light.Direction = XMFLOAT3(dirX, dirY, dirZ);
+        light.Color = XMFLOAT4(colorR, colorG, colorB, colorA);
+        light.AmbientColor = XMFLOAT4(ambR, ambG, ambB, ambA);
+        krenderer->SetDirectionalLight(light);
+    }
+
+    ENGINEAPI void Renderer_SetDirectionalLightDirection(void* renderer, float x, float y, float z)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        FDirectionalLight light;
+        light.Direction = XMFLOAT3(x, y, z);
+        krenderer->SetDirectionalLight(light);
+    }
+
+    ENGINEAPI void Renderer_SetDirectionalLightColor(void* renderer, float r, float g, float b, float a)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        FDirectionalLight light;
+        light.Color = XMFLOAT4(r, g, b, a);
+        krenderer->SetDirectionalLight(light);
+    }
+
+    ENGINEAPI void Renderer_SetDirectionalLightAmbient(void* renderer, float r, float g, float b, float a)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        FDirectionalLight light;
+        light.AmbientColor = XMFLOAT4(r, g, b, a);
+        krenderer->SetDirectionalLight(light);
+    }
+
+    ENGINEAPI void Renderer_AddPointLight(void* renderer, float posX, float posY, float posZ,
+                                           float colorR, float colorG, float colorB, float intensity,
+                                           float radius, float falloff)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        FPointLight light;
+        light.Position = XMFLOAT3(posX, posY, posZ);
+        light.Color = XMFLOAT4(colorR, colorG, colorB, 1.0f);
+        light.Intensity = intensity;
+        light.Radius = radius;
+        light.Falloff = falloff;
+        krenderer->AddPointLight(light);
+    }
+
+    ENGINEAPI void Renderer_ClearPointLights(void* renderer)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->ClearPointLights();
+    }
+
+    ENGINEAPI void Renderer_AddSpotLight(void* renderer, float posX, float posY, float posZ,
+                                          float dirX, float dirY, float dirZ,
+                                          float colorR, float colorG, float colorB, float intensity,
+                                          float innerCone, float outerCone, float radius, float falloff)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        FSpotLight light;
+        light.Position = XMFLOAT3(posX, posY, posZ);
+        light.Direction = XMFLOAT3(dirX, dirY, dirZ);
+        light.Color = XMFLOAT4(colorR, colorG, colorB, 1.0f);
+        light.Intensity = intensity;
+        light.InnerCone = innerCone;
+        light.OuterCone = outerCone;
+        light.Radius = radius;
+        light.Falloff = falloff;
+        krenderer->AddSpotLight(light);
+    }
+
+    ENGINEAPI void Renderer_ClearSpotLights(void* renderer)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->ClearSpotLights();
+    }
+
+    ENGINEAPI void Renderer_SetShadowSceneBounds(void* renderer, float centerX, float centerY, float centerZ, float radius)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->SetShadowSceneBounds(XMFLOAT3(centerX, centerY, centerZ), radius);
+    }
+
+    ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path)
+    {
+        if (!engine || !path) return nullptr;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto texture = wrapper->Engine->GetRenderer()->GetTextureManager()->LoadTexture(
+            wrapper->Engine->GetGraphicsDevice()->GetDevice(), std::wstring(path));
+        return texture ? texture.get() : nullptr;
+    }
+
+    ENGINEAPI void Texture_Unload(void* engine, const wchar_t* path)
+    {
+        if (!engine || !path) return;
+    }
+
+    ENGINEAPI void SkeletalMeshComponent_PauseAnimation(void* component)
+    {
+        if (!component) return;
+        KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
+        skmc->PauseAnimation();
+    }
+
+    ENGINEAPI void SkeletalMeshComponent_ResumeAnimation(void* component)
+    {
+        if (!component) return;
+        KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
+        skmc->ResumeAnimation();
+    }
+
+    ENGINEAPI const char* SkeletalMeshComponent_GetAnimationName(void* component, int index)
+    {
+        if (!component) return "";
+        KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
+        static thread_local std::string nameBuffer;
+        nameBuffer = skmc->GetAnimationName(index);
+        return nameBuffer.c_str();
+    }
+
+    ENGINEAPI int Model_HasSkeleton(void* model)
+    {
+        if (!model) return 0;
+        FLoadedModel* loadedModel = static_cast<FLoadedModel*>(model);
+        return (loadedModel->Skeleton && !loadedModel->Skeleton->GetBones().empty()) ? 1 : 0;
+    }
+
+    ENGINEAPI int Model_GetAnimationCount(void* model)
+    {
+        if (!model) return 0;
+        FLoadedModel* loadedModel = static_cast<FLoadedModel*>(model);
+        return static_cast<int>(loadedModel->Animations.size());
+    }
+
+    ENGINEAPI const char* Model_GetAnimationName(void* model, int index)
+    {
+        if (!model) return "";
+        FLoadedModel* loadedModel = static_cast<FLoadedModel*>(model);
+        if (index >= 0 && index < static_cast<int>(loadedModel->Animations.size()))
+        {
+            static thread_local std::string nameBuffer;
+            nameBuffer = loadedModel->Animations[index]->GetName();
+            return nameBuffer.c_str();
+        }
+        return "";
+    }
+
+    ENGINEAPI void Actor_AddChild(void* parent, void* child)
+    {
+        if (!parent || !child) return;
+        KActor* parentActor = static_cast<KActor*>(parent);
+        KActor* childActor = static_cast<KActor*>(child);
+        auto childPtr = std::shared_ptr<KActor>(childActor, [](KActor*) {});
+        parentActor->AddChild(childPtr);
+    }
+
+    ENGINEAPI int Actor_GetChildCount(void* actor)
+    {
+        if (!actor) return 0;
+        KActor* kactor = static_cast<KActor*>(actor);
+        return static_cast<int>(kactor->GetChildren().size());
+    }
+
+    ENGINEAPI void* Actor_GetChild(void* actor, int index)
+    {
+        if (!actor) return nullptr;
+        KActor* kactor = static_cast<KActor*>(actor);
+        const auto& children = kactor->GetChildren();
+        if (index >= 0 && index < static_cast<int>(children.size()))
+        {
+            return children[index].get();
+        }
+        return nullptr;
+    }
+
+    ENGINEAPI void* Actor_GetParent(void* actor)
+    {
+        if (!actor) return nullptr;
+        KActor* kactor = static_cast<KActor*>(actor);
+        return kactor->GetParent();
     }
 }

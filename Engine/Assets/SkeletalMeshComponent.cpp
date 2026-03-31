@@ -265,6 +265,17 @@ bool KSkeletalMeshComponent::HasAnimation(const std::string& Name) const
     return Animations.find(Name) != Animations.end();
 }
 
+std::string KSkeletalMeshComponent::GetAnimationName(int Index) const
+{
+    int i = 0;
+    for (const auto& [name, anim] : Animations)
+    {
+        if (i == Index) return name;
+        ++i;
+    }
+    return "";
+}
+
 void KSkeletalMeshComponent::Serialize(KBinaryArchive& Archive)
 {
     KActorComponent::Serialize(Archive);
