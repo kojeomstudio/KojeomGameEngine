@@ -104,12 +104,14 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 │   ├── SceneViewModel.cs     # Scene hierarchy VM, engine sync
 │   ├── PropertiesViewModel.cs # Properties panel VM
 │   └── ComponentViewModel.cs # Component VM
-└── Views/
-    ├── ViewportControl.xaml  # D3D11 viewport (HwndHost), fly camera, object picking, drag-drop
-    ├── SceneHierarchyControl.xaml  # Actor tree
-    ├── PropertiesPanelControl.xaml # Transform/properties
-    ├── MaterialEditorControl.xaml  # PBR material editing
-    └── ContentBrowserControl.xaml  # Asset browser
+├── Views/
+│   ├── ViewportControl.xaml  # D3D11 viewport (HwndHost), fly camera, object picking, drag-drop
+│   ├── SceneHierarchyControl.xaml  # Actor tree
+│   ├── PropertiesPanelControl.xaml # Transform/properties
+│   ├── MaterialEditorControl.xaml  # PBR material editing
+│   └── ContentBrowserControl.xaml  # Asset browser
+└── Styles/
+    └── CommonStyles.xaml     # Shared resource dictionary
 ```
 
 ### Editor Features
@@ -171,7 +173,7 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Engine source files (.h + .cpp) | 144 |
 | Engine total lines | ~36,000 |
 | Editor C# files | 13 |
-| Editor XAML files | 8 |
+| Editor XAML files | 9 |
 | Sample projects | 16 |
 | Total solution projects | 19 |
 | Engine modules | 12 |
