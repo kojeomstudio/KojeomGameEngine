@@ -5,6 +5,7 @@
 #include <Engine/Graphics/Camera.h>
 #include <Engine/Graphics/Texture.h>
 #include <Engine/Graphics/Light.h>
+#include <Engine/Graphics/Material.h>
 #include <Engine/Assets/ModelLoader.h>
 #include <Engine/Scene/SceneManager.h>
 #include <Engine/Scene/Actor.h>
@@ -227,6 +228,13 @@ extern "C"
         return nameBuffer.c_str();
     }
 
+    ENGINEAPI void Actor_SetName(void* actor, const char* name)
+    {
+        if (!actor || !name) return;
+        KActor* kactor = static_cast<KActor*>(actor);
+        kactor->SetName(std::string(name));
+    }
+
     ENGINEAPI void* Camera_GetMain(void* engine)
     {
         if (!engine) return nullptr;
@@ -423,22 +431,61 @@ extern "C"
     ENGINEAPI void Material_SetAlbedo(void* material, float r, float g, float b, float a)
     {
         if (!material) return;
-        FPBRMaterialParams* mat = static_cast<FPBRMaterialParams*>(material);
-        mat->AlbedoColor = XMFLOAT4(r, g, b, a);
+        KMaterial* mat = static_cast<KMaterial*>(material);
+        mat->SetAlbedoColor(XMFLOAT4(r, g, b, a));
     }
 
     ENGINEAPI void Material_SetMetallic(void* material, float value)
     {
         if (!material) return;
-        FPBRMaterialParams* mat = static_cast<FPBRMaterialParams*>(material);
-        mat->Metallic = value;
+        KMaterial* mat = static_cast<KMaterial*>(material);
+        mat->SetMetallic(value);
     }
 
     ENGINEAPI void Material_SetRoughness(void* material, float value)
     {
         if (!material) return;
-        FPBRMaterialParams* mat = static_cast<FPBRMaterialParams*>(material);
-        mat->Roughness = value;
+        KMaterial* mat = static_cast<KMaterial*>(material);
+        mat->SetRoughness(value);
+    }
+
+    ENGINEAPI void Material_SetAO(void* material, float value)
+    {
+        if (!material) return;
+        KMaterial* mat = static_cast<KMaterial*>(material);
+        mat->SetAO(value);
+    }
+
+    ENGINEAPI void Material_GetAlbedo(void* material, float* r, float* g, float* b, float* a)
+    {
+        if (!material || !r || !g || !b || !a) return;
+        KMaterial* mat = static_cast<KMaterial*>(material);
+        const FPBRMaterialParams& params = mat->GetParams();
+        *r = params.AlbedoColor.x;
+        *g = params.AlbedoColor.y;
+        *b = params.AlbedoColor.z;
+        *a = params.AlbedoColor.w;
+    }
+
+    ENGINEAPI float Material_GetMetallic(void* material)
+    {
+        if (!material) return 0.0f;
+        KMaterial* mat = static_cast<KMaterial*>(material);
+        return mat->GetParams().Metallic;
+    }
+
+    ENGINEAPI float Material_GetRoughness(void* material)
+    {
+        if (!material) return 0.0f;
+        KMaterial* mat = static_cast<KMaterial*>(material);
+        return mat->GetParams().Roughness;
+    }
+
+    ENGINEAPI float Material_GetAO(void* material)
+    {
+        if (!material) return 0.0f;
+        KMaterial* mat = static_cast<KMaterial*>(material);
+        return mat->GetParams().AO;
     }
 
     ENGINEAPI void* Actor_AddComponent(void* actor, int componentType)
@@ -479,7 +526,6 @@ extern "C"
     ENGINEAPI void* Actor_GetLightComponent(void* actor)
     {
         if (!actor) return nullptr;
-        // Light component class not yet implemented - returns nullptr
         return nullptr;
     }
 
@@ -508,6 +554,30 @@ extern "C"
         staticMesh->AddLOD(vertices, indices);
         smc->SetStaticMesh(staticMesh);
         return staticMesh.get();
+    }
+
+    ENGINEAPI void* StaticMeshComponent_GetMaterial(void* component)
+    {
+        if (!component) return nullptr;
+        KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
+        return smc->GetMaterial();
+    }
+
+    ENGINEAPI void* StaticMeshComponent_CreateDefaultMesh(void* component)
+    {
+        if (!component) return nullptr;
+        KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
+        auto staticMesh = std::make_shared<KStaticMesh>();
+        std::vector<FVertex> vertices;
+        std::vector<uint32> indices;
+        for (uint32 i = 0; i < 24; ++i)
+        {
+            vertices.push_back(FVertex());
+        }
+        staticMesh->AddLOD(vertices, indices);
+        smc->SetStaticMesh(staticMesh);
+        return staticMesh.get();
+        return nullptr;
     }
 
     ENGINEAPI void* SkeletalMeshComponent_PlayAnimation(void* component, const char* animName)
@@ -559,6 +629,30 @@ extern "C"
             return model->StaticMesh.get();
         }
         return nullptr;
+    }
+
+    ENGINEAPI void* Model_LoadAndGetSkeletalMesh(void* engine, const wchar_t* path)
+    {
+        if (!engine || !path) return nullptr;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        if (model && model->SkeletalMesh)
+        {
+            return model->SkeletalMesh.get();
+        }
+        return nullptr;
+    }
+
+    ENGINEAPI void SkeletalMeshComponent_SetSkeletalMeshFromModel(void* component, void* engine, const wchar_t* path)
+    {
+        if (!component || !engine || !path) return;
+        KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        if (model && model->SkeletalMesh)
+        {
+            skmc->SetSkeletalMesh(model->SkeletalMesh);
+        }
     }
 
     ENGINEAPI void Renderer_SetSSAOEnabled(void* renderer, bool enabled)
@@ -667,27 +761,21 @@ extern "C"
     {
         if (!renderer) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
-        FDirectionalLight light;
-        light.Direction = XMFLOAT3(x, y, z);
-        krenderer->SetDirectionalLight(light);
+        krenderer->GetDirectionalLightMutable().Direction = XMFLOAT3(x, y, z);
     }
 
     ENGINEAPI void Renderer_SetDirectionalLightColor(void* renderer, float r, float g, float b, float a)
     {
         if (!renderer) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
-        FDirectionalLight light;
-        light.Color = XMFLOAT4(r, g, b, a);
-        krenderer->SetDirectionalLight(light);
+        krenderer->GetDirectionalLightMutable().Color = XMFLOAT4(r, g, b, a);
     }
 
     ENGINEAPI void Renderer_SetDirectionalLightAmbient(void* renderer, float r, float g, float b, float a)
     {
         if (!renderer) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
-        FDirectionalLight light;
-        light.AmbientColor = XMFLOAT4(r, g, b, a);
-        krenderer->SetDirectionalLight(light);
+        krenderer->GetDirectionalLightMutable().AmbientColor = XMFLOAT4(r, g, b, a);
     }
 
     ENGINEAPI void Renderer_AddPointLight(void* renderer, float posX, float posY, float posZ,
@@ -736,6 +824,67 @@ extern "C"
         if (!renderer) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
         krenderer->ClearSpotLights();
+    }
+
+    ENGINEAPI void Renderer_GetDirectionalLight(void* renderer, float* dirX, float* dirY, float* dirZ,
+                                                 float* colorR, float* colorG, float* colorB, float* colorA,
+                                                 float* ambR, float* ambG, float* ambB, float* ambA)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        const FDirectionalLight& light = krenderer->GetDirectionalLight();
+        if (dirX) *dirX = light.Direction.x;
+        if (dirY) *dirY = light.Direction.y;
+        if (dirZ) *dirZ = light.Direction.z;
+        if (colorR) *colorR = light.Color.x;
+        if (colorG) *colorG = light.Color.y;
+        if (colorB) *colorB = light.Color.z;
+        if (colorA) *colorA = light.Color.w;
+        if (ambR) *ambR = light.AmbientColor.x;
+        if (ambG) *ambG = light.AmbientColor.y;
+        if (ambB) *ambB = light.AmbientColor.z;
+        if (ambA) *ambA = light.AmbientColor.w;
+    }
+
+    ENGINEAPI int Renderer_GetPointLightCount(void* renderer)
+    {
+        if (!renderer) return 0;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        return static_cast<int>(krenderer->GetNumPointLights());
+    }
+
+    ENGINEAPI void Renderer_GetPointLight(void* renderer, int index,
+                                           float* posX, float* posY, float* posZ,
+                                           float* colorR, float* colorG, float* colorB, float* intensity,
+                                           float* radius, float* falloff)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        if (index < 0 || index >= static_cast<int>(krenderer->GetNumPointLights())) return;
+        const FPointLight& light = krenderer->GetPointLight(static_cast<UINT32>(index));
+        if (posX) *posX = light.Position.x;
+        if (posY) *posY = light.Position.y;
+        if (posZ) *posZ = light.Position.z;
+        if (colorR) *colorR = light.Color.x;
+        if (colorG) *colorG = light.Color.y;
+        if (colorB) *colorB = light.Color.z;
+        if (intensity) *intensity = light.Intensity;
+        if (radius) *radius = light.Radius;
+        if (falloff) *falloff = light.Falloff;
+    }
+
+    ENGINEAPI void Renderer_SetDirectionalLightIntensity(void* renderer, float intensity)
+    {
+        if (!renderer) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        krenderer->GetDirectionalLightMutable().Intensity = intensity;
+    }
+
+    ENGINEAPI float Renderer_GetDirectionalLightIntensity(void* renderer)
+    {
+        if (!renderer) return 0.0f;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        return krenderer->GetDirectionalLight().Intensity;
     }
 
     ENGINEAPI void Renderer_SetShadowSceneBounds(void* renderer, float centerX, float centerY, float centerZ, float radius)

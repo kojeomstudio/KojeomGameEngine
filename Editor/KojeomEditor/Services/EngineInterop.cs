@@ -437,12 +437,13 @@ public class EngineInterop : IDisposable
         Dispose();
     }
 
-    public void AddComponent(IntPtr actor, int componentType)
+    public IntPtr AddComponent(IntPtr actor, int componentType)
     {
         if (actor != IntPtr.Zero)
         {
-            Actor_AddComponent(actor, componentType);
+            return Actor_AddComponent(actor, componentType);
         }
+        return IntPtr.Zero;
     }
 
     public void DestroyActor(IntPtr scene, IntPtr actor)
@@ -916,5 +917,135 @@ public class EngineInterop : IDisposable
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Renderer_SetDirectionalLightAmbient(IntPtr renderer, float r, float g, float b, float a);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Actor_SetName(IntPtr actor, [MarshalAs(UnmanagedType.LPStr)] string name);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr StaticMeshComponent_GetMaterial(IntPtr component);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr StaticMeshComponent_CreateDefaultMesh(IntPtr component);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_GetDirectionalLight(IntPtr renderer,
+        out float dirX, out float dirY, out float dirZ,
+        out float colorR, out float colorG, out float colorB, out float colorA,
+        out float ambR, out float ambG, out float ambB, out float ambA);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Renderer_GetPointLightCount(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_GetPointLight(IntPtr renderer, int index,
+        out float posX, out float posY, out float posZ,
+        out float colorR, out float colorG, out float colorB, out float intensity,
+        out float radius, out float falloff);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetDirectionalLightIntensity(IntPtr renderer, float intensity);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float Renderer_GetDirectionalLightIntensity(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Model_LoadAndGetSkeletalMesh(IntPtr engine, [MarshalAs(UnmanagedType.LPWStr)] string path);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void SkeletalMeshComponent_SetSkeletalMeshFromModel(IntPtr component, IntPtr engine, [MarshalAs(UnmanagedType.LPWStr)] string path);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Material_SetAO(IntPtr material, float value);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Material_GetAlbedo(IntPtr material, out float r, out float g, out float b, out float a);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float Material_GetMetallic(IntPtr material);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float Material_GetRoughness(IntPtr material);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float Material_GetAO(IntPtr material);
+
     #endregion
+
+    public void SetActorName(IntPtr actor, string name)
+    {
+        if (actor != IntPtr.Zero) Actor_SetName(actor, name);
+    }
+
+    public IntPtr GetStaticMeshComponentMaterial(IntPtr component)
+    {
+        if (component == IntPtr.Zero) return IntPtr.Zero;
+        return StaticMeshComponent_GetMaterial(component);
+    }
+
+    public IntPtr CreateDefaultMesh(IntPtr component)
+    {
+        if (component == IntPtr.Zero) return IntPtr.Zero;
+        return StaticMeshComponent_CreateDefaultMesh(component);
+    }
+
+    public (float dirX, float dirY, float dirZ, float colorR, float colorG, float colorB, float colorA, float ambR, float ambG, float ambB, float ambA) GetDirectionalLight()
+    {
+        var renderer = GetRenderer();
+        if (renderer == IntPtr.Zero) return (0,0,0, 1,1,1,1, 0,0,0,1);
+        Renderer_GetDirectionalLight(renderer,
+            out float dirX, out float dirY, out float dirZ,
+            out float colorR, out float colorG, out float colorB, out float colorA,
+            out float ambR, out float ambG, out float ambB, out float ambA);
+        return (dirX, dirY, dirZ, colorR, colorG, colorB, colorA, ambR, ambG, ambB, ambA);
+    }
+
+    public int GetPointLightCount()
+    {
+        var renderer = GetRenderer();
+        return renderer == IntPtr.Zero ? 0 : Renderer_GetPointLightCount(renderer);
+    }
+
+    public void SetDirectionalLightIntensity(float intensity)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetDirectionalLightIntensity(renderer, intensity);
+    }
+
+    public float GetDirectionalLightIntensity()
+    {
+        var renderer = GetRenderer();
+        return renderer == IntPtr.Zero ? 0 : Renderer_GetDirectionalLightIntensity(renderer);
+    }
+
+    public void SetMaterialAO(IntPtr material, float ao)
+    {
+        if (material != IntPtr.Zero) Material_SetAO(material, ao);
+    }
+
+    public (float r, float g, float b, float a) GetMaterialAlbedo(IntPtr material)
+    {
+        if (material == IntPtr.Zero) return (1, 1, 1, 1);
+        Material_GetAlbedo(material, out float r, out float g, out float b, out float a);
+        return (r, g, b, a);
+    }
+
+    public float GetMaterialMetallic(IntPtr material)
+    {
+        return material == IntPtr.Zero ? 0 : Material_GetMetallic(material);
+    }
+
+    public float GetMaterialRoughness(IntPtr material)
+    {
+        return material == IntPtr.Zero ? 0 : Material_GetRoughness(material);
+    }
+
+    public float GetMaterialAO(IntPtr material)
+    {
+        return material == IntPtr.Zero ? 0 : Material_GetAO(material);
+    }
+
+    public void SetSkeletalMeshFromModel(IntPtr component, string path)
+    {
+        if (component == IntPtr.Zero) return;
+        SkeletalMeshComponent_SetSkeletalMeshFromModel(component, _enginePtr, path);
+    }
 }

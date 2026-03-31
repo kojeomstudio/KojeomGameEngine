@@ -33,26 +33,27 @@ KojeomGameEngine은 12개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 ### Engine Modules
 
-| Module | Description |
-|--------|-------------|
-| Core | KEngine - 윈도우 관리, 메인 루프, 서브시스템 소유 |
-| Graphics | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20+ 서브시스템) |
-| Input | 키보드, 마우스, Raw Input, Action Mapping |
-| Audio | XAudio2 오디오, 3D 사운드 |
-| Physics | 리지드바디, 충돌 감지, Raycast |
-| Scene | Actor-Component 시스템, 씬 관리 |
-| Assets | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 모델 로더 (FBX/OBJ/GLTF) |
-| Serialization | 바이너리/JSON 아카이브 |
-| UI | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
-| DebugUI | ImGui 디버그 오버레이 |
-| Utils | Common.h, Logger.h, Math.h |
+| Module | Files | Lines | Description |
+|--------|------:|------:|-------------|
+| Graphics | 70 | 22,988 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20 서브시스템) |
+| Assets | 16 | 4,786 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 모델 로더 (FBX/OBJ/GLTF) |
+| UI | 27 | 2,513 | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
+| Core | 3 | 1,086 | KEngine - 윈도우 관리, 메인 루프, 서브시스템 소유 |
+| Audio | 6 | 999 | XAudio2 오디오, 3D 사운드 |
+| Physics | 6 | 1,122 | 리지드바디, 충돌 감지, Raycast |
+| Serialization | 4 | 945 | 바이너리/JSON 아카이브 |
+| Input | 3 | 774 | 키보드, 마우스, Raw Input, Action Mapping |
+| Scene | 4 | 763 | Actor-Component 시스템, 씬 관리 |
+| DebugUI | 2 | 264 | ImGui 디버그 오버레이 |
+| Utils | 3 | 303 | Common.h, Logger.h, Math.h |
+| **Total** | **147** | **36,543** | |
 
 ### Editor
 
-| Component | Description |
-|-----------|-------------|
-| EngineInterop | C++ DLL (flat C API, ~40 exported functions) for C# P/Invoke |
-| KojeomEditor | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Content Browser |
+| Component | Files | Lines | Description |
+|-----------|------:|------:|-------------|
+| EngineInterop | 2 | 1,150 | C++ DLL (flat C API, ~103 exported functions) for C# P/Invoke |
+| KojeomEditor | 21 | 4,218 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Content Browser |
 
 ### Samples
 

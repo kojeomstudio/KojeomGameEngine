@@ -1,6 +1,11 @@
 #include "StaticMeshComponent.h"
 #include "../Graphics/Renderer.h"
 
+KStaticMeshComponent::KStaticMeshComponent()
+{
+    Material = std::make_shared<KMaterial>();
+}
+
 void KStaticMeshComponent::Render(KRenderer* Renderer)
 {
     if (!StaticMesh || !Renderer || !GetOwner())

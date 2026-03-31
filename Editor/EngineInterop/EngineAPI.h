@@ -66,6 +66,11 @@ extern "C"
     ENGINEAPI void Material_SetAlbedo(void* material, float r, float g, float b, float a);
     ENGINEAPI void Material_SetMetallic(void* material, float value);
     ENGINEAPI void Material_SetRoughness(void* material, float value);
+    ENGINEAPI void Material_SetAO(void* material, float value);
+    ENGINEAPI void Material_GetAlbedo(void* material, float* r, float* g, float* b, float* a);
+    ENGINEAPI float Material_GetMetallic(void* material);
+    ENGINEAPI float Material_GetRoughness(void* material);
+    ENGINEAPI float Material_GetAO(void* material);
 
     ENGINEAPI void* Actor_AddComponent(void* actor, int componentType);
     ENGINEAPI void* Actor_GetStaticMeshComponent(void* actor);
@@ -127,4 +132,24 @@ extern "C"
     ENGINEAPI void Renderer_SetDirectionalLightDirection(void* renderer, float x, float y, float z);
     ENGINEAPI void Renderer_SetDirectionalLightColor(void* renderer, float r, float g, float b, float a);
     ENGINEAPI void Renderer_SetDirectionalLightAmbient(void* renderer, float r, float g, float b, float a);
+
+    ENGINEAPI void Actor_SetName(void* actor, const char* name);
+
+    ENGINEAPI void* StaticMeshComponent_GetMaterial(void* component);
+    ENGINEAPI void* StaticMeshComponent_CreateDefaultMesh(void* component);
+
+    ENGINEAPI void Renderer_GetDirectionalLight(void* renderer, float* dirX, float* dirY, float* dirZ,
+                                                 float* colorR, float* colorG, float* colorB, float* colorA,
+                                                 float* ambR, float* ambG, float* ambB, float* ambA);
+    ENGINEAPI int Renderer_GetPointLightCount(void* renderer);
+    ENGINEAPI void Renderer_GetPointLight(void* renderer, int index,
+                                           float* posX, float* posY, float* posZ,
+                                           float* colorR, float* colorG, float* colorB, float* intensity,
+                                           float* radius, float* falloff);
+
+    ENGINEAPI void Renderer_SetDirectionalLightIntensity(void* renderer, float intensity);
+    ENGINEAPI float Renderer_GetDirectionalLightIntensity(void* renderer);
+
+    ENGINEAPI void* Model_LoadAndGetSkeletalMesh(void* engine, const wchar_t* path);
+    ENGINEAPI void SkeletalMeshComponent_SetSkeletalMeshFromModel(void* component, void* engine, const wchar_t* path);
 }

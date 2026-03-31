@@ -78,6 +78,8 @@ public:
                             ID3D11Buffer* BoneMatrixBuffer);
 
     void SetDirectionalLight(const FDirectionalLight& Light) { DirectionalLight = Light; }
+    const FDirectionalLight& GetDirectionalLight() const { return DirectionalLight; }
+    FDirectionalLight& GetDirectionalLightMutable() { return DirectionalLight; }
 
     void AddPointLight(const FPointLight& Light);
     void RemovePointLight(UINT32 Index);

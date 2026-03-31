@@ -46,6 +46,7 @@ public partial class MainWindow : Window
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
+        _viewModel.SceneViewModel.Initialize();
         Viewport.Focus();
     }
 

@@ -492,6 +492,9 @@ void KRenderer::UpdateLightBuffer()
     LightData.DirLightDirection = DirectionalLight.Direction;
     LightData.NumSpotLights = static_cast<int32>(SpotLights.size() > MAX_SPOT_LIGHTS ? MAX_SPOT_LIGHTS : SpotLights.size());
     LightData.DirLightColor = DirectionalLight.Color;
+    LightData.DirLightColor.x *= DirectionalLight.Intensity;
+    LightData.DirLightColor.y *= DirectionalLight.Intensity;
+    LightData.DirLightColor.z *= DirectionalLight.Intensity;
     LightData.AmbientColor = DirectionalLight.AmbientColor;
 
     for (size_t i = 0; i < LightData.NumPointLights; ++i)

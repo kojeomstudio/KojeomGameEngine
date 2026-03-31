@@ -8,6 +8,7 @@ public class SceneViewModel : ViewModelBase
     private string _sceneName = "Untitled Scene";
     private ActorViewModel? _selectedActor;
     private EngineInterop? _engine;
+    private IntPtr _activeScenePtr = IntPtr.Zero;
 
     public string SceneName
     {
@@ -24,9 +25,16 @@ public class SceneViewModel : ViewModelBase
         {
             if (_selectedActor != value)
             {
+                if (_selectedActor != null)
+                {
+                    _selectedActor.PropertyChanged -= OnActorPropertyChanged;
+                }
                 _selectedActor = value;
+                if (_selectedActor != null)
+                {
+                    _selectedActor.PropertyChanged += OnActorPropertyChanged;
+                }
                 OnPropertyChanged(nameof(SelectedActor));
-                SyncActorSelectionToEngine();
             }
         }
     }
@@ -37,7 +45,13 @@ public class SceneViewModel : ViewModelBase
         set { _engine = value; }
     }
 
+    public IntPtr ActiveScenePtr => _activeScenePtr;
+
     public SceneViewModel()
+    {
+    }
+
+    public void Initialize()
     {
         CreateNewScene();
     }
@@ -54,16 +68,9 @@ public class SceneViewModel : ViewModelBase
             if (scenePtr != IntPtr.Zero)
             {
                 _engine.SetActiveScene(scenePtr);
+                _activeScenePtr = scenePtr;
             }
         }
-
-        var dirLight = new ActorViewModel { Name = "Directional Light", ActorType = "Light" };
-        dirLight.AddComponent(new LightComponentViewModel { LightType = 0, Intensity = 1.0f });
-        Actors.Add(dirLight);
-
-        var mainCam = new ActorViewModel { Name = "Main Camera", ActorType = "Camera" };
-        mainCam.AddComponent(new CameraComponentViewModel());
-        Actors.Add(mainCam);
     }
 
     public void LoadScene(string path)
@@ -78,6 +85,7 @@ public class SceneViewModel : ViewModelBase
             if (scenePtr != IntPtr.Zero)
             {
                 _engine.SetActiveScene(scenePtr);
+                _activeScenePtr = scenePtr;
                 RefreshFromEngine();
             }
         }
@@ -97,17 +105,37 @@ public class SceneViewModel : ViewModelBase
 
     public void AddActor(string name, string type = "Actor")
     {
-        var actor = new ActorViewModel { Name = name, ActorType = type };
-        if (type == "StaticMesh")
+        IntPtr nativePtr = IntPtr.Zero;
+        if (_engine != null && _engine.IsInitialized && _activeScenePtr != IntPtr.Zero)
+        {
+            nativePtr = _engine.CreateActor(_activeScenePtr, name);
+        }
+
+        var actor = new ActorViewModel { Name = name, ActorType = type, NativePtr = nativePtr };
+        if (type == "StaticMesh" && nativePtr != IntPtr.Zero)
         {
             actor.AddComponent(new StaticMeshComponentViewModel());
+            var compPtr = _engine.AddComponent(nativePtr, 2);
+            if (compPtr != IntPtr.Zero)
+            {
+                _engine.CreateDefaultMesh(compPtr);
+            }
         }
+        else if (type == "SkeletalMesh" && nativePtr != IntPtr.Zero)
+        {
+            var compPtr = _engine.AddComponent(nativePtr, 3);
+        }
+
         Actors.Add(actor);
         SelectedActor = actor;
     }
 
     public void RemoveActor(ActorViewModel actor)
     {
+        if (_engine != null && _engine.IsInitialized && actor.NativePtr != IntPtr.Zero && _activeScenePtr != IntPtr.Zero)
+        {
+            _engine.DestroyActor(_activeScenePtr, actor.NativePtr);
+        }
         Actors.Remove(actor);
         if (SelectedActor == actor)
         {
@@ -130,6 +158,11 @@ public class SceneViewModel : ViewModelBase
     public void RefreshFromEngine()
     {
         if (_engine == null || !_engine.IsInitialized) return;
+
+        if (_selectedActor != null)
+        {
+            _selectedActor.PropertyChanged -= OnActorPropertyChanged;
+        }
 
         Actors.Clear();
 
@@ -161,6 +194,8 @@ public class SceneViewModel : ViewModelBase
             vm.ScaleY = sy;
             vm.ScaleZ = sz;
 
+            vm.IsVisible = _engine.IsActorVisible(actorPtr);
+
             int compCount = _engine.GetComponentCount(actorPtr);
             for (int j = 0; j < compCount; j++)
             {
@@ -175,14 +210,42 @@ public class SceneViewModel : ViewModelBase
 
             Actors.Add(vm);
         }
+
+        if (_selectedActor != null)
+        {
+            _selectedActor.PropertyChanged += OnActorPropertyChanged;
+        }
     }
 
-    private void SyncActorSelectionToEngine()
+    private void OnActorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (_engine == null || !_engine.IsInitialized) return;
-        if (SelectedActor == null || SelectedActor.NativePtr == IntPtr.Zero) return;
-        _engine.SetActorPosition(SelectedActor.NativePtr, SelectedActor.PositionX, SelectedActor.PositionY, SelectedActor.PositionZ);
-        _engine.SetActorScale(SelectedActor.NativePtr, SelectedActor.ScaleX, SelectedActor.ScaleY, SelectedActor.ScaleZ);
+        if (sender is not ActorViewModel actor || actor.NativePtr == IntPtr.Zero) return;
+
+        switch (e.PropertyName)
+        {
+            case nameof(ActorViewModel.PositionX):
+            case nameof(ActorViewModel.PositionY):
+            case nameof(ActorViewModel.PositionZ):
+                _engine.SetActorPosition(actor.NativePtr, actor.PositionX, actor.PositionY, actor.PositionZ);
+                break;
+            case nameof(ActorViewModel.RotationX):
+            case nameof(ActorViewModel.RotationY):
+            case nameof(ActorViewModel.RotationZ):
+                _engine.SetActorRotation(actor.NativePtr, actor.RotationX, actor.RotationY, actor.RotationZ, 0);
+                break;
+            case nameof(ActorViewModel.ScaleX):
+            case nameof(ActorViewModel.ScaleY):
+            case nameof(ActorViewModel.ScaleZ):
+                _engine.SetActorScale(actor.NativePtr, actor.ScaleX, actor.ScaleY, actor.ScaleZ);
+                break;
+            case nameof(ActorViewModel.Name):
+                _engine.SetActorName(actor.NativePtr, actor.Name);
+                break;
+            case nameof(ActorViewModel.IsVisible):
+                _engine.SetActorVisibility(actor.NativePtr, actor.IsVisible);
+                break;
+        }
     }
 }
 

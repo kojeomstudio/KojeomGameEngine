@@ -2,7 +2,7 @@
 
 ## Summary
 
-C++17 / DirectX 11 game engine with WPF-based editor (C# / .NET 8.0). Modular architecture with 12 engine modules, 20+ graphics sub-systems, and full editor integration via C#/C++ interop.
+C++17 / DirectX 11 game engine with WPF-based editor (C# / .NET 8.0). Modular architecture with 12 engine modules, 20 graphics sub-systems, and full editor integration via C#/C++ interop.
 
 ## Solution Structure
 
@@ -17,61 +17,64 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v145, C++17, x64)
 
 ## Engine Modules
 
-| Module | Path | Description |
-|--------|------|-------------|
-| Core | `Engine/Core/` | KEngine singleton, Win32 window, main loop, subsystem ownership |
-| Graphics | `Engine/Graphics/` | Full rendering pipeline (20+ sub-systems) |
-| Input | `Engine/Input/` | Keyboard, mouse, raw input, action mapping |
-| Audio | `Engine/Audio/` | XAudio2-based audio, 3D sound |
-| Physics | `Engine/Physics/` | Rigid body, collision detection, raycast |
-| Scene | `Engine/Scene/` | Actor-Component system, scene management, serialization |
-| Assets | `Engine/Assets/` | Static/skeletal mesh, skeleton, animation, model loader (FBX/OBJ/GLTF) |
-| Serialization | `Engine/Serialization/` | Binary archive, JSON archive (custom DOM parser) |
-| UI | `Engine/UI/` | Canvas-based UI (text, button, image, slider, checkbox, layouts) |
-| DebugUI | `Engine/DebugUI/` | ImGui debug overlay |
-| Utils | `Engine/Utils/` | Common.h, Logger.h, Math.h |
+| Module | Path | Files | Lines | Description |
+|--------|------|------:|------:|-------------|
+| Graphics | `Engine/Graphics/` | 70 | 22,988 | Full rendering pipeline (20 sub-systems) |
+| Assets | `Engine/Assets/` | 16 | 4,786 | Static/skeletal mesh, skeleton, animation, model loader |
+| UI | `Engine/UI/` | 27 | 2,513 | Canvas-based UI system |
+| Physics | `Engine/Physics/` | 6 | 1,122 | Rigid body, collision detection, raycast |
+| Core | `Engine/Core/` | 3 | 1,086 | KEngine singleton, Win32 window, main loop |
+| Audio | `Engine/Audio/` | 6 | 999 | XAudio2 audio, 3D sound |
+| Serialization | `Engine/Serialization/` | 4 | 945 | Binary archive, JSON archive |
+| Input | `Engine/Input/` | 3 | 774 | Keyboard, mouse, raw input, action mapping |
+| Scene | `Engine/Scene/` | 4 | 763 | Actor-Component system, scene management |
+| DebugUI | `Engine/DebugUI/` | 2 | 264 | ImGui debug overlay |
+| Utils | `Engine/Utils/` | 3 | 303 | Common.h, Logger.h, Math.h |
+| **Total** | | **147** | **36,543** | |
 
 ## Graphics Sub-Systems
 
-| Sub-System | Path | Feature |
-|------------|------|---------|
-| Forward/Deferred | `Graphics/Renderer.h`, `Graphics/Deferred/` | Dual render path support |
-| PBR | `Graphics/Material.h`, `Graphics/Renderer.h` | Metallic-Roughness workflow, 7 texture slots |
-| Shadows | `Graphics/Shadow/` | Shadow maps, cascaded shadow maps |
-| Post-Processing | `Graphics/PostProcess/` | HDR, bloom, auto exposure, DOF, motion blur, lens effects |
-| SSAO | `Graphics/SSAO/` | Screen-space ambient occlusion |
-| SSR | `Graphics/SSR/` | Screen-space reflections |
-| TAA | `Graphics/TAA/` | Temporal anti-aliasing |
-| SSGI | `Graphics/SSGI/` | Screen-space global illumination |
-| Sky | `Graphics/Sky/` | Procedural sky rendering |
-| Volumetric Fog | `Graphics/Volumetric/` | Volumetric fog effect |
-| Water | `Graphics/Water/` | Water rendering |
-| Terrain | `Graphics/Terrain/` | Terrain rendering |
-| IBL | `Graphics/IBL/` | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
-| LOD | `Graphics/LOD/` | LOD generation and system |
-| Particle | `Graphics/Particle/` | Particle system |
-| Culling | `Graphics/Culling/` | Frustum and GPU occlusion culling |
-| Instanced | `Graphics/Instanced/` | GPU instanced rendering |
-| Command Buffer | `Graphics/CommandBuffer/` | Deferred command-based rendering |
-| Debug | `Graphics/Debug/` | Debug renderer |
-| Performance | `Graphics/Performance/` | GPU timer, frame stats |
+| Sub-System | Path | Files | Lines | Feature |
+|------------|------|------:|------:|---------|
+| Core | `Graphics/` (root) | 16 | 5,815 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
+| PostProcess | `Graphics/PostProcess/` | 10 | 3,540 | HDR, bloom, auto exposure, DOF, motion blur |
+| Shadow | `Graphics/Shadow/` | 8 | 1,168 | Shadow maps, cascaded shadow maps |
+| Deferred | `Graphics/Deferred/` | 4 | 1,364 | G-Buffer, deferred renderer |
+| Debug | `Graphics/Debug/` | 2 | 982 | Debug wireframe/shape rendering |
+| IBL | `Graphics/IBL/` | 2 | 1,093 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
+| Terrain | `Graphics/Terrain/` | 2 | 848 | Terrain rendering |
+| LOD | `Graphics/LOD/` | 4 | 904 | LOD generation and system |
+| Water | `Graphics/Water/` | 2 | 655 | Water rendering |
+| SSAO | `Graphics/SSAO/` | 2 | 795 | Screen-space ambient occlusion |
+| SSGI | `Graphics/SSGI/` | 2 | 784 | Screen-space global illumination |
+| Sky | `Graphics/Sky/` | 2 | 646 | Procedural sky rendering |
+| Volumetric | `Graphics/Volumetric/` | 2 | 641 | Volumetric fog |
+| SSR | `Graphics/SSR/` | 2 | 649 | Screen-space reflections |
+| TAA | `Graphics/TAA/` | 2 | 591 | Temporal anti-aliasing |
+| Particle | `Graphics/Particle/` | 2 | 677 | Particle system |
+| Culling | `Graphics/Culling/` | 4 | 635 | Frustum and GPU occlusion culling |
+| CommandBuffer | `Graphics/CommandBuffer/` | 2 | 548 | Deferred command recording |
+| Instanced | `Graphics/Instanced/` | 2 | 274 | GPU instanced rendering |
+| Performance | `Graphics/Performance/` | 2 | 379 | GPU timer, frame stats |
 
 ## Key Design Patterns
 
 ### Entity-Component System
 - `KActor` owns `KActorComponent`s via `GetComponent<T>()`
-- Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`
+- Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`
 - `KScene` manages actors with parent-child hierarchy
-- Component types: Base, StaticMesh, SkeletalMesh, Water, Terrain
+- Component types: Transform, StaticMesh, SkeletalMesh, Light, Camera, Audio (stub), Physics (stub)
 
 ### Singletons
 - `KEngine::GetInstance()` - global engine instance
-- `KInputManager`, `KAudioManager`, `KDebugUI`
+- `KInputManager` - keyboard, mouse, raw input, action mapping
+- `KAudioManager` - XAudio2 audio engine
+- `KDebugUI` - ImGui debug overlay
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes ~40 flat C functions (`extern "C"`)
+- `EngineInterop.dll` exposes ~103 flat C functions (`extern "C"`)
 - C# consumes via P/Invoke (`DllImport`, `CallingConvention.Cdecl`)
-- Covers: Engine lifecycle, Scene/Actor CRUD, Camera, Renderer, Model loading, Components
+- API groups: Engine lifecycle (7), Scene management (8), Actor management (20), Camera (10), Renderer settings (12), Lighting (11), Material (8), Components (13), Model loading (8), Texture (2)
 
 ### Serialization
 - `KBinaryArchive` - binary read/write with stream operators
@@ -97,30 +100,62 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v145, C++17, x64)
 ```
 Editor/KojeomEditor/ (.NET 8.0, WPF)
 ├── Services/
-│   ├── EngineInterop.cs      # P/Invoke wrapper (~655 lines)
-│   └── UndoRedoService.cs    # Undo/Redo system
+│   ├── EngineInterop.cs      # P/Invoke wrapper (1,051 lines, 103 DllImport declarations)
+│   └── UndoRedoService.cs    # Undo/Redo system (276 lines, command pattern)
 ├── ViewModels/
 │   ├── MainViewModel.cs      # Main window VM, transform mode state
 │   ├── SceneViewModel.cs     # Scene hierarchy VM, engine sync
 │   ├── PropertiesViewModel.cs # Properties panel VM
-│   └── ComponentViewModel.cs # Component VM
+│   └── ComponentViewModel.cs # Component VM (StaticMesh, Light, Camera, Material)
 ├── Views/
-│   ├── ViewportControl.xaml  # D3D11 viewport (HwndHost), fly camera, object picking, drag-drop
-│   ├── SceneHierarchyControl.xaml  # Actor tree
-│   ├── PropertiesPanelControl.xaml # Transform/properties
-│   ├── MaterialEditorControl.xaml  # PBR material editing
-│   └── ContentBrowserControl.xaml  # Asset browser
+│   ├── ViewportControl.xaml  # Native Win32 child window D3D11 viewport, WASD fly camera, object picking, drag-drop
+│   ├── SceneHierarchyControl.xaml  # Actor tree with context menu
+│   ├── PropertiesPanelControl.xaml # Transform/properties editing
+│   ├── MaterialEditorControl.xaml  # PBR material editing, 7 presets
+│   └── ContentBrowserControl.xaml  # Asset browser with folder tree, thumbnails, drag-drop
 └── Styles/
-    └── CommonStyles.xaml     # Shared resource dictionary
+    └── CommonStyles.xaml     # VS Code dark theme colors
 ```
 
+### Editor Statistics
+
+| Category | Count |
+|----------|-------|
+| C# source files | 13 |
+| XAML files | 8 |
+| C# lines of code | 3,472 |
+| XAML lines | 746 |
+
 ### Editor Features
-- **Viewport**: Native D3D11 rendering via HwndHost, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning
+- **Viewport**: Native Win32 child window with D3D11 rendering, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning
 - **Transform Modes**: Select, Move, Rotate, Scale (toolbar buttons)
-- **Play/Pause/Stop**: Simulation control with scene state refresh
+- **Play/Pause/Stop**: Toolbar buttons (simulation logic scaffold only)
 - **Scene Management**: New, Open, Save scene files (.scene)
-- **Undo/Redo**: Action-based undo/redo service
+- **Undo/Redo**: Action-based undo/redo service (scaffold, not fully wired)
 - **Status Bar**: Real-time FPS, draw calls, vertex count display
+- **Material Editor**: PBR parameters (Albedo, Metallic, Roughness, AO), 7 presets (Default, Metal, Plastic, Rubber, Gold, Silver, Copper)
+
+## EngineInterop API
+
+### API Groups (~103 exported functions)
+
+| Group | Functions | Description |
+|-------|----------:|-------------|
+| Engine Lifecycle | 7 | Create, Destroy, Initialize, Tick, Render, Resize, InitializeEmbedded |
+| Subsystem Access | 2 | GetSceneManager, GetRenderer |
+| Scene Management | 8 | Create, Load, Save, SetActive, GetActive, Raycast, GetActorCount, GetActorAt |
+| Actor Management | 20 | Create, Destroy, Transform (Get/Set), Name, Components, Visibility, Hierarchy |
+| Camera | 10 | GetMain, Transform, Matrices, FOV, Near/Far |
+| Renderer Settings | 12 | RenderPath, DebugMode, Stats, SSAO, PostProcess, Shadow, Sky, TAA, DebugUI, SSR, VolumetricFog |
+| Directional Light | 7 | Set/Get properties, Direction, Color, Ambient, Intensity |
+| Point Light | 4 | Add, Clear, Count, Get |
+| Spot Light | 2 | Add, Clear |
+| Material | 8 | Set/Get Albedo, Metallic, Roughness, AO |
+| StaticMesh Component | 4 | Get, SetMesh, GetMaterial, CreateDefaultMesh |
+| SkeletalMesh Component | 8 | Get, Play/Stop/Pause/Resume, AnimationCount, AnimationName, LoadModel |
+| Model Loading | 6 | Load, Unload, LoadStaticMesh, LoadSkeletalMesh, HasSkeleton, AnimationInfo |
+| Texture | 2 | Load, Unload |
+| Other | 3 | GetLightComponent (stub), AddChild, GetChild, GetParent |
 
 ## Sample Projects
 
@@ -170,12 +205,14 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 
 | Category | Count |
 |----------|-------|
-| Engine source files (.h + .cpp) | 144 |
-| Engine total lines | ~36,000 |
+| Engine source files (.h + .cpp) | 147 |
+| Engine total lines | ~36,500 |
 | Editor C# files | 13 |
-| Editor XAML files | 9 |
+| Editor XAML files | 8 |
+| Editor C# lines | ~3,470 |
+| Editor XAML lines | ~750 |
 | Sample projects | 16 |
-| Total solution projects | 19 |
 | Engine modules | 12 |
 | Graphics sub-systems | 20 |
-| EngineInterop API functions | ~40 |
+| EngineInterop API functions | ~103 |
+| Total solution projects | 19 |

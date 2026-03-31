@@ -8,13 +8,13 @@ constexpr UINT32 MAX_SPOT_LIGHTS = 4;
 struct FDirectionalLight
 {
     XMFLOAT3 Direction   = {  0.5f, -1.0f,  0.5f };
-    float    Padding0    = 0.0f;
+    float    Intensity   = 1.0f;
     XMFLOAT4 Color       = {  1.0f,  0.95f, 0.9f, 1.0f };
     XMFLOAT4 AmbientColor= {  0.15f, 0.15f, 0.2f, 1.0f };
 
     FDirectionalLight() = default;
     FDirectionalLight(const XMFLOAT3& InDir, const XMFLOAT4& InColor, const XMFLOAT4& InAmbient)
-        : Direction(InDir), Color(InColor), AmbientColor(InAmbient) {}
+        : Direction(InDir), Intensity(1.0f), Color(InColor), AmbientColor(InAmbient) {}
 };
 
 struct FPointLight
