@@ -115,15 +115,15 @@ public class SceneViewModel : ViewModelBase
         if (type == "StaticMesh" && nativePtr != IntPtr.Zero)
         {
             actor.AddComponent(new StaticMeshComponentViewModel());
-            var compPtr = _engine.AddComponent(nativePtr, 2);
+            var compPtr = _engine!.AddComponent(nativePtr, 2);
             if (compPtr != IntPtr.Zero)
             {
-                _engine.CreateDefaultMesh(compPtr);
+                _engine!.CreateDefaultMesh(compPtr);
             }
         }
         else if (type == "SkeletalMesh" && nativePtr != IntPtr.Zero)
         {
-            var compPtr = _engine.AddComponent(nativePtr, 3);
+            var compPtr = _engine!.AddComponent(nativePtr, 3);
         }
 
         Actors.Add(actor);
