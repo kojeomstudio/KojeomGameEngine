@@ -63,7 +63,7 @@ Engine/
 ```
 Editor/
 ├── EngineInterop/      # C++ DLL exposing flat C API (extern "C") for P/Invoke
-│   ├── EngineAPI.h     # ~40 exported functions for engine operations
+│   ├── EngineAPI.h     # ~42 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes
 └── KojeomEditor/       # C# WPF editor (.NET 8.0)
     ├── Services/       # EngineInterop P/Invoke wrapper, UndoRedoService

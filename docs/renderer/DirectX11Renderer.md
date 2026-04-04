@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the DirectX 11 renderer architecture for KojeomGameEngine. The renderer provides a modern, flexible rendering pipeline with both Forward and Deferred rendering paths, PBR materials, and 20+ advanced rendering sub-systems.
+This document describes the DirectX 11 renderer architecture for KojeomGameEngine. The renderer provides a modern, flexible rendering pipeline with both Forward and Deferred rendering paths, PBR materials, and 20 advanced rendering sub-systems.
 
 ## Architecture
 

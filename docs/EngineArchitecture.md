@@ -19,7 +19,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v145, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 73 | 19,456 | Full rendering pipeline (20 sub-systems) |
+| Graphics | `Engine/Graphics/` | 73 | 19,474 | Full rendering pipeline (20 sub-systems) |
 | Assets | `Engine/Assets/` | 16 | 4,167 | Static/skeletal mesh, skeleton, animation, model loader |
 | UI | `Engine/UI/` | 27 | 2,132 | Canvas-based UI system |
 | Physics | `Engine/Physics/` | 6 | 922 | Rigid body, collision detection, raycast |
@@ -30,13 +30,13 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v145, C++17, x64)
 | Scene | `Engine/Scene/` | 4 | 629 | Actor-Component system, scene management |
 | DebugUI | `Engine/DebugUI/` | 2 | 241 | ImGui debug overlay |
 | Utils | `Engine/Utils/` | 3 | 260 | Common.h, Logger.h, Math.h |
-| **Total** | | **147** | **31,042** | |
+| **Total** | | **147** | **31,060** | |
 
 ## Graphics Sub-Systems
 
 | Sub-System | Path | Files | Lines | Feature |
 |------------|------|------:|------:|---------|
-| Core | `Graphics/` (root) | 15 | 5,004 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
+| Core | `Graphics/` (root) | 15 | 5,022 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
 | PostProcess | `Graphics/PostProcess/` | 10 | 2,964 | HDR, bloom, auto exposure, DOF, motion blur |
 | Shadow | `Graphics/Shadow/` | 8 | 1,003 | Shadow maps, cascaded shadow maps |
 | Deferred | `Graphics/Deferred/` | 4 | 1,180 | G-Buffer, deferred renderer |
@@ -72,7 +72,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v145, C++17, x64)
 - `KDebugUI` - ImGui debug overlay
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes ~103 flat C functions (`extern "C"`)
+- `EngineInterop.dll` exposes ~106 flat C functions (`extern "C"`)
 - C# consumes via P/Invoke (`DllImport`, `CallingConvention.Cdecl`)
 - API groups: Engine lifecycle (7), Scene management (8), Actor management (20), Camera (10), Renderer settings (12), Lighting (11), Material (8), Components (13), Model loading (8), Texture (2)
 
@@ -100,8 +100,8 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v145, C++17, x64)
 ```
 Editor/KojeomEditor/ (.NET 8.0, WPF)
 ├── Services/
-│   ├── EngineInterop.cs      # P/Invoke wrapper (1,051 lines, 103 DllImport declarations)
-│   └── UndoRedoService.cs    # Undo/Redo system (276 lines, command pattern)
+│   ├── EngineInterop.cs      # P/Invoke wrapper (841 lines, 106 DllImport declarations)
+│   └── UndoRedoService.cs    # Undo/Redo system (231 lines, command pattern)
 ├── ViewModels/
 │   ├── MainViewModel.cs      # Main window VM, transform mode state
 │   ├── SceneViewModel.cs     # Scene hierarchy VM, engine sync
@@ -123,8 +123,8 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 |----------|-------|
 | C# source files | 13 |
 | XAML files | 8 |
-| C# lines of code | 3,472 |
-| XAML lines | 746 |
+| C# lines of code | 2,925 |
+| XAML lines | 690 |
 
 ### Editor Features
 - **Viewport**: Native Win32 child window with D3D11 rendering, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning
@@ -209,10 +209,10 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Engine total lines | ~31,000 |
 | Editor C# files | 13 |
 | Editor XAML files | 8 |
-| Editor C# lines | ~3,470 |
-| Editor XAML lines | ~750 |
+| Editor C# lines | ~2,930 |
+| Editor XAML lines | ~690 |
 | Sample projects | 16 |
 | Engine modules | 12 |
 | Graphics sub-systems | 20 |
-| EngineInterop API functions | ~103 |
+| EngineInterop API functions | ~106 |
 | Total solution projects | 19 |

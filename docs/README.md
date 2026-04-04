@@ -35,7 +35,7 @@ KojeomGameEngine은 12개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 | Module | Files | Lines | Description |
 |--------|------:|------:|-------------|
-| Graphics | 73 | 19,456 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20 서브시스템) |
+| Graphics | 73 | 19,474 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20 서브시스템) |
 | Assets | 16 | 4,167 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 모델 로더 (FBX/OBJ/GLTF) |
 | UI | 27 | 2,132 | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
 | Core | 3 | 916 | KEngine - 윈도우 관리, 메인 루프, 서브시스템 소유 |
@@ -46,14 +46,14 @@ KojeomGameEngine은 12개 모듈로 구성된 모듈형 게임 엔진입니다:
 | Scene | 4 | 629 | Actor-Component 시스템, 씬 관리 |
 | DebugUI | 2 | 241 | ImGui 디버그 오버레이 |
 | Utils | 3 | 260 | Common.h, Logger.h, Math.h |
-| **Total** | **147** | **31,042** | |
+| **Total** | **147** | **31,060** | |
 
 ### Editor
 
 | Component | Files | Lines | Description |
 |-----------|------:|------:|-------------|
-| EngineInterop | 2 | 1,150 | C++ DLL (flat C API, ~103 exported functions) for C# P/Invoke |
-| KojeomEditor | 21 | 4,218 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Content Browser |
+| EngineInterop | 2 | 1,182 | C++ DLL (flat C API, ~106 exported functions) for C# P/Invoke |
+| KojeomEditor | 21 | 3,615 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Content Browser |
 
 ### Samples
 
