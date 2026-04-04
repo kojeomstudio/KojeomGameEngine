@@ -131,6 +131,12 @@ public:
     std::shared_ptr<KTexture> LoadTexture(ID3D11Device* Device, const std::wstring& Filename);
 
     /**
+     * @brief Remove a cached texture by path
+     * @param Filename Texture file path
+     */
+    void RemoveTexture(const std::wstring& Filename);
+
+    /**
      * @brief Create default textures
      * @param Device DirectX 11 device
      * @return S_OK on success

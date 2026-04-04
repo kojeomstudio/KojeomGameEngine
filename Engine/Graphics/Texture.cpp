@@ -334,3 +334,17 @@ std::shared_ptr<KTexture> KTextureManager::LoadTexture(ID3D11Device* Device, con
     TextureCache[Filename] = NewTexture;
     return NewTexture;
 }
+
+void KTextureManager::RemoveTexture(const std::wstring& Filename)
+{
+    auto It = TextureCache.find(Filename);
+    if (It != TextureCache.end())
+    {
+        if (It->second)
+        {
+            It->second->Cleanup();
+        }
+        TextureCache.erase(It);
+        LOG_INFO("Texture unloaded: " + StringUtils::WideToMultiByte(Filename));
+    }
+}

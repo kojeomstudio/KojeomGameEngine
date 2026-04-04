@@ -568,16 +568,41 @@ extern "C"
         if (!component) return nullptr;
         KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
         auto staticMesh = std::make_shared<KStaticMesh>();
-        std::vector<FVertex> vertices;
-        std::vector<uint32> indices;
-        for (uint32 i = 0; i < 24; ++i)
-        {
-            vertices.push_back(FVertex());
-        }
+
+        const XMFLOAT4 White = { 1.0f, 1.0f, 1.0f, 1.0f };
+        const XMFLOAT3 NUp   = {  0, 1, 0 };
+        const XMFLOAT3 NDown = {  0,-1, 0 };
+        const XMFLOAT3 NFwd  = {  0, 0,-1 };
+        const XMFLOAT3 NBack = {  0, 0, 1 };
+        const XMFLOAT3 NLeft = { -1, 0, 0 };
+        const XMFLOAT3 NRgt  = {  1, 0, 0 };
+
+        std::vector<FVertex> vertices = {
+            {{-1, 1,-1}, White, NUp,   {0,0}}, {{ 1, 1,-1}, White, NUp,   {1,0}},
+            {{ 1, 1, 1}, White, NUp,   {1,1}}, {{-1, 1, 1}, White, NUp,   {0,1}},
+            {{-1,-1, 1}, White, NDown, {0,0}}, {{ 1,-1, 1}, White, NDown, {1,0}},
+            {{ 1,-1,-1}, White, NDown, {1,1}}, {{-1,-1,-1}, White, NDown, {0,1}},
+            {{-1, 1,-1}, White, NFwd,  {0,0}}, {{ 1, 1,-1}, White, NFwd,  {1,0}},
+            {{ 1,-1,-1}, White, NFwd,  {1,1}}, {{-1,-1,-1}, White, NFwd,  {0,1}},
+            {{ 1, 1, 1}, White, NBack, {0,0}}, {{-1, 1, 1}, White, NBack, {1,0}},
+            {{-1,-1, 1}, White, NBack, {1,1}}, {{ 1,-1, 1}, White, NBack, {0,1}},
+            {{-1, 1, 1}, White, NLeft, {0,0}}, {{-1, 1,-1}, White, NLeft, {1,0}},
+            {{-1,-1,-1}, White, NLeft, {1,1}}, {{-1,-1, 1}, White, NLeft, {0,1}},
+            {{ 1, 1,-1}, White, NRgt,  {0,0}}, {{ 1, 1, 1}, White, NRgt,  {1,0}},
+            {{ 1,-1, 1}, White, NRgt,  {1,1}}, {{ 1,-1,-1}, White, NRgt,  {0,1}},
+        };
+        std::vector<uint32> indices = {
+            0, 2, 1,   3, 2, 0,
+            4, 6, 5,   4, 7, 6,
+            8, 9,10,   8,10,11,
+           12,13,14,  12,14,15,
+           16,17,18,  16,18,19,
+           20,21,22,  20,22,23,
+        };
         staticMesh->AddLOD(vertices, indices);
+        staticMesh->CalculateBounds();
         smc->SetStaticMesh(staticMesh);
         return staticMesh.get();
-        return nullptr;
     }
 
     ENGINEAPI void* SkeletalMeshComponent_PlayAnimation(void* component, const char* animName)
@@ -906,6 +931,13 @@ extern "C"
     ENGINEAPI void Texture_Unload(void* engine, const wchar_t* path)
     {
         if (!engine || !path) return;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto* textureMgr = wrapper->Engine->GetRenderer()->GetTextureManager();
+        if (textureMgr)
+        {
+            std::wstring wpath(path);
+            textureMgr->RemoveTexture(wpath);
+        }
     }
 
     ENGINEAPI void SkeletalMeshComponent_PauseAnimation(void* component)
