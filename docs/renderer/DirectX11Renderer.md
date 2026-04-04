@@ -58,11 +58,12 @@ Camera system with perspective and orthographic projection:
 - Dirty flag optimization for matrix updates
 - Mouse look and WASD movement support
 
-#### KShaderProgram
+#### KShader / KShaderProgram
 HLSL shader compilation and management:
 
+- `KShader`: Individual shader wrapper (vertex, pixel, geometry, hull, domain, compute)
+- `KShaderProgram`: Linked shader program with input layout and constant buffers
 - Compile from file or embedded string source
-- Vertex, Pixel, Geometry, Hull, Domain, Compute shader support
 - Input layout creation
 - Constant buffer management
 - Built-in shader programs: Basic, Phong, PhongShadow, PBR, Skinned, Water, DepthOnly
@@ -129,7 +130,7 @@ Texture resource management with caching:
 ┌─────────────────────────────────────────────────────────────┐
 │                   Deferred Frame Cycle                        │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Geometry Pass (G-Buffer)                                │
+│  1. Geometry Pass (G-Buffer via KGBuffer)                   │
 │     ├── World Position (RT0)                                │
 │     ├── World Normal (RT1)                                  │
 │     ├── Albedo + Alpha (RT2)                                │
@@ -227,8 +228,8 @@ cbuffer MaterialBuffer : register(b2)
 ### Environment Rendering
 - **KSkySystem** (`Graphics/Sky/`): Procedural sky rendering
 - **KVolumetricFog** (`Graphics/Volumetric/`): Volumetric fog
-- **KWater** (`Graphics/Water/`): Water rendering with reflections
-- **KTerrain** (`Graphics/Terrain/`): Heightmap-based terrain
+- **KWater** (`Graphics/Water/`): Water rendering with reflections; **KWaterComponent** for Actor-Component integration
+- **KTerrain** (`Graphics/Terrain/`): Heightmap-based terrain; **KTerrainComponent** for Actor-Component integration
 
 ### IBL System (`Graphics/IBL/`)
 - Diffuse irradiance map generation
@@ -277,7 +278,7 @@ cbuffer MaterialBuffer : register(b2)
 auto Triangle = Renderer.CreateTriangleMesh();
 auto Quad = Renderer.CreateQuadMesh();
 auto Cube = Renderer.CreateCubeMesh();
-auto Sphere = Renderer.CreateSphereMesh(32, 32);
+auto Sphere = Renderer.CreateSphereMesh(16, 16);
 ```
 
 ## Performance Guidelines

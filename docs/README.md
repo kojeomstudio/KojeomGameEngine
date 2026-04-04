@@ -52,8 +52,8 @@ KojeomGameEngine은 12개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 | Component | Files | Lines | Description |
 |-----------|------:|------:|-------------|
-| EngineInterop | 2 | 1,182 | C++ DLL (flat C API, ~106 exported functions) for C# P/Invoke |
-| KojeomEditor | 21 | 3,615 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Content Browser |
+| EngineInterop | 2 | 1,182 | C++ DLL (flat C API, 103 exported functions) for C# P/Invoke |
+| KojeomEditor | 21 | 4,218 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Content Browser |
 
 ### Samples
 

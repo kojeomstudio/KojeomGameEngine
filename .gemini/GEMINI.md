@@ -16,6 +16,9 @@ C++17 / DirectX 11 기반 게임 엔진입니다. WPF 기반 에디터(Editor/Ko
 | Functions | PascalCase | `Initialize()`, `BeginFrame()` |
 | Variables | camelCase | `graphicsDevice`, `currentCamera` |
 | Member booleans | `b` prefix | `bInFrame`, `bInitialized` |
+| Parameters | `In` prefix | `InGraphicsDevice`, `InMesh` |
+| Type Aliases | PascalCase | `ActorPtr`, `ComPtr<T>` |
+| Template Params | PascalCase | `T`, `FuncType` |
 
 ## DirectX 11 Rules
 
@@ -47,7 +50,7 @@ Editor/
 
 ## Architecture Patterns
 
-- **Entity-Component**: `KActor`가 `KActorComponent` 소유 (`GetComponent<T>()`)
+- **Entity-Component**: `KActor`가 `KActorComponent` 소유 (`GetComponent<T>()`) - KStaticMeshComponent, KSkeletalMeshComponent, KLightComponent, KCameraComponent, KTerrainComponent, KWaterComponent
 - **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KDebugUI`
 - **C#/C++ Interop**: `EngineInterop.dll` flat C API -> C# P/Invoke
 
@@ -71,6 +74,16 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 6. 컴파일러 경고를 무시하지 말 것
 7. 서드파티 라이브러리 코드를 수정하지 말 것
 8. 변경 사항은 문서(docs/)에 반영할 것
+
+## C# Editor Code Style
+
+- File-scoped namespaces: `namespace KojeomEditor;`
+- Classes/properties/methods: PascalCase
+- Private fields: `_camelCase` with underscore prefix (`_engine`, `_viewModel`)
+- Local variables: camelCase
+- MVVM pattern with `INotifyPropertyChanged` and `RelayCommand`
+- P/Invoke via `DllImport` with `CallingConvention.Cdecl`
+- `IDisposable` for native resource management
 
 ## Documentation
 

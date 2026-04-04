@@ -72,7 +72,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 - `KDebugUI` - ImGui debug overlay
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes ~106 flat C functions (`extern "C"`)
+- `EngineInterop.dll` exposes 103 flat C functions (`extern "C"`)
 - C# consumes via P/Invoke (`DllImport`, `CallingConvention.Cdecl`)
 - API groups: Engine lifecycle (7), Scene management (8), Actor management (20), Camera (10), Renderer settings (12), Lighting (11), Material (8), Components (13), Model loading (8), Texture (2)
 
@@ -100,8 +100,8 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 ```
 Editor/KojeomEditor/ (.NET 8.0, WPF)
 ├── Services/
-│   ├── EngineInterop.cs      # P/Invoke wrapper (841 lines, 106 DllImport declarations)
-│   └── UndoRedoService.cs    # Undo/Redo system (231 lines, command pattern)
+│   ├── EngineInterop.cs      # P/Invoke wrapper (1,051 lines, 95 DllImport declarations)
+│   └── UndoRedoService.cs    # Undo/Redo system (276 lines, command pattern)
 ├── ViewModels/
 │   ├── MainViewModel.cs      # Main window VM, transform mode state
 │   ├── SceneViewModel.cs     # Scene hierarchy VM, engine sync
@@ -123,8 +123,8 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 |----------|-------|
 | C# source files | 13 |
 | XAML files | 8 |
-| C# lines of code | 2,925 |
-| XAML lines | 690 |
+| C# lines of code | 3,472 |
+| XAML lines | 746 |
 
 ### Editor Features
 - **Viewport**: Native Win32 child window with D3D11 rendering, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning
@@ -137,7 +137,7 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 
 ## EngineInterop API
 
-### API Groups (~103 exported functions)
+### API Groups (103 exported functions)
 
 | Group | Functions | Description |
 |-------|----------:|-------------|
@@ -209,10 +209,10 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Engine total lines | ~31,000 |
 | Editor C# files | 13 |
 | Editor XAML files | 8 |
-| Editor C# lines | ~2,930 |
-| Editor XAML lines | ~690 |
+| Editor C# lines | ~3,472 |
+| Editor XAML lines | ~746 |
 | Sample projects | 16 |
 | Engine modules | 12 |
 | Graphics sub-systems | 20 |
-| EngineInterop API functions | ~106 |
+| EngineInterop API functions | ~103 |
 | Total solution projects | 19 |

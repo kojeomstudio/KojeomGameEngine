@@ -63,7 +63,7 @@ Engine/
 ```
 Editor/
 ├── EngineInterop/      # C++ DLL exposing flat C API (extern "C") for P/Invoke
-│   ├── EngineAPI.h     # ~42 exported functions for engine operations
+│   ├── EngineAPI.h     # 103 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes
 └── KojeomEditor/       # C# WPF editor (.NET 8.0)
     ├── Services/       # EngineInterop P/Invoke wrapper, UndoRedoService
@@ -85,11 +85,15 @@ Editor/
 | Member Variables | camelCase with 'b' prefix for booleans | `bInFrame`, `bDebugLayerEnabled` |
 | Constants | PascalCase in namespace | `Colors::CornflowerBlue`, `EngineConstants::DefaultFOV` |
 | Namespaces | PascalCase | `KojeomEngine::KDebugUI` |
+| Parameters | camelCase with 'In' prefix | `InGraphicsDevice`, `InMesh`, `InName` |
+| Type Aliases | PascalCase | `ActorPtr`, `ComponentPtr`, `ComPtr<T>` |
+| Template Params | PascalCase | `T`, `FuncType` |
 
 ### File Organization
 
 - Header files use `#pragma once`
-- Include order: Project includes -> External includes (D3D11, DirectXMath) -> Standard library
+- Include order: `#include "../Utils/Common.h"` first, then project headers, then external headers (D3D11, DirectXMath), then standard library
+- Use custom type aliases from `Engine/Utils/Common.h` (`uint8`, `uint32`, `int32`, etc.) instead of `<cstdint>` types directly
 - Source files paired: `ClassName.h` / `ClassName.cpp`
 
 ### Header File Structure
@@ -146,7 +150,7 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 
 ### Entity-Component System
 - `KActor` owns `KActorComponent`s via `GetComponent<T>()`
-- Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`
+- Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`, `KCameraComponent`, `KAudioComponent` (stub), `KPhysicsComponent` (stub), `KTerrainComponent`, `KWaterComponent`
 - `KScene` manages actors with parent-child hierarchy
 
 ### Singleton Subsystems
@@ -168,7 +172,9 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 
 1. **Use LOG macros**: `LOG_INFO()`, `LOG_WARNING()`, `LOG_ERROR()`, `LOG_HRESULT_ERROR()`
 2. **Return HRESULT** for functions that can fail
-3. **Validate pointers** at function entry
+3. **Use CHECK_HRESULT macro** to early-return on failure
+4. **Validate pointers** at function entry
+5. **Use cleanup macros**: `SAFE_RELEASE(p)`, `SAFE_DELETE(p)`, `SAFE_DELETE_ARRAY(p)`
 
 ## Memory Management
 
@@ -176,6 +182,7 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 2. **Use ComPtr** for all COM objects
 3. **Delete copy constructor/assignment** for resource-owning classes
 4. **Prefer stack allocation** for small, short-lived objects
+5. **Use `static_assert`** for 16-byte alignment on constant buffer structs
 
 ## Performance Guidelines
 
@@ -184,6 +191,17 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 3. Use Map/Unmap for frequently updated data, UpdateSubresource for rarely updated
 4. Use frustum and occlusion culling
 5. Profile with GPU timer (`KGPUTimer`)
+
+## C# Editor Code Style
+
+- **File-scoped namespaces**: `namespace KojeomEditor;`
+- Classes/properties/methods: PascalCase
+- Private fields: `_camelCase` with underscore prefix (`_engine`, `_viewModel`)
+- Local variables: camelCase
+- Nullable reference types enabled
+- MVVM pattern with `INotifyPropertyChanged` and `RelayCommand`
+- P/Invoke via `DllImport` with `CallingConvention.Cdecl`
+- `IDisposable` for native resource management
 
 ## Documentation Rules
 
