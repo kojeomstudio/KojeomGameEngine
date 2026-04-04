@@ -38,7 +38,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 |------------|------|------:|------:|---------|
 | Core | `Graphics/` (root) | 15 | 5,022 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
 | PostProcess | `Graphics/PostProcess/` | 10 | 2,964 | HDR, bloom, auto exposure, DOF, motion blur |
-| Shadow | `Graphics/Shadow/` | 8 | 1,003 | Shadow maps, cascaded shadow maps |
+| Shadow | `Graphics/Shadow/` | 8 | 1,003 | Shadow maps, cascaded shadow maps, skinned shadow shader for skeletal meshes |
 | Deferred | `Graphics/Deferred/` | 4 | 1,180 | G-Buffer, deferred renderer |
 | Debug | `Graphics/Debug/` | 2 | 874 | Debug wireframe/shape rendering |
 | IBL | `Graphics/IBL/` | 2 | 931 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
@@ -88,6 +88,11 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 - `KAnimationStateMachine` - state machine with transitions, conditions (float/bool parameters), blending, notifies
 - GPU skinning via `FSkinnedVertex` (4 bone influences) and `FBoneMatrixBuffer`
 
+### Skeletal Mesh Shadow Casting
+- `FShadowCaster` struct includes skeletal mesh fields: `bIsSkeletal`, `SkeletalVertexBuffer`, `SkeletalIndexBuffer`, `SkeletalIndexCount`, `BoneMatrixBuffer`
+- Skinned shadow shader (`SkinnedShadowShader`) renders skeletal meshes into shadow maps using bone matrix palette
+- Both `KShadowRenderer` and `KCascadedShadowRenderer` support skeletal shadow casters via `AddShadowCaster()`
+
 ### Model Loading
 - Primary: Assimp (when `USE_ASSIMP` is defined) - FBX, OBJ, GLTF, DAE, etc.
 - Fallback parsers (no Assimp required):
@@ -127,13 +132,13 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 | XAML lines | 746 |
 
 ### Editor Features
-- **Viewport**: Native Win32 child window with D3D11 rendering, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning
+- **Viewport**: Native Win32 child window with D3D11 rendering, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning, proper HWND positioning via `MoveWindow`/`ScreenToClient` for correct panel resizing
 - **Transform Modes**: Select, Move, Rotate, Scale (toolbar buttons)
 - **Play/Pause/Stop**: Toolbar buttons (simulation logic scaffold only)
 - **Scene Management**: New, Open, Save scene files (.scene)
-- **Undo/Redo**: Action-based undo/redo service (scaffold, not fully wired)
+- **Undo/Redo**: Action-based undo/redo wired to actor create/delete and transform operations (AddItemAction, RemoveItemAction, SetPropertyAction)
 - **Status Bar**: Real-time FPS, draw calls, vertex count display
-- **Material Editor**: PBR parameters (Albedo, Metallic, Roughness, AO), 7 presets (Default, Metal, Plastic, Rubber, Gold, Silver, Copper)
+- **Material Editor**: PBR parameters (Albedo, Metallic, Roughness, AO), 7 presets (Default, Metal, Plastic, Rubber, Gold, Silver, Copper); fully connected to engine via EngineInterop material API (Set/Get Albedo, Metallic, Roughness, AO)
 
 ## EngineInterop API
 
@@ -150,7 +155,7 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 | Directional Light | 7 | Set/Get properties, Direction, Color, Ambient, Intensity |
 | Point Light | 4 | Add, Clear, Count, Get |
 | Spot Light | 2 | Add, Clear |
-| Material | 8 | Set/Get Albedo, Metallic, Roughness, AO |
+| Material | 8 | Set/Get Albedo, Metallic, Roughness, AO (connected to editor MaterialEditorControl) |
 | StaticMesh Component | 4 | Get, SetMesh, GetMaterial, CreateDefaultMesh |
 | SkeletalMesh Component | 8 | Get, Play/Stop/Pause/Resume, AnimationCount, AnimationName, LoadModel |
 | Model Loading | 6 | Load, Unload, LoadStaticMesh, LoadSkeletalMesh, HasSkeleton, AnimationInfo |

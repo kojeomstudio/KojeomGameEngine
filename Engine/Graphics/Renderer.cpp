@@ -283,9 +283,17 @@ void KRenderer::RenderSkeletalMesh(KSkeletalMesh* InMesh, const XMMATRIX& WorldM
 
     ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
 
-    // TODO: Skeletal mesh shadow casting requires extending FShadowCaster
-    // to support KSkeletalMesh vertex buffers with bone matrix transforms.
-    // For now, skeletal meshes will not cast shadows.
+    if (bShadowsEnabled && ShadowRenderer.IsInitialized())
+    {
+        FShadowCaster Caster;
+        Caster.bIsSkeletal = true;
+        Caster.SkeletalVertexBuffer = InMesh->GetVertexBuffer();
+        Caster.SkeletalIndexBuffer = InMesh->GetIndexBuffer();
+        Caster.SkeletalIndexCount = InMesh->GetIndexCount();
+        Caster.BoneMatrixBuffer = BoneMatrixBuffer;
+        Caster.WorldMatrix = WorldMatrix;
+        ShadowRenderer.AddShadowCaster(Caster);
+    }
 
     SkinnedShader->Bind(Context);
 

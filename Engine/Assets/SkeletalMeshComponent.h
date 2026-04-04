@@ -93,6 +93,9 @@ public:
     uint32 GetVertexCount() const { return VertexCount; }
     uint32 GetIndexCount() const { return IndexCount; }
 
+    ID3D11Buffer* GetVertexBuffer() const { return VertexBuffer.Get(); }
+    ID3D11Buffer* GetIndexBuffer() const { return IndexBuffer.Get(); }
+
     bool IsValid() const { return VertexBuffer != nullptr; }
     void Cleanup();
 

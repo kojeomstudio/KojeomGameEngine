@@ -208,9 +208,10 @@ cbuffer MaterialBuffer : register(b2)
 
 ### Shadow System (`Graphics/Shadow/`)
 - **KShadowMap**: Standard shadow map rendering
-- **KShadowRenderer**: Shadow pass orchestration
+- **KShadowRenderer**: Shadow pass orchestration, including skinned shadow shader for skeletal mesh shadows
 - **KCascadedShadowMap**: Cascaded shadow maps for large scenes
 - **KCascadedShadowRenderer**: CSM pass with cascade splitting
+- **FShadowCaster**: Shadow caster data with skeletal mesh support (`bIsSkeletal`, `SkeletalVertexBuffer`, `SkeletalIndexBuffer`, `BoneMatrixBuffer`)
 
 ### Post-Processing Pipeline (`Graphics/PostProcess/`)
 - **KPostProcessor**: Central post-processing orchestrator
@@ -249,6 +250,7 @@ cbuffer MaterialBuffer : register(b2)
 - **Skinned shader**: Vertex shader with bone matrix palette
 - **Bone matrix buffer**: Up to 256 bones, 4 influences per vertex
 - **RenderSkeletalMesh()**: Dedicated skeletal mesh rendering path
+- **Skinned shadow shader**: Depth-only shader for skeletal mesh shadow casting (bone matrix palette support)
 
 ## API Reference
 

@@ -1,8 +1,15 @@
+using System.ComponentModel;
+using KojeomEditor.Services;
+
 namespace KojeomEditor.ViewModels;
 
 public class PropertiesViewModel : ViewModelBase
 {
     private ActorViewModel? _selectedActor;
+    private EngineInterop? _engine;
+    private MaterialViewModel _material = new();
+    private IntPtr _currentMaterialPtr = IntPtr.Zero;
+    private bool _syncingFromEngine;
 
     public ActorViewModel? SelectedActor
     {
@@ -12,13 +19,110 @@ public class PropertiesViewModel : ViewModelBase
             _selectedActor = value;
             OnPropertyChanged(nameof(SelectedActor));
             OnPropertyChanged(nameof(HasSelection));
+            SyncMaterialFromEngine();
         }
     }
 
     public bool HasSelection => SelectedActor != null;
 
+    public EngineInterop? Engine
+    {
+        get => _engine;
+        set { _engine = value; }
+    }
+
+    public MaterialViewModel Material => _material;
+
+    public PropertiesViewModel()
+    {
+        _material.PropertyChanged += OnMaterialPropertyChanged;
+    }
+
     public void SetSelectedActor(ActorViewModel? actor)
     {
         SelectedActor = actor;
+    }
+
+    private void SyncMaterialFromEngine()
+    {
+        _material.PropertyChanged -= OnMaterialPropertyChanged;
+
+        _currentMaterialPtr = IntPtr.Zero;
+
+        if (_engine == null || !_engine.IsInitialized || _selectedActor == null || _selectedActor.NativePtr == IntPtr.Zero)
+        {
+            ResetMaterialDefaults();
+            _material.PropertyChanged += OnMaterialPropertyChanged;
+            return;
+        }
+
+        var componentPtr = _engine.GetActorStaticMeshComponent(_selectedActor.NativePtr);
+        if (componentPtr == IntPtr.Zero)
+        {
+            ResetMaterialDefaults();
+            _material.PropertyChanged += OnMaterialPropertyChanged;
+            return;
+        }
+
+        var materialPtr = _engine.GetStaticMeshComponentMaterial(componentPtr);
+        if (materialPtr == IntPtr.Zero)
+        {
+            ResetMaterialDefaults();
+            _material.PropertyChanged += OnMaterialPropertyChanged;
+            return;
+        }
+
+        _currentMaterialPtr = materialPtr;
+
+        _syncingFromEngine = true;
+        var (r, g, b, a) = _engine.GetMaterialAlbedo(materialPtr);
+        _material.AlbedoR = r;
+        _material.AlbedoG = g;
+        _material.AlbedoB = b;
+        _material.AlbedoA = a;
+        _material.Metallic = _engine.GetMaterialMetallic(materialPtr);
+        _material.Roughness = _engine.GetMaterialRoughness(materialPtr);
+        _material.AO = _engine.GetMaterialAO(materialPtr);
+        _syncingFromEngine = false;
+
+        _material.PropertyChanged += OnMaterialPropertyChanged;
+    }
+
+    private void ResetMaterialDefaults()
+    {
+        _syncingFromEngine = true;
+        _material.AlbedoR = 1.0f;
+        _material.AlbedoG = 1.0f;
+        _material.AlbedoB = 1.0f;
+        _material.AlbedoA = 1.0f;
+        _material.Metallic = 0.0f;
+        _material.Roughness = 0.5f;
+        _material.AO = 1.0f;
+        _syncingFromEngine = false;
+    }
+
+    private void OnMaterialPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_syncingFromEngine) return;
+        if (_engine == null || !_engine.IsInitialized || _currentMaterialPtr == IntPtr.Zero) return;
+
+        switch (e.PropertyName)
+        {
+            case nameof(MaterialViewModel.AlbedoR):
+            case nameof(MaterialViewModel.AlbedoG):
+            case nameof(MaterialViewModel.AlbedoB):
+            case nameof(MaterialViewModel.AlbedoA):
+                _engine.SetMaterialAlbedo(_currentMaterialPtr, _material.AlbedoR, _material.AlbedoG, _material.AlbedoB, _material.AlbedoA);
+                break;
+            case nameof(MaterialViewModel.Metallic):
+                _engine.SetMaterialMetallic(_currentMaterialPtr, _material.Metallic);
+                break;
+            case nameof(MaterialViewModel.Roughness):
+                _engine.SetMaterialRoughness(_currentMaterialPtr, _material.Roughness);
+                break;
+            case nameof(MaterialViewModel.AO):
+                _engine.SetMaterialAO(_currentMaterialPtr, _material.AO);
+                break;
+        }
     }
 }

@@ -9,6 +9,8 @@ public class SceneViewModel : ViewModelBase
     private ActorViewModel? _selectedActor;
     private EngineInterop? _engine;
     private IntPtr _activeScenePtr = IntPtr.Zero;
+    private UndoRedoService? _undoRedo;
+    private bool _isUndoRedoInProgress;
 
     public string SceneName
     {
@@ -44,6 +46,15 @@ public class SceneViewModel : ViewModelBase
         get => _engine;
         set { _engine = value; }
     }
+
+    public UndoRedoService? UndoRedo
+    {
+        get => _undoRedo;
+        set { _undoRedo = value; }
+    }
+
+    public void BeginUndoRedoOperation() { _isUndoRedoInProgress = true; }
+    public void EndUndoRedoOperation() { _isUndoRedoInProgress = false; }
 
     public IntPtr ActiveScenePtr => _activeScenePtr;
 
@@ -126,17 +137,34 @@ public class SceneViewModel : ViewModelBase
             var compPtr = _engine!.AddComponent(nativePtr, 3);
         }
 
-        Actors.Add(actor);
+        if (_undoRedo != null)
+        {
+            _undoRedo.ExecuteAction(new AddItemAction<ActorViewModel>(Actors, actor));
+        }
+        else
+        {
+            Actors.Add(actor);
+        }
         SelectedActor = actor;
     }
 
     public void RemoveActor(ActorViewModel actor)
     {
+        if (!Actors.Contains(actor)) return;
+
+        if (_undoRedo != null)
+        {
+            _undoRedo.ExecuteAction(new RemoveItemAction<ActorViewModel>(Actors, actor));
+        }
+        else
+        {
+            Actors.Remove(actor);
+        }
+
         if (_engine != null && _engine.IsInitialized && actor.NativePtr != IntPtr.Zero && _activeScenePtr != IntPtr.Zero)
         {
             _engine.DestroyActor(_activeScenePtr, actor.NativePtr);
         }
-        Actors.Remove(actor);
         if (SelectedActor == actor)
         {
             SelectedActor = null;
@@ -227,18 +255,63 @@ public class SceneViewModel : ViewModelBase
             case nameof(ActorViewModel.PositionX):
             case nameof(ActorViewModel.PositionY):
             case nameof(ActorViewModel.PositionZ):
+            {
+                if (!_isUndoRedoInProgress && _undoRedo != null)
+                {
+                    var (oldX, oldY, oldZ) = _engine.GetActorPosition(actor.NativePtr);
+                    var newValues = (actor.PositionX, actor.PositionY, actor.PositionZ);
+                    if ((oldX, oldY, oldZ) != newValues)
+                    {
+                        _engine.SetActorPosition(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3);
+                        _undoRedo.ExecuteAction(new SetPropertyAction<(float, float, float)>(
+                            actor, "Position", (oldX, oldY, oldZ), newValues,
+                            v => { actor.PositionX = v.Item1; actor.PositionY = v.Item2; actor.PositionZ = v.Item3; }));
+                        break;
+                    }
+                }
                 _engine.SetActorPosition(actor.NativePtr, actor.PositionX, actor.PositionY, actor.PositionZ);
                 break;
+            }
             case nameof(ActorViewModel.RotationX):
             case nameof(ActorViewModel.RotationY):
             case nameof(ActorViewModel.RotationZ):
+            {
+                if (!_isUndoRedoInProgress && _undoRedo != null)
+                {
+                    _engine.GetActorRotation(actor.NativePtr, out float oldRx, out float oldRy, out float oldRz, out _);
+                    var newValues = (actor.RotationX, actor.RotationY, actor.RotationZ);
+                    if ((oldRx, oldRy, oldRz) != newValues)
+                    {
+                        _engine.SetActorRotation(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3, 0);
+                        _undoRedo.ExecuteAction(new SetPropertyAction<(float, float, float)>(
+                            actor, "Rotation", (oldRx, oldRy, oldRz), newValues,
+                            v => { actor.RotationX = v.Item1; actor.RotationY = v.Item2; actor.RotationZ = v.Item3; }));
+                        break;
+                    }
+                }
                 _engine.SetActorRotation(actor.NativePtr, actor.RotationX, actor.RotationY, actor.RotationZ, 0);
                 break;
+            }
             case nameof(ActorViewModel.ScaleX):
             case nameof(ActorViewModel.ScaleY):
             case nameof(ActorViewModel.ScaleZ):
+            {
+                if (!_isUndoRedoInProgress && _undoRedo != null)
+                {
+                    _engine.GetActorScale(actor.NativePtr, out float oldSx, out float oldSy, out float oldSz);
+                    var newValues = (actor.ScaleX, actor.ScaleY, actor.ScaleZ);
+                    if ((oldSx, oldSy, oldSz) != newValues)
+                    {
+                        _engine.SetActorScale(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3);
+                        _undoRedo.ExecuteAction(new SetPropertyAction<(float, float, float)>(
+                            actor, "Scale", (oldSx, oldSy, oldSz), newValues,
+                            v => { actor.ScaleX = v.Item1; actor.ScaleY = v.Item2; actor.ScaleZ = v.Item3; }));
+                        break;
+                    }
+                }
                 _engine.SetActorScale(actor.NativePtr, actor.ScaleX, actor.ScaleY, actor.ScaleZ);
                 break;
+            }
             case nameof(ActorViewModel.Name):
                 _engine.SetActorName(actor.NativePtr, actor.Name);
                 break;

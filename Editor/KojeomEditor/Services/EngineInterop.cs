@@ -968,6 +968,9 @@ public class EngineInterop : IDisposable
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern float Material_GetAO(IntPtr material);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Actor_GetStaticMeshComponent(IntPtr actor);
+
     #endregion
 
     public void SetActorName(IntPtr actor, string name)
@@ -1047,5 +1050,26 @@ public class EngineInterop : IDisposable
     {
         if (component == IntPtr.Zero) return;
         SkeletalMeshComponent_SetSkeletalMeshFromModel(component, _enginePtr, path);
+    }
+
+    public IntPtr GetActorStaticMeshComponent(IntPtr actor)
+    {
+        if (actor == IntPtr.Zero) return IntPtr.Zero;
+        return Actor_GetStaticMeshComponent(actor);
+    }
+
+    public void SetMaterialAlbedo(IntPtr material, float r, float g, float b, float a)
+    {
+        if (material != IntPtr.Zero) Material_SetAlbedo(material, r, g, b, a);
+    }
+
+    public void SetMaterialMetallic(IntPtr material, float value)
+    {
+        if (material != IntPtr.Zero) Material_SetMetallic(material, value);
+    }
+
+    public void SetMaterialRoughness(IntPtr material, float value)
+    {
+        if (material != IntPtr.Zero) Material_SetRoughness(material, value);
     }
 }

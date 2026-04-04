@@ -20,6 +20,7 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
         _engine = new EngineInterop();
         _viewModel.Engine = _engine;
+        _viewModel.PropertiesViewModel.Engine = _engine;
         _engine.LogMessage += OnEngineLogMessage;
 
         Viewport.Engine = _engine;
@@ -28,6 +29,8 @@ public partial class MainWindow : Window
 
         _viewModel.SceneViewModel.PropertyChanged += SceneViewModel_PropertyChanged;
         Viewport.ActorSelected += Viewport_ActorSelected;
+
+        MaterialEditor.MaterialViewModel = _viewModel.PropertiesViewModel.Material;
 
         Loaded += OnWindowLoaded;
         Closed += OnWindowClosed;
@@ -47,6 +50,7 @@ public partial class MainWindow : Window
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
         _viewModel.SceneViewModel.Initialize();
+        _viewModel.SceneViewModel.UndoRedo = _undoRedo;
         Viewport.Focus();
     }
 
@@ -91,8 +95,19 @@ public partial class MainWindow : Window
 
     private readonly UndoRedoService _undoRedo = new();
 
-    private void Undo() => _undoRedo.Undo();
-    private void Redo() => _undoRedo.Redo();
+    private void Undo()
+    {
+        _viewModel.SceneViewModel.BeginUndoRedoOperation();
+        _undoRedo.Undo();
+        _viewModel.SceneViewModel.EndUndoRedoOperation();
+    }
+
+    private void Redo()
+    {
+        _viewModel.SceneViewModel.BeginUndoRedoOperation();
+        _undoRedo.Redo();
+        _viewModel.SceneViewModel.EndUndoRedoOperation();
+    }
 
     private void DeleteSelected()
     {

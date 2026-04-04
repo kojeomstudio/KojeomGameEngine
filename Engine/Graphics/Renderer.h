@@ -221,8 +221,6 @@ private:
     void UpdateLightBuffer();
     void UpdateShadowBuffer();
     HRESULT CreateDebugResources();
-    void RenderShadowPass();
-
 private:
     KGraphicsDevice* GraphicsDevice = nullptr;
     KCamera* CurrentCamera = nullptr;

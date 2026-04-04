@@ -20,6 +20,11 @@ struct FShadowCaster
 {
     std::shared_ptr<KMesh> Mesh;
     XMMATRIX WorldMatrix;
+    bool bIsSkeletal = false;
+    ID3D11Buffer* SkeletalVertexBuffer = nullptr;
+    ID3D11Buffer* SkeletalIndexBuffer = nullptr;
+    uint32 SkeletalIndexCount = 0;
+    ID3D11Buffer* BoneMatrixBuffer = nullptr;
 };
 
 class KShadowRenderer
@@ -51,13 +56,16 @@ public:
 
 private:
     HRESULT CreateShadowShader(ID3D11Device* Device);
+    HRESULT CreateSkinnedShadowShader(ID3D11Device* Device);
     HRESULT CreateShadowBuffer(ID3D11Device* Device);
     void UpdateShadowBuffer(ID3D11DeviceContext* Context);
 
 private:
     KShadowMap ShadowMap;
     std::shared_ptr<KShaderProgram> ShadowShader;
+    std::shared_ptr<KShaderProgram> SkinnedShadowShader;
     ComPtr<ID3D11Buffer> ShadowConstantBuffer;
+    ComPtr<ID3D11Buffer> SkinnedShadowTransformBuffer;
     std::vector<FShadowCaster> ShadowCasters;
 
     XMMATRIX LightViewProjection;

@@ -47,10 +47,22 @@ public partial class ViewportControl : UserControl
     [DllImport("user32.dll")]
     private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
 
+    [DllImport("user32.dll")]
+    private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int X;
+        public int Y;
+        public POINT(int x, int y) { X = x; Y = y; }
+    }
+
     private const int WS_CHILD = 0x40000000;
     private const int WS_VISIBLE = 0x10000000;
     private const int SW_SHOW = 5;
     private IntPtr _childHwnd = IntPtr.Zero;
+    private IntPtr _parentHwnd = IntPtr.Zero;
 
     public static readonly DependencyProperty EngineProperty =
         DependencyProperty.Register(nameof(Engine), typeof(EngineInterop), typeof(ViewportControl),
@@ -140,19 +152,26 @@ public partial class ViewportControl : UserControl
         {
             if (contentPresenter.IsLoaded && _engine != null && !_engine.IsInitialized)
             {
-                var helper = new WindowInteropHelper(Window.GetWindow(this));
-                IntPtr parentHwnd = helper.Handle;
-                if (parentHwnd == IntPtr.Zero) return;
+                var parentWindow = Window.GetWindow(this);
+                if (parentWindow == null) return;
+
+                _hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+                _parentHwnd = _hwndSource?.Handle ?? IntPtr.Zero;
+                if (_parentHwnd == IntPtr.Zero) return;
 
                 int width = (int)ActualWidth;
                 int height = (int)ActualHeight;
                 if (width <= 0 || height <= 0) return;
 
+                var screenPoint = PointToScreen(new Point(0, 0));
+                var clientPoint = new POINT((int)screenPoint.X, (int)screenPoint.Y);
+                ScreenToClient(_parentHwnd, ref clientPoint);
+
                 _childHwnd = CreateWindowEx(
                     0, "Static", "KojeomViewport",
                     WS_CHILD | WS_VISIBLE,
-                    0, 0, width, height,
-                    parentHwnd, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                    clientPoint.X, clientPoint.Y, width, height,
+                    _parentHwnd, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 
                 if (_childHwnd != IntPtr.Zero)
                 {
@@ -521,9 +540,12 @@ public partial class ViewportControl : UserControl
         if (_engine?.IsInitialized == true && sizeInfo.NewSize.Width > 0 && sizeInfo.NewSize.Height > 0)
         {
             _engine.Resize((int)sizeInfo.NewSize.Width, (int)sizeInfo.NewSize.Height);
-            if (_childHwnd != IntPtr.Zero)
+            if (_childHwnd != IntPtr.Zero && _parentHwnd != IntPtr.Zero)
             {
-                MoveWindow(_childHwnd, 0, 0, (int)sizeInfo.NewSize.Width, (int)sizeInfo.NewSize.Height, true);
+                var screenPoint = PointToScreen(new Point(0, 0));
+                var clientPoint = new POINT((int)screenPoint.X, (int)screenPoint.Y);
+                ScreenToClient(_parentHwnd, ref clientPoint);
+                MoveWindow(_childHwnd, clientPoint.X, clientPoint.Y, (int)sizeInfo.NewSize.Width, (int)sizeInfo.NewSize.Height, true);
             }
         }
     }
