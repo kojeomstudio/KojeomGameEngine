@@ -6,7 +6,7 @@ Instructions for AI coding agents working in this repository.
 
 C++17 / DirectX 11 game engine with a WPF-based editor (C# / .NET 8.0). Supports Forward and Deferred rendering, PBR, skeletal animation, physics, audio, and a canvas UI system.
 
-- **Solution:** `KojeomEngine.sln` (Visual Studio 2022, MSVC v145, C++17, x64 only)
+- **Solution:** `KojeomEngine.sln` (Visual Studio 2022, MSVC v143, C++17, x64 only)
 - **Core Engine:** `Engine/` (static library, .lib)
 - **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL exposing flat C API for P/Invoke)
 - **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, x64)

@@ -7,7 +7,7 @@ C++17 / DirectX 11 game engine with WPF-based editor (C# / .NET 8.0). Modular ar
 ## Solution Structure
 
 ```
-KojeomEngine.sln (Visual Studio 2022, MSVC v145, C++17, x64)
+KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 ├── Engine/                    # Static library (.lib) - Core engine
 ├── Editor/
 │   ├── EngineInterop/         # C++ DLL (flat C API for P/Invoke)
