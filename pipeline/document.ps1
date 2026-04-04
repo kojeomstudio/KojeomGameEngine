@@ -2,7 +2,7 @@
 chcp 65001
 
 # 1. Get TeamCity environment variable
- $promptInput = $env:prompt_check
+ $promptInput = $env:prompt_document
 
 # 2. Verify variable value (for debugging - output to build log)
 Write-Host "Starting Coding Agent CLI execution."
