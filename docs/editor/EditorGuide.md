@@ -81,7 +81,7 @@ The editor communicates with the native C++ engine through a **flat C API** brid
 
 ```
 C# Editor (EngineInterop.cs)  ──P/Invoke──>  EngineInterop.dll (EngineAPI.cpp)  ──>  Engine C++ Core
-     96 DllImport declarations               extern "C" API (155 functions)        KEngine, KRenderer, etc.
+     96 DllImport declarations               extern "C" API (103 functions)        KEngine, KRenderer, etc.
 ```
 
 ### C++ Side (`Editor/EngineInterop/EngineAPI.h`)

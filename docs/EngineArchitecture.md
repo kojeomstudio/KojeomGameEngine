@@ -19,7 +19,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 73 | 19,474 | Full rendering pipeline (20 sub-systems) |
+| Graphics | `Engine/Graphics/` | 73 | 23,184 | Full rendering pipeline (20 sub-systems) |
 | Assets | `Engine/Assets/` | 16 | 4,167 | Static/skeletal mesh, skeleton, animation, model loader |
 | UI | `Engine/UI/` | 27 | 2,132 | Canvas-based UI system |
 | Physics | `Engine/Physics/` | 6 | 922 | Rigid body, collision detection, raycast |
@@ -30,32 +30,32 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | Scene | `Engine/Scene/` | 4 | 629 | Actor-Component system, scene management |
 | DebugUI | `Engine/DebugUI/` | 2 | 241 | ImGui debug overlay |
 | Utils | `Engine/Utils/` | 3 | 260 | Common.h, Logger.h, Math.h |
-| **Total** | | **147** | **31,060** | |
+| **Total** | | **147** | **34,772** | |
 
 ## Graphics Sub-Systems
 
 | Sub-System | Path | Files | Lines | Feature |
 |------------|------|------:|------:|---------|
-| Core | `Graphics/` (root) | 15 | 5,022 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
-| PostProcess | `Graphics/PostProcess/` | 10 | 2,964 | HDR, bloom, auto exposure, DOF, motion blur |
-| Shadow | `Graphics/Shadow/` | 8 | 1,003 | Shadow maps, cascaded shadow maps, skinned shadow shader for skeletal meshes |
-| Deferred | `Graphics/Deferred/` | 4 | 1,180 | G-Buffer, deferred renderer |
-| Debug | `Graphics/Debug/` | 2 | 874 | Debug wireframe/shape rendering |
-| IBL | `Graphics/IBL/` | 2 | 931 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
-| LOD | `Graphics/LOD/` | 4 | 784 | LOD generation and system |
-| Terrain | `Graphics/Terrain/` | 2 | 672 | Terrain rendering |
-| Particle | `Graphics/Particle/` | 2 | 563 | Particle system |
-| Culling | `Graphics/Culling/` | 4 | 527 | Frustum and GPU occlusion culling |
-| CommandBuffer | `Graphics/CommandBuffer/` | 2 | 525 | Deferred command recording |
-| SSAO | `Graphics/SSAO/` | 2 | 630 | Screen-space ambient occlusion |
-| SSGI | `Graphics/SSGI/` | 2 | 624 | Screen-space global illumination |
-| Sky | `Graphics/Sky/` | 2 | 574 | Procedural sky rendering |
-| Volumetric | `Graphics/Volumetric/` | 2 | 519 | Volumetric fog |
-| Water | `Graphics/Water/` | 2 | 541 | Water rendering |
-| SSR | `Graphics/SSR/` | 2 | 515 | Screen-space reflections |
-| TAA | `Graphics/TAA/` | 2 | 490 | Temporal anti-aliasing |
-| Performance | `Graphics/Performance/` | 2 | 309 | GPU timer, frame stats |
-| Instanced | `Graphics/Instanced/` | 2 | 227 | GPU instanced rendering |
+| Core | `Graphics/` (root) | 15 | 5,841 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
+| PostProcess | `Graphics/PostProcess/` | 10 | 3,540 | HDR, bloom, auto exposure, DOF, motion blur |
+| Shadow | `Graphics/Shadow/` | 8 | 1,338 | Shadow maps, cascaded shadow maps, skinned shadow shader for skeletal meshes |
+| Deferred | `Graphics/Deferred/` | 4 | 1,364 | G-Buffer, deferred renderer |
+| Debug | `Graphics/Debug/` | 2 | 982 | Debug wireframe/shape rendering |
+| IBL | `Graphics/IBL/` | 2 | 1,093 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
+| LOD | `Graphics/LOD/` | 4 | 904 | LOD generation and system |
+| Terrain | `Graphics/Terrain/` | 2 | 848 | Terrain rendering |
+| Particle | `Graphics/Particle/` | 2 | 677 | Particle system |
+| Culling | `Graphics/Culling/` | 4 | 635 | Frustum and GPU occlusion culling |
+| CommandBuffer | `Graphics/CommandBuffer/` | 2 | 548 | Deferred command recording |
+| SSAO | `Graphics/SSAO/` | 2 | 795 | Screen-space ambient occlusion |
+| SSGI | `Graphics/SSGI/` | 2 | 784 | Screen-space global illumination |
+| Sky | `Graphics/Sky/` | 2 | 646 | Procedural sky rendering |
+| Volumetric | `Graphics/Volumetric/` | 2 | 641 | Volumetric fog |
+| Water | `Graphics/Water/` | 2 | 655 | Water rendering |
+| SSR | `Graphics/SSR/` | 2 | 649 | Screen-space reflections |
+| TAA | `Graphics/TAA/` | 2 | 591 | Temporal anti-aliasing |
+| Performance | `Graphics/Performance/` | 2 | 379 | GPU timer, frame stats |
+| Instanced | `Graphics/Instanced/` | 2 | 274 | GPU instanced rendering |
 
 ## Key Design Patterns
 
@@ -105,7 +105,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 ```
 Editor/KojeomEditor/ (.NET 8.0, WPF)
 ├── Services/
-│   ├── EngineInterop.cs      # P/Invoke wrapper (1,051 lines, 95 DllImport declarations)
+│       ├── EngineInterop.cs      # P/Invoke wrapper (1,075 lines, 96 DllImport declarations)
 │   └── UndoRedoService.cs    # Undo/Redo system (276 lines, command pattern)
 ├── ViewModels/
 │   ├── MainViewModel.cs      # Main window VM, transform mode state
@@ -128,7 +128,7 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 |----------|-------|
 | C# source files | 13 |
 | XAML files | 8 |
-| C# lines of code | 3,472 |
+| C# lines of code | 3,710 |
 | XAML lines | 746 |
 
 ### Editor Features
@@ -211,10 +211,10 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Category | Count |
 |----------|-------|
 | Engine source files (.h + .cpp) | 147 |
-| Engine total lines | ~31,000 |
+| Engine total lines | ~34,772 |
 | Editor C# files | 13 |
 | Editor XAML files | 8 |
-| Editor C# lines | ~3,472 |
+| Editor C# lines | ~3,710 |
 | Editor XAML lines | ~746 |
 | Sample projects | 16 |
 | Engine modules | 12 |
