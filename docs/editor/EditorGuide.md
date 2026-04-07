@@ -43,7 +43,7 @@ Editor/
     ├── MainWindow.xaml / MainWindow.xaml.cs   # Root window with menus, toolbar, status bar
     ├── KojeomEditor.csproj                   # .NET 8.0 project with native DLL copy target
     ├── Services/                             # Business logic and engine bridge
-    │   ├── EngineInterop.cs                  # P/Invoke wrapper (96 DllImport declarations)
+    │   ├── EngineInterop.cs                  # P/Invoke wrapper (100 DllImport declarations)
     │   └── UndoRedoService.cs                # Command-pattern undo/redo system
     ├── ViewModels/                           # MVVM ViewModels
     │   ├── MainViewModel.cs                  # Root VM, ViewModelBase, RelayCommand, ETransformMode
@@ -55,6 +55,7 @@ Editor/
     │   ├── SceneHierarchyControl.xaml(.cs)   # Actor tree, context menu, drag reorder
     │   ├── PropertiesPanelControl.xaml(.cs)  # Transform + component inspectors (pure XAML binding)
     │   ├── MaterialEditorControl.xaml(.cs)   # PBR material editing, 7 presets
+    │   ├── RendererSettingsControl.xaml(.cs) # Rendering feature toggles (SSAO, PostProcess, Shadows, Sky, TAA, Debug UI, SSR, Volumetric Fog, Wireframe, Grid, Axis)
     │   └── ContentBrowserControl.xaml(.cs)   # Folder tree, asset grid, thumbnails, drag-drop
     └── Styles/
         └── CommonStyles.xaml                 # Shared XAML styles
@@ -80,8 +81,8 @@ The editor has minimal external dependencies, declared in `KojeomEditor.csproj`:
 The editor communicates with the native C++ engine through a **flat C API** bridge. The native side is compiled as a DLL (`EngineInterop.dll`) that exposes `extern "C"` functions, which the C# editor consumes via `DllImport` with `CallingConvention.Cdecl`.
 
 ```
-C# Editor (EngineInterop.cs)  ──P/Invoke──>  EngineInterop.dll (EngineAPI.cpp)  ──>  Engine C++ Core
-     96 DllImport declarations               extern "C" API (103 functions)        KEngine, KRenderer, etc.
+ C# Editor (EngineInterop.cs)  ──P/Invoke──>  EngineInterop.dll (EngineAPI.cpp)  ──>  Engine C++ Core
+     100 DllImport declarations               extern "C" API (107 functions)        KEngine, KRenderer, etc.
 ```
 
 ### C++ Side (`Editor/EngineInterop/EngineAPI.h`)
@@ -100,10 +101,11 @@ All native functions are declared as `extern "C"` with `ENGINEAPI` export macro.
 | **Components** | `Actor_AddComponent`, `Actor_GetComponentCount`, `Actor_GetComponentName`, `Actor_GetComponentType`, `Actor_GetStaticMeshComponent`, `Actor_GetSkeletalMeshComponent`, `Actor_GetLightComponent`, `StaticMeshComponent_SetMesh`, `StaticMeshComponent_GetMaterial`, `StaticMeshComponent_CreateDefaultMesh` | Component management |
 | **Animation** | `SkeletalMeshComponent_PlayAnimation`, `SkeletalMeshComponent_StopAnimation`, `SkeletalMeshComponent_PauseAnimation`, `SkeletalMeshComponent_ResumeAnimation`, `SkeletalMeshComponent_GetAnimationCount`, `SkeletalMeshComponent_GetAnimationName`, `SkeletalMeshComponent_SetSkeletalMeshFromModel` | Skeletal animation playback |
 | **Model/Texture** | `Model_Load`, `Model_Unload`, `Model_LoadAndGetStaticMesh`, `Model_LoadAndGetSkeletalMesh`, `Model_HasSkeleton`, `Model_GetAnimationCount`, `Model_GetAnimationName`, `Texture_Load`, `Texture_Unload` | Asset loading |
+| **DebugRenderer** | `DebugRenderer_DrawGrid`, `DebugRenderer_DrawAxis`, `DebugRenderer_SetEnabled`, `DebugRenderer_RenderFrame` | Debug rendering (grid, axis, overlay) |
 
 ### C# Side (`Editor/KojeomEditor/Services/EngineInterop.cs`)
 
-The `EngineInterop` class wraps all 96 P/Invoke declarations with a managed API. It implements `IDisposable` for proper cleanup of the native engine instance. Every method guards against uninitialized state by checking `_isInitialized` and `_enginePtr`.
+The `EngineInterop` class wraps all 100 P/Invoke declarations with a managed API. It implements `IDisposable` for proper cleanup of the native engine instance. Every method guards against uninitialized state by checking `_isInitialized` and `_enginePtr`.
 
 **P/Invoke declaration pattern:**
 
@@ -282,6 +284,7 @@ MainWindow.xaml (DataContext = MainViewModel)
   ├── SceneHierarchyControl ← binds SceneViewModel.Actors via DataContext chain
   ├── PropertiesPanelControl ← binds PropertiesViewModel.SelectedActor via DataContext chain
   ├── MaterialEditorControl  ← binds PropertiesViewModel.Material via DependencyProperties
+  ├── RendererSettingsControl ← binds Engine via DependencyProperty, checkbox events call EngineInterop
   └── ContentBrowserControl  ← self-contained DataContext, drag-drop events to ViewportControl
 
 MainViewModel
@@ -591,6 +594,48 @@ public class AssetItem
 }
 ```
 
+### 5.6 RendererSettingsControl
+
+**Location:** `Views/RendererSettingsControl.xaml` / `Views/RendererSettingsControl.xaml.cs`
+
+Provides toggle checkboxes for 11 rendering features with real-time synchronization to the native engine via `EngineInterop`.
+
+**Rendering Feature Toggles:**
+
+| Feature | Default | Engine API |
+|---------|---------|------------|
+| SSAO (Screen-Space Ambient Occlusion) | On | `Renderer_SetSSAOEnabled` |
+| Post Processing | On | `Renderer_SetPostProcessEnabled` |
+| Shadows | On | `Renderer_SetShadowEnabled` |
+| Sky | On | `Renderer_SetSkyEnabled` |
+| TAA (Temporal Anti-Aliasing) | On | `Renderer_SetTAAEnabled` |
+| Debug UI | Off | `Renderer_SetDebugUIEnabled` |
+| SSR (Screen-Space Reflections) | On | `Renderer_SetSSREnabled` |
+| Volumetric Fog | On | `Renderer_SetVolumetricFogEnabled` |
+| Wireframe Mode | Off | `Renderer_SetDebugMode` |
+| Show Grid | On | `DebugRenderer_DrawGrid` |
+| Show Axis | On | `DebugRenderer_DrawAxis` |
+
+**Implementation:**
+
+Each checkbox binds its `Checked`/`Unchecked` events to a handler that calls the corresponding `EngineInterop` method:
+
+```csharp
+private void OnSSAOChanged(object sender, RoutedEventArgs e)
+{
+    if (Engine != null) Engine.SetSSAOEnabled(CheckBoxSSAO.IsChecked == true);
+}
+
+private void OnShowGridChanged(object sender, RoutedEventArgs e)
+{
+    if (Engine != null)
+    {
+        bool show = CheckBoxShowGrid.IsChecked == true;
+        if (show) Engine.DebugRendererDrawGrid(0, 0, 0, 40.0f, 2.0f, 10);
+    }
+}
+```
+
 ---
 
 ## 6. UndoRedoService
@@ -785,7 +830,7 @@ private void Undo()
 |------|-------|----------|
 | **File** | New Scene, Open Scene, Save Scene, Exit | `Ctrl+N`, `Ctrl+O`, `Ctrl+S` |
 | **Edit** | Undo, Redo, Delete | `Ctrl+Z`, `Ctrl+Y`, `Delete` |
-| **View** | Scene Hierarchy (toggle), Properties (toggle), Content Browser (toggle) | - |
+| **View** | Scene Hierarchy (toggle), Properties (toggle), Content Browser (toggle), Renderer Settings (toggle) | - |
 | **Help** | About | - |
 
 ### Toolbar
@@ -860,6 +905,8 @@ InputBindings.Add(new KeyBinding(new RelayCommand(_ => DeleteSelected()),
 ```
 
 Column widths: Scene Hierarchy = 250px, Properties = 300px, Content Browser height = 200px.
+
+- **Renderer Settings**: Toggle panel for rendering features (SSAO, Post Processing, Shadows, Sky, TAA, Debug UI, SSR, Volumetric Fog, Wireframe Mode, Show Grid, Show Axis) with real-time engine sync via EngineInterop DebugRenderer API
 
 ---
 

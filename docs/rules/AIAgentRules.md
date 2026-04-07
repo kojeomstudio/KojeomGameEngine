@@ -63,12 +63,12 @@ Engine/
 ```
 Editor/
 ├── EngineInterop/      # C++ DLL exposing flat C API (extern "C") for P/Invoke
-│   ├── EngineAPI.h     # 103 exported functions for engine operations
+│   ├── EngineAPI.h     # 107 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes
 └── KojeomEditor/       # C# WPF editor (.NET 8.0)
     ├── Services/       # EngineInterop P/Invoke wrapper, UndoRedoService
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel
-    └── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, ContentBrowser
+    └── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser
 ```
 
 ## Code Style Guidelines
@@ -152,6 +152,7 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 - `KActor` owns `KActorComponent`s via `GetComponent<T>()`
 - Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`, `KCameraComponent`, `KAudioComponent` (stub), `KPhysicsComponent` (stub), `KTerrainComponent`, `KWaterComponent`
 - `KScene` manages actors with parent-child hierarchy
+- Component types: Transform, StaticMesh, SkeletalMesh, Light, Camera, Audio (stub), Physics (stub), Terrain, Water
 
 ### Singletons
 - `KEngine` (global instance via `GetInstance()`)
@@ -164,9 +165,10 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 - `KSubsystemRegistry` - owns and manages subsystems with type-based registration and ordered lifecycle
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes flat C API (`extern "C"`, `__declspec(dllexport)`)
-- C# consumes via P/Invoke (`DllImport`)
+- `EngineInterop.dll` exposes 107 flat C functions (`extern "C"`, `__declspec(dllexport)`)
+- C# consumes via P/Invoke (`DllImport`, 100 DllImport declarations)
 - Preprocessor: `ENGINEAPI_EXPORTS` controls dllexport/dllimport
+- API groups: Engine lifecycle (7), Scene management (8), Actor management (20), Camera (10), Renderer settings (12), Lighting (13), Material (8), Components (13), Model loading (8), Texture (2), DebugRenderer (4)
 
 ### Serialization
 - Binary archive (`KBinaryArchive`) for scene/mesh/skeleton data

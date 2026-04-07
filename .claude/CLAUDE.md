@@ -50,9 +50,9 @@ Editor/
 
 ## Architecture Patterns
 
-- **Entity-Component**: `KActor`가 `KActorComponent` 소유 (`GetComponent<T>()`) - KStaticMeshComponent, KSkeletalMeshComponent, KLightComponent, KCameraComponent, KTerrainComponent, KWaterComponent
+- **Entity-Component**: `KActor`가 `KActorComponent` 소유 (`GetComponent<T>()`) - KStaticMeshComponent, KSkeletalMeshComponent, KLightComponent, KCameraComponent, KTerrainComponent, KWaterComponent, KAudioComponent (stub), KPhysicsComponent (stub)
 - **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KDebugUI`
-- **C#/C++ Interop**: `EngineInterop.dll` flat C API -> C# P/Invoke
+- **C#/C++ Interop**: `EngineInterop.dll` flat C API (107 functions) -> C# P/Invoke
 
 ## Git Commit Format
 

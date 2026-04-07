@@ -121,6 +121,7 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 │   ├── SceneHierarchyControl.xaml  # Actor tree with context menu
 │   ├── PropertiesPanelControl.xaml # Transform/properties editing
 │   ├── MaterialEditorControl.xaml  # PBR material editing, 7 presets
+│   ├── RendererSettingsControl.xaml # Rendering feature toggles (11 checkboxes)
 │   └── ContentBrowserControl.xaml  # Asset browser with folder tree, thumbnails, drag-drop
 └── Styles/
     └── CommonStyles.xaml     # VS Code dark theme colors
@@ -130,13 +131,14 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 
 | Category | Count |
 |----------|-------|
-| C# source files | 13 |
-| XAML files | 8 |
-| C# lines of code | 3,710 |
-| XAML lines | 746 |
+| C# source files | 14 |
+| XAML files | 9 |
+| C# lines of code | 3,956 |
+| XAML lines | 789 |
 
 ### Editor Features
 - **Viewport**: Native Win32 child window with D3D11 rendering, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning, proper HWND positioning via `MoveWindow`/`ScreenToClient` for correct panel resizing
+- **Renderer Settings**: Toggle panel for rendering features (SSAO, Post Processing, Shadows, Sky, TAA, Debug UI, SSR, Volumetric Fog, Wireframe Mode, Show Grid, Show Axis) with real-time engine synchronization
 - **Transform Modes**: Select, Move, Rotate, Scale (toolbar buttons)
 - **Play/Pause/Stop**: Toolbar buttons (simulation logic scaffold only)
 - **Scene Management**: New, Open, Save scene files (.scene)
@@ -164,6 +166,7 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 | SkeletalMesh Component | 8 | Get, Play/Stop/Pause/Resume, AnimationCount, AnimationName, LoadModel |
 | Model Loading | 6 | Load, Unload, LoadStaticMesh, LoadSkeletalMesh, HasSkeleton, AnimationInfo |
 | Texture | 2 | Load, Unload |
+| DebugRenderer | 4 | DrawGrid, DrawAxis, SetEnabled, RenderFrame |
 | Other | 3 | GetLightComponent (stub), AddChild, GetChild, GetParent |
 
 ## Sample Projects
@@ -216,12 +219,12 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 |----------|-------|
 | Engine source files (.h + .cpp) | 147 |
 | Engine total lines | ~36,742 |
-| Editor C# files | 13 |
-| Editor XAML files | 8 |
-| Editor C# lines | ~3,710 |
-| Editor XAML lines | ~746 |
+| Editor C# files | 14 |
+| Editor XAML files | 9 |
+| Editor C# lines | ~3,956 |
+| Editor XAML lines | ~789 |
 | Sample projects | 16 |
 | Engine modules | 12 |
 | Graphics sub-systems | 20 |
-| EngineInterop API functions | ~103 |
+| EngineInterop API functions | ~107 |
 | Total solution projects | 19 |
