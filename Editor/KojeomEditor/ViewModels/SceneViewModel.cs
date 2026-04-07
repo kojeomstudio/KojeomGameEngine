@@ -11,6 +11,13 @@ public class SceneViewModel : ViewModelBase
     private IntPtr _activeScenePtr = IntPtr.Zero;
     private UndoRedoService? _undoRedo;
     private bool _isUndoRedoInProgress;
+    private bool _isEnginePaused;
+
+    public bool IsEnginePaused
+    {
+        get => _isEnginePaused;
+        set { _isEnginePaused = value; OnPropertyChanged(nameof(IsEnginePaused)); }
+    }
 
     public string SceneName
     {
@@ -136,6 +143,11 @@ public class SceneViewModel : ViewModelBase
         {
             var compPtr = _engine!.AddComponent(nativePtr, 3);
         }
+        else if (type == "Light" && nativePtr != IntPtr.Zero)
+        {
+            actor.AddComponent(new LightComponentViewModel());
+            var compPtr = _engine!.AddComponent(nativePtr, 4);
+        }
 
         if (_undoRedo != null)
         {
@@ -194,6 +206,8 @@ public class SceneViewModel : ViewModelBase
 
         Actors.Clear();
 
+        var allViewModels = new List<ActorViewModel>();
+
         int actorCount = _engine.GetActorCount();
         for (int i = 0; i < actorCount; i++)
         {
@@ -236,13 +250,44 @@ public class SceneViewModel : ViewModelBase
                 });
             }
 
-            Actors.Add(vm);
+            allViewModels.Add(vm);
+        }
+
+        var vmByPtr = new Dictionary<IntPtr, ActorViewModel>();
+        foreach (var vm in allViewModels)
+        {
+            vmByPtr[vm.NativePtr] = vm;
+        }
+
+        foreach (var vm in allViewModels)
+        {
+            var parentPtr = _engine.GetParent(vm.NativePtr);
+            if (parentPtr != IntPtr.Zero && vmByPtr.TryGetValue(parentPtr, out var parentVm))
+            {
+                vm.Parent = parentVm;
+                parentVm.Children.Add(vm);
+            }
+            else
+            {
+                Actors.Add(vm);
+            }
         }
 
         if (_selectedActor != null)
         {
             _selectedActor.PropertyChanged += OnActorPropertyChanged;
         }
+    }
+
+    public void MakeParentChild(ActorViewModel parent, ActorViewModel child)
+    {
+        if (_engine == null || !_engine.IsInitialized) return;
+        if (parent.NativePtr == IntPtr.Zero || child.NativePtr == IntPtr.Zero) return;
+
+        _engine.AddChild(parent.NativePtr, child.NativePtr);
+        Actors.Remove(child);
+        child.Parent = parent;
+        parent.Children.Add(child);
     }
 
     private void OnActorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -331,6 +376,10 @@ public class ActorViewModel : ViewModelBase
     private float _scaleX = 1, _scaleY = 1, _scaleZ = 1;
     private bool _isVisible = true;
     private IntPtr _nativePtr = IntPtr.Zero;
+
+    public ObservableCollection<ActorViewModel> Children { get; } = new();
+    public ActorViewModel? Parent { get; set; }
+    public bool HasChildren => Children.Count > 0;
 
     public string Name
     {

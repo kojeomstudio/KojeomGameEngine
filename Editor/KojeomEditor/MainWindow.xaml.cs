@@ -32,6 +32,8 @@ public partial class MainWindow : Window
 
         MaterialEditor.MaterialViewModel = _viewModel.PropertiesViewModel.Material;
 
+        RendererSettings.Engine = _engine;
+
         Loaded += OnWindowLoaded;
         Closed += OnWindowClosed;
 
@@ -174,12 +176,18 @@ public partial class MainWindow : Window
         {
             _isPlaying = true;
             _isPaused = false;
+            _viewModel.SceneViewModel.IsEnginePaused = false;
             StatusReady.Text = "Playing...";
+            StatusBar.Background = new System.Windows.Media.SolidColorBrush(
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#4CAF50"));
         }
         else if (_isPaused)
         {
             _isPaused = false;
+            _viewModel.SceneViewModel.IsEnginePaused = false;
             StatusReady.Text = "Playing...";
+            StatusBar.Background = new System.Windows.Media.SolidColorBrush(
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#4CAF50"));
         }
     }
 
@@ -188,7 +196,10 @@ public partial class MainWindow : Window
         if (_isPlaying && !_isPaused)
         {
             _isPaused = true;
+            _viewModel.SceneViewModel.IsEnginePaused = true;
             StatusReady.Text = "Paused";
+            StatusBar.Background = new System.Windows.Media.SolidColorBrush(
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#FF9800"));
         }
     }
 
@@ -198,11 +209,35 @@ public partial class MainWindow : Window
         {
             _isPlaying = false;
             _isPaused = false;
+            _viewModel.SceneViewModel.IsEnginePaused = false;
             StatusReady.Text = "Ready";
+            StatusBar.Background = new System.Windows.Media.SolidColorBrush(
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#007ACC"));
             if (_viewModel.SceneViewModel.Engine != null && _viewModel.SceneViewModel.Engine.IsInitialized)
             {
                 _viewModel.SceneViewModel.RefreshFromEngine();
             }
         }
+    }
+
+    private void MenuItem_ToggleSceneHierarchy_Click(object sender, RoutedEventArgs e)
+    {
+        SceneHierarchyPanel.Visibility = SceneHierarchyPanel.Visibility == Visibility.Collapsed ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void MenuItem_ToggleProperties_Click(object sender, RoutedEventArgs e)
+    {
+        PropertiesPanel.Visibility = PropertiesPanel.Visibility == Visibility.Collapsed ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void MenuItem_ToggleContentBrowser_Click(object sender, RoutedEventArgs e)
+    {
+        ContentBrowserPanel.Visibility = ContentBrowserPanel.Visibility == Visibility.Collapsed ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void MenuItem_About_Click(object sender, RoutedEventArgs e)
+    {
+        var message = "Kojeom Engine Editor\n\nVersion 1.0.0\n\nC++17 / DirectX 11 Game Engine\nC# / .NET 8.0 WPF Editor\n\nForward & Deferred Rendering\nPBR Materials • Skeletal Animation\nPhysics • Audio • UI System";
+        MessageBox.Show(message, "About Kojeom Engine Editor", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

@@ -971,6 +971,18 @@ public class EngineInterop : IDisposable
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr Actor_GetStaticMeshComponent(IntPtr actor);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void DebugRenderer_DrawGrid(IntPtr engine, float centerX, float centerY, float centerZ, float size, float cellSize, int subdivisions);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void DebugRenderer_DrawAxis(IntPtr engine, float originX, float originY, float originZ, float length);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void DebugRenderer_SetEnabled(IntPtr engine, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void DebugRenderer_RenderFrame(IntPtr engine, float deltaTime);
+
     #endregion
 
     public void SetActorName(IntPtr actor, string name)
@@ -1071,5 +1083,29 @@ public class EngineInterop : IDisposable
     public void SetMaterialRoughness(IntPtr material, float value)
     {
         if (material != IntPtr.Zero) Material_SetRoughness(material, value);
+    }
+
+    public void DebugRendererDrawGrid(float centerX, float centerY, float centerZ, float size, float cellSize, int subdivisions)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return;
+        DebugRenderer_DrawGrid(_enginePtr, centerX, centerY, centerZ, size, cellSize, subdivisions);
+    }
+
+    public void DebugRendererDrawAxis(float originX, float originY, float originZ, float length)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return;
+        DebugRenderer_DrawAxis(_enginePtr, originX, originY, originZ, length);
+    }
+
+    public void DebugRendererSetEnabled(bool enabled)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return;
+        DebugRenderer_SetEnabled(_enginePtr, enabled);
+    }
+
+    public void DebugRendererRenderFrame(float deltaTime)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return;
+        DebugRenderer_RenderFrame(_enginePtr, deltaTime);
     }
 }

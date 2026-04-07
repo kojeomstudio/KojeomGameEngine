@@ -1,0 +1,37 @@
+<UserControl x:Class="KojeomEditor.Views.RendererSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="250" d:DesignWidth="300">
+
+    <Grid Background="#1E1E1E">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#2D2D30" Padding="8,4">
+            <TextBlock Text="Renderer Settings" FontWeight="Bold" FontSize="12" Foreground="White"/>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="8">
+                <CheckBox x:Name="CheckBoxSSAO" Content="SSAO (Screen-Space Ambient Occlusion)" Foreground="White" Margin="0,4,0,4" Checked="OnSSAOChanged" Unchecked="OnSSAOChanged"/>
+                <CheckBox x:Name="CheckBoxPostProcess" Content="Post Processing" Foreground="White" Margin="0,4,0,4" Checked="OnPostProcessChanged" Unchecked="OnPostProcessChanged"/>
+                <CheckBox x:Name="CheckBoxShadows" Content="Shadows" Foreground="White" Margin="0,4,0,4" Checked="OnShadowsChanged" Unchecked="OnShadowsChanged"/>
+                <CheckBox x:Name="CheckBoxSky" Content="Sky" Foreground="White" Margin="0,4,0,4" Checked="OnSkyChanged" Unchecked="OnSkyChanged"/>
+                <CheckBox x:Name="CheckBoxTAA" Content="TAA (Temporal Anti-Aliasing)" Foreground="White" Margin="0,4,0,4" Checked="OnTAAChanged" Unchecked="OnTAAChanged"/>
+                <CheckBox x:Name="CheckBoxDebugUI" Content="Debug UI" Foreground="White" Margin="0,4,0,4" Checked="OnDebugUIChanged" Unchecked="OnDebugUIChanged"/>
+                <CheckBox x:Name="CheckBoxSSR" Content="SSR (Screen-Space Reflections)" Foreground="White" Margin="0,4,0,4" Checked="OnSSRChanged" Unchecked="OnSSRChanged"/>
+                <CheckBox x:Name="CheckBoxVolumetricFog" Content="Volumetric Fog" Foreground="White" Margin="0,4,0,4" Checked="OnVolumetricFogChanged" Unchecked="OnVolumetricFogChanged"/>
+                <Separator Background="#3F3F46" Margin="0,4,0,4"/>
+                <CheckBox x:Name="CheckBoxWireframe" Content="Wireframe Mode" Foreground="White" Margin="0,4,0,4" Checked="OnWireframeChanged" Unchecked="OnWireframeChanged"/>
+                <Separator Background="#3F3F46" Margin="0,4,0,4"/>
+                <CheckBox x:Name="CheckBoxShowGrid" Content="Show Grid" Foreground="White" Margin="0,4,0,4" IsChecked="True" Checked="OnShowGridChanged" Unchecked="OnShowGridChanged"/>
+                <CheckBox x:Name="CheckBoxShowAxis" Content="Show Axis" Foreground="White" Margin="0,4,0,4" IsChecked="True" Checked="OnShowAxisChanged" Unchecked="OnShowAxisChanged"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

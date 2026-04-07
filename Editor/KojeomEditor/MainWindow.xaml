@@ -38,12 +38,12 @@
                 <MenuItem Header="_Delete" InputGestureText="Delete" Click="MenuItem_Delete_Click"/>
             </MenuItem>
             <MenuItem Header="_View">
-                <MenuItem Header="Scene Hierarchy" IsCheckable="True" IsChecked="True"/>
-                <MenuItem Header="Properties" IsCheckable="True" IsChecked="True"/>
-                <MenuItem Header="Content Browser" IsCheckable="True" IsChecked="True"/>
+                <MenuItem x:Name="MenuItemSceneHierarchy" Header="Scene Hierarchy" IsCheckable="True" IsChecked="True" Click="MenuItem_ToggleSceneHierarchy_Click"/>
+                <MenuItem x:Name="MenuItemProperties" Header="Properties" IsCheckable="True" IsChecked="True" Click="MenuItem_ToggleProperties_Click"/>
+                <MenuItem x:Name="MenuItemContentBrowser" Header="Content Browser" IsCheckable="True" IsChecked="True" Click="MenuItem_ToggleContentBrowser_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="_About"/>
+                <MenuItem Header="_About" Click="MenuItem_About_Click"/>
             </MenuItem>
         </Menu>
 
@@ -88,7 +88,7 @@
                     <ColumnDefinition Width="300"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,0,1,0">
+                <Border x:Name="SceneHierarchyPanel" Grid.Column="0" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,0,1,0">
                     <views:SceneHierarchyControl/>
                 </Border>
 
@@ -96,27 +96,32 @@
                     <views:ViewportControl x:Name="Viewport"/>
                 </Border>
 
-                <Border Grid.Column="2" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1,0,0,0">
+                <Border x:Name="PropertiesPanel" Grid.Column="2" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1,0,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <views:PropertiesPanelControl Grid.Row="0"/>
                         <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" Background="#3F3F46"/>
-                        <views:MaterialEditorControl x:Name="MaterialEditor" Grid.Row="2" Height="400"/>
+                        <views:MaterialEditorControl x:Name="MaterialEditor" Grid.Row="2" Height="250"/>
+                        <GridSplitter Grid.Row="3" Height="4" HorizontalAlignment="Stretch" Background="#3F3F46"/>
+                        <views:RendererSettingsControl x:Name="RendererSettings" Grid.Row="4" Height="250"/>
                     </Grid>
                 </Border>
             </Grid>
 
             <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="#3F3F46"/>
 
-            <Border Grid.Row="2" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,1,0,0">
+            <Border x:Name="ContentBrowserPanel" Grid.Row="2" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,1,0,0">
                 <views:ContentBrowserControl/>
             </Border>
         </Grid>
 
-        <StatusBar Grid.Row="3" Background="#007ACC" Foreground="White">
+        <StatusBar Grid.Row="3" x:Name="StatusBar" Background="#007ACC" Foreground="White">
             <StatusBarItem>
                 <TextBlock x:Name="StatusReady" Text="Ready"/>
             </StatusBarItem>

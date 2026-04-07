@@ -242,6 +242,10 @@ public partial class ContentBrowserControl : UserControl
         }
         else if (SelectedAsset.Extension == ".scene")
         {
+            if (Window.GetWindow(this)?.DataContext is ViewModels.MainViewModel mainVm)
+            {
+                mainVm.SceneViewModel.LoadScene(SelectedAsset.Path);
+            }
         }
     }
     

@@ -11,6 +11,9 @@ public:
     PhysicsSample() = default;
     ~PhysicsSample() = default;
 
+    PhysicsSample(const PhysicsSample&) = delete;
+    PhysicsSample& operator=(const PhysicsSample&) = delete;
+
     HRESULT InitializeSample()
     {
         auto renderer = GetRenderer();
@@ -94,6 +97,14 @@ public:
             ball.BodyId = bodyId;
             ball.Radius = radius;
             ball.Color = XMFLOAT4(colorDist(gen), colorDist(gen), colorDist(gen), 1.0f);
+
+            auto graphicsDevice = GetGraphicsDevice();
+            if (graphicsDevice)
+            {
+                ball.ColorTexture = std::make_shared<KTexture>();
+                ball.ColorTexture->CreateSolidColor(graphicsDevice->GetDevice(), 4, 4, ball.Color);
+            }
+
             m_balls.push_back(ball);
         }
     }
@@ -133,13 +144,13 @@ public:
         }
     }
 
-    void Update(float DeltaTime) override
+    void Update(float deltaTime) override
     {
-        KEngine::Update(DeltaTime);
+        KEngine::Update(deltaTime);
 
         if (m_physicsWorld)
         {
-            m_physicsWorld->Update(DeltaTime);
+            m_physicsWorld->Update(deltaTime);
         }
 
         KInputManager* inputManager = GetInputManager();
@@ -154,7 +165,7 @@ public:
             if (camera)
             {
                 XMFLOAT3 camPos = camera->GetPosition();
-                float speed = 20.0f * DeltaTime;
+                float speed = 20.0f * deltaTime;
                 
                 if (inputManager->IsActionDown("MoveForward"))
                     camPos.z += speed;
@@ -170,12 +181,39 @@ public:
         }
     }
 
+protected:
+    void RenderFrame_Internal() override
+    {
+        auto renderer = GetRenderer();
+
+        XMMATRIX floorWorld = XMMatrixScaling(15.0f, 1.0f, 15.0f) *
+            XMMatrixTranslation(0.0f, -0.5f, 0.0f);
+        auto checkerTexture = renderer->GetTextureManager()->GetCheckerboardTexture();
+        renderer->RenderMeshLit(m_cubeMesh, floorWorld, checkerTexture);
+
+        for (const auto& ball : m_balls)
+        {
+            if (!m_physicsWorld)
+                break;
+
+            KRigidBody* body = m_physicsWorld->GetRigidBody(ball.BodyId);
+            if (!body)
+                continue;
+
+            XMFLOAT3 pos = body->GetPosition();
+            XMMATRIX ballWorld = XMMatrixScaling(ball.Radius, ball.Radius, ball.Radius) *
+                XMMatrixTranslation(pos.x, pos.y, pos.z);
+            renderer->RenderMeshLit(m_sphereMesh, ballWorld, ball.ColorTexture);
+        }
+    }
+
 private:
     struct FBall
     {
         uint32_t BodyId;
         XMFLOAT4 Color;
         float Radius;
+        std::shared_ptr<KTexture> ColorTexture;
     };
 
     std::unique_ptr<KPhysicsWorld> m_physicsWorld;

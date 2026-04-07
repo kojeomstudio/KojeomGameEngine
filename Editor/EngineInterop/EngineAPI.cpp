@@ -11,23 +11,36 @@
 #include <Engine/Scene/Actor.h>
 #include <Engine/Assets/StaticMeshComponent.h>
 #include <Engine/Assets/SkeletalMeshComponent.h>
+#include <Engine/Graphics/Debug/DebugRenderer.h>
 
 class FEngineWrapper
 {
 public:
     std::unique_ptr<KEngine> Engine;
     std::unique_ptr<KModelLoader> ModelLoader;
+    std::unique_ptr<KDebugRenderer> DebugRenderer;
 
     FEngineWrapper()
     {
         Engine = std::make_unique<KEngine>();
         ModelLoader = std::make_unique<KModelLoader>();
+        DebugRenderer = std::make_unique<KDebugRenderer>();
     }
 
     ~FEngineWrapper()
     {
+        DebugRenderer.reset();
         ModelLoader.reset();
         Engine.reset();
+    }
+
+    HRESULT InitializeDebugRenderer()
+    {
+        if (!DebugRenderer || !Engine) return E_FAIL;
+        if (DebugRenderer->IsInitialized()) return S_OK;
+        KGraphicsDevice* device = Engine->GetGraphicsDevice();
+        if (!device) return E_FAIL;
+        return DebugRenderer->Initialize(device);
     }
 };
 
@@ -63,6 +76,7 @@ extern "C"
         if (SUCCEEDED(hr))
         {
             wrapper->ModelLoader->Initialize();
+            wrapper->InitializeDebugRenderer();
         }
         return hr;
     }
@@ -76,6 +90,7 @@ extern "C"
         if (SUCCEEDED(hr))
         {
             wrapper->ModelLoader->Initialize();
+            wrapper->InitializeDebugRenderer();
         }
         return hr;
     }
@@ -1023,5 +1038,47 @@ extern "C"
         if (!actor) return nullptr;
         KActor* kactor = static_cast<KActor*>(actor);
         return kactor->GetParent();
+    }
+
+    ENGINEAPI void DebugRenderer_DrawGrid(void* engine, float centerX, float centerY, float centerZ, float size, float cellSize, int subdivisions)
+    {
+        if (!engine) return;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        if (!wrapper->DebugRenderer || !wrapper->DebugRenderer->IsEnabled()) return;
+        wrapper->DebugRenderer->DrawGrid(XMFLOAT3(centerX, centerY, centerZ), size, cellSize,
+                                         XMFLOAT4(0.3f, 0.3f, 0.3f, 0.5f), subdivisions);
+    }
+
+    ENGINEAPI void DebugRenderer_DrawAxis(void* engine, float originX, float originY, float originZ, float length)
+    {
+        if (!engine) return;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        if (!wrapper->DebugRenderer || !wrapper->DebugRenderer->IsEnabled()) return;
+        wrapper->DebugRenderer->DrawAxis(XMFLOAT3(originX, originY, originZ), length);
+    }
+
+    ENGINEAPI void DebugRenderer_SetEnabled(void* engine, bool enabled)
+    {
+        if (!engine) return;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        if (wrapper->DebugRenderer)
+        {
+            wrapper->DebugRenderer->SetEnabled(enabled);
+        }
+    }
+
+    ENGINEAPI void DebugRenderer_RenderFrame(void* engine, float deltaTime)
+    {
+        if (!engine) return;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        if (!wrapper->DebugRenderer || !wrapper->DebugRenderer->IsInitialized() || !wrapper->DebugRenderer->IsEnabled()) return;
+
+        KGraphicsDevice* device = wrapper->Engine->GetGraphicsDevice();
+        KCamera* camera = wrapper->Engine->GetCamera();
+        if (!device || !camera) return;
+
+        wrapper->DebugRenderer->BeginFrame();
+        wrapper->DebugRenderer->Render(device->GetContext(), camera);
+        wrapper->DebugRenderer->EndFrame(deltaTime);
     }
 }

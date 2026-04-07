@@ -176,6 +176,7 @@ public partial class ViewportControl : UserControl
                 if (_childHwnd != IntPtr.Zero)
                 {
                     _engine.InitializeEmbedded(_childHwnd, width, height);
+                    _engine.DebugRendererSetEnabled(true);
                     StartRendering();
                 }
             }
@@ -225,8 +226,14 @@ public partial class ViewportControl : UserControl
         if (deltaTime > 0 && deltaTime < 1.0f)
         {
             UpdateCameraMovement(deltaTime);
-            _engine.Tick(deltaTime);
+            if (SceneViewModel == null || !SceneViewModel.IsEnginePaused)
+            {
+                _engine.Tick(deltaTime);
+            }
+            _engine.DebugRendererDrawGrid(0, 0, 0, 40.0f, 2.0f, 10);
+            _engine.DebugRendererDrawAxis(0, 0.01f, 0, 2.0f);
             _engine.Render();
+            _engine.DebugRendererRenderFrame(deltaTime);
         }
     }
 
@@ -400,8 +407,23 @@ public partial class ViewportControl : UserControl
 
         foreach (var actor in SceneViewModel.Actors)
         {
-            if (actor.Name == name)
-                return actor;
+            var found = FindActorViewModelRecursive(actor, name);
+            if (found != null)
+                return found;
+        }
+        return null;
+    }
+
+    private static ActorViewModel? FindActorViewModelRecursive(ActorViewModel actor, string name)
+    {
+        if (actor.Name == name)
+            return actor;
+
+        foreach (var child in actor.Children)
+        {
+            var found = FindActorViewModelRecursive(child, name);
+            if (found != null)
+                return found;
         }
         return null;
     }

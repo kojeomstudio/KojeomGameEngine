@@ -42,6 +42,14 @@ public partial class SceneHierarchyControl : UserControl
         }
     }
 
+    private void AddLightActor_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ViewModels.MainViewModel mainVm)
+        {
+            mainVm.SceneViewModel.AddActor($"Light_{mainVm.SceneViewModel.Actors.Count + 1}", "Light");
+        }
+    }
+
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is ViewModels.MainViewModel mainVm && mainVm.SceneViewModel.SelectedActor != null)

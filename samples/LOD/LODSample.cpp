@@ -241,19 +241,14 @@ private:
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-    LODSample sample;
-    
-    if (FAILED(sample.Initialize(hInstance, L"LOD Sample - Level of Detail System", 1280, 720)))
-    {
-        MessageBox(nullptr, L"Failed to initialize sample", L"Error", MB_ICONERROR);
-        return -1;
-    }
-    
-    if (FAILED(sample.InitializeSample()))
-    {
-        MessageBox(nullptr, L"Failed to initialize sample content", L"Error", MB_ICONERROR);
-        return -1;
-    }
-    
-    return sample.Run();
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+    return KEngine::RunApplication<LODSample>(
+        hInstance, 
+        L"LOD Sample - Level of Detail System",
+        1280, 720,
+        [](LODSample* Sample) -> HRESULT {
+            return Sample->InitializeSample();
+        }
+    );
 }

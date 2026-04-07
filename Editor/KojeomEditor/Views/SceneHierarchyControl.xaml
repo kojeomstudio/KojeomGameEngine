@@ -30,7 +30,7 @@
                 </Style>
             </TreeView.ItemContainerStyle>
             <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="📦" Margin="0,0,5,0" FontSize="10" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
@@ -41,6 +41,7 @@
                 <ContextMenu>
                     <MenuItem Header="Add Actor" Click="AddActor_Click"/>
                     <MenuItem Header="Add Empty" Click="AddEmpty_Click"/>
+                    <MenuItem Header="Add Light Actor" Click="AddLightActor_Click"/>
                     <Separator/>
                     <MenuItem Header="Delete" Click="Delete_Click"/>
                 </ContextMenu>

@@ -152,4 +152,9 @@ extern "C"
 
     ENGINEAPI void* Model_LoadAndGetSkeletalMesh(void* engine, const wchar_t* path);
     ENGINEAPI void SkeletalMeshComponent_SetSkeletalMeshFromModel(void* component, void* engine, const wchar_t* path);
+
+    ENGINEAPI void DebugRenderer_DrawGrid(void* engine, float centerX, float centerY, float centerZ, float size, float cellSize, int subdivisions);
+    ENGINEAPI void DebugRenderer_DrawAxis(void* engine, float originX, float originY, float originZ, float length);
+    ENGINEAPI void DebugRenderer_SetEnabled(void* engine, bool enabled);
+    ENGINEAPI void DebugRenderer_RenderFrame(void* engine, float deltaTime);
 }
