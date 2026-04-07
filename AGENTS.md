@@ -7,7 +7,7 @@ Instructions for AI coding agents working in this repository.
 C++17 / DirectX 11 game engine with a WPF-based editor (C# / .NET 8.0). Supports Forward and Deferred rendering, PBR, skeletal animation, physics, audio, and a canvas UI system.
 
 - **Solution:** `KojeomEngine.sln` (Visual Studio 2022, MSVC v143, C++17, x64 only)
-- **Core Engine:** `Engine/` (static library, .lib)
+- **Core Engine:** `Engine/` (static library, .lib, third-party at `Engine/third_party/`)
 - **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL exposing flat C API for P/Invoke)
 - **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, x64)
 - **Samples:** `samples/` (16 sample projects demonstrating engine features)
@@ -113,7 +113,7 @@ private:
 
 - Return `HRESULT` for functions that can fail; check with `FAILED(hr)`
 - Use `CHECK_HRESULT(hr)` macro to early-return on failure
-- Use `LOG_INFO()`, `LOG_WARNING()`, `LOG_ERROR()`, `LOG_HRESULT_ERROR()` macros
+- Use `LOG_INFO()`, `LOG_WARNING()`, `LOG_ERROR()` macros
 - Validate pointers at function entry before use
 - Use `SAFE_RELEASE(p)`, `SAFE_DELETE(p)`, `SAFE_DELETE_ARRAY(p)` macros
 
@@ -152,7 +152,7 @@ private:
 
 ```
 Engine/
-├── Core/           # KEngine - window, main loop, subsystem ownership
+├── Core/           # KEngine - window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
 ├── Graphics/       # Device, renderer, camera, shader, mesh, material, texture, light
 │   ├── CommandBuffer/# Deferred command-based rendering
 │   ├── Debug/      # Debug renderer
@@ -201,7 +201,7 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 1. Read existing code before making changes to understand established patterns
 2. When modifying engine APIs, also update `Editor/EngineInterop/EngineAPI.h`, `EngineAPI.cpp`, and C# editor bindings in `Editor/KojeomEditor/Services/`
 3. Never use raw pointers for owning resources
-4. Never modify third-party library code under `Engine/lib/`
+4. Never modify third-party library code under `Engine/third_party/`
 5. Never commit debug/test code to main branch
 6. Never add new dependencies without explicit approval
 7. Never break existing APIs without updating all call sites

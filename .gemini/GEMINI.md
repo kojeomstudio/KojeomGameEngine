@@ -31,7 +31,7 @@ C++17 / DirectX 11 기반 게임 엔진입니다. WPF 기반 에디터(Editor/Ko
 
 ```
 Engine/
-├── Core/           # KEngine - 윈도우, 메인 루프, 서브시스템 관리
+├── Core/           # KEngine - 윈도우, 메인 루프, 서브시스템 관리, ISubsystem 인터페이스, KSubsystemRegistry
 ├── Graphics/       # 렌더링 파이프라인 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, 등)
 ├── Input/          # 키보드, 마우스, 액션 매핑
 ├── Audio/          # XAudio2 기반 오디오, 3D 사운드
@@ -72,7 +72,7 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 4. 리소스 소유 클래스는 복사 생성자/대입 연산자를 삭제할 것
 5. 원시 포인터로 리소스를 소유하지 말 것 (ComPtr, smart pointer 사용)
 6. 컴파일러 경고를 무시하지 말 것
-7. 서드파티 라이브러리 코드를 수정하지 말 것
+7. 서드파티 라이브러리 코드(`Engine/third_party/`)를 수정하지 말 것
 8. 변경 사항은 문서(docs/)에 반영할 것
 
 ## C# Editor Code Style
@@ -94,7 +94,7 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 
 ## Prohibited Actions
 
-- 서드파티 코드 수정
+- 서드파티 코드(`Engine/third_party/`) 수정
 - main 브랜치에 디버그/테스트 코드 커밋
 - 기존 API 파괴적 변경 없이 사용처 업데이트 누락
 - 승인 없는 새로운 의존성 추가

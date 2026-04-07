@@ -20,17 +20,17 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
 | Graphics | `Engine/Graphics/` | 73 | 23,184 | Full rendering pipeline (20 sub-systems) |
-| Assets | `Engine/Assets/` | 16 | 4,167 | Static/skeletal mesh, skeleton, animation, model loader |
-| UI | `Engine/UI/` | 27 | 2,132 | Canvas-based UI system |
-| Physics | `Engine/Physics/` | 6 | 922 | Rigid body, collision detection, raycast |
-| Core | `Engine/Core/` | 3 | 916 | KEngine singleton, Win32 window, main loop |
-| Audio | `Engine/Audio/` | 6 | 845 | XAudio2 audio, 3D sound |
-| Serialization | `Engine/Serialization/` | 4 | 819 | Binary archive, JSON archive |
-| Input | `Engine/Input/` | 3 | 655 | Keyboard, mouse, raw input, action mapping |
-| Scene | `Engine/Scene/` | 4 | 629 | Actor-Component system, scene management |
-| DebugUI | `Engine/DebugUI/` | 2 | 241 | ImGui debug overlay |
-| Utils | `Engine/Utils/` | 3 | 260 | Common.h, Logger.h, Math.h |
-| **Total** | | **147** | **34,772** | |
+| Assets | `Engine/Assets/` | 16 | 4,789 | Static/skeletal mesh, skeleton, animation, model loader |
+| UI | `Engine/UI/` | 27 | 2,513 | Canvas-based UI system |
+| Physics | `Engine/Physics/` | 6 | 1,122 | Rigid body, collision detection, raycast |
+| Core | `Engine/Core/` | 3 | 1,086 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
+| Audio | `Engine/Audio/` | 6 | 999 | XAudio2 audio, 3D sound |
+| Serialization | `Engine/Serialization/` | 4 | 945 | Binary archive, JSON archive |
+| Input | `Engine/Input/` | 3 | 774 | Keyboard, mouse, raw input, action mapping |
+| Scene | `Engine/Scene/` | 4 | 763 | Actor-Component system, scene management |
+| DebugUI | `Engine/DebugUI/` | 2 | 264 | ImGui debug overlay |
+| Utils | `Engine/Utils/` | 3 | 303 | Common.h, Logger.h, Math.h |
+| **Total** | | **147** | **36,742** | |
 
 ## Graphics Sub-Systems
 
@@ -70,6 +70,10 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 - `KInputManager` - keyboard, mouse, raw input, action mapping
 - `KAudioManager` - XAudio2 audio engine
 - `KDebugUI` - ImGui debug overlay
+
+### Subsystem Interface
+- `ISubsystem` - base interface with `Initialize()`, `Tick()`, `Shutdown()` lifecycle methods
+- `KSubsystemRegistry` - type-based registration, ordered initialization and reverse-order shutdown
 
 ### C#/C++ Interop
 - `EngineInterop.dll` exposes 103 flat C functions (`extern "C"`)
@@ -211,7 +215,7 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Category | Count |
 |----------|-------|
 | Engine source files (.h + .cpp) | 147 |
-| Engine total lines | ~34,772 |
+| Engine total lines | ~36,742 |
 | Editor C# files | 13 |
 | Editor XAML files | 8 |
 | Editor C# lines | ~3,710 |

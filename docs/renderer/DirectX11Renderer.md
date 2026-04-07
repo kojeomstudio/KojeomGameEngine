@@ -299,7 +299,7 @@ HRESULT hr = Renderer.Initialize(&GraphicsDevice);
 if (FAILED(hr))
 {
     LOG_ERROR("Failed to initialize renderer");
-    LOG_HRESULT_ERROR(hr);
+    CHECK_HRESULT(hr);
     return hr;
 }
 ```

@@ -18,7 +18,7 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 
 ```
 Engine/
-├── Core/               # KEngine - Main engine class, Win32 window, main loop, subsystem ownership
+├── Core/               # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
 ├── Graphics/           # Rendering pipeline and all visual subsystems
 │   ├── GraphicsDevice.h/cpp      # DirectX 11 device, swap chain, render targets
 │   ├── Renderer.h/cpp            # Central rendering orchestrator
@@ -153,11 +153,15 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 - Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`, `KCameraComponent`, `KAudioComponent` (stub), `KPhysicsComponent` (stub), `KTerrainComponent`, `KWaterComponent`
 - `KScene` manages actors with parent-child hierarchy
 
-### Singleton Subsystems
+### Singletons
 - `KEngine` (global instance via `GetInstance()`)
 - `KInputManager` (global instance)
 - `KAudioManager` (global instance)
 - `KDebugUI` (global instance, `KojeomEngine::KDebugUI`)
+
+### Subsystem Interface
+- `ISubsystem` - base interface for all engine modules (Initialize, Tick, Shutdown)
+- `KSubsystemRegistry` - owns and manages subsystems with type-based registration and ordered lifecycle
 
 ### C#/C++ Interop
 - `EngineInterop.dll` exposes flat C API (`extern "C"`, `__declspec(dllexport)`)
@@ -170,7 +174,7 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 
 ## Error Handling
 
-1. **Use LOG macros**: `LOG_INFO()`, `LOG_WARNING()`, `LOG_ERROR()`, `LOG_HRESULT_ERROR()`
+1. **Use LOG macros**: `LOG_INFO()`, `LOG_WARNING()`, `LOG_ERROR()`
 2. **Return HRESULT** for functions that can fail
 3. **Use CHECK_HRESULT macro** to early-return on failure
 4. **Validate pointers** at function entry
@@ -236,7 +240,7 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 
 ## Prohibited Actions
 
-1. **Do not** modify third-party library code
+1. **Do not** modify third-party library code under `Engine/third_party/`
 2. **Do not** commit debug/test code to main branch
 3. **Do not** break existing API without updating all usages (including EngineInterop and C# editor)
 4. **Do not** use raw pointers for owning resources
