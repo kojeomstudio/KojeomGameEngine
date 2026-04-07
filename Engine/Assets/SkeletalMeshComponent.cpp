@@ -150,6 +150,11 @@ void KSkeletalMeshComponent::Render(KRenderer* Renderer)
         return;
     }
 
+    if (bAnimationPlaying && !BoneMatrixBuffer)
+    {
+        CreateBoneMatrixBuffer(graphicsDevice->GetDevice());
+    }
+
     if (bAnimationPlaying && BoneMatrixBuffer)
     {
         UpdateBoneMatrices(context);

@@ -27,6 +27,7 @@ public:
     float GetLineHeight(float Scale = 1.0f) const;
 
     bool IsInitialized() const { return bInitialized; }
+    ID3D11ShaderResourceView* GetTextureSRV() const { return FontTextureSRV.Get(); }
 
 private:
     HRESULT LoadFontFile(const std::wstring& FontPath);

@@ -42,6 +42,7 @@ void KUICanvas::Cleanup()
     BlendState.Reset();
     RasterizerState.Reset();
     DepthStencilState.Reset();
+    NullTextureSRV.Reset();
 
     Device = nullptr;
     bInitialized = false;
@@ -81,6 +82,9 @@ HRESULT KUICanvas::Initialize(ID3D11Device* InDevice, UINT32 Width, UINT32 Heigh
     if (FAILED(hr)) return hr;
 
     hr = CompileShaders();
+    if (FAILED(hr)) return hr;
+
+    hr = CreateNullTexture();
     if (FAILED(hr)) return hr;
 
     bInitialized = true;
@@ -177,6 +181,36 @@ HRESULT KUICanvas::CreateDepthStencilState()
     desc.StencilEnable = FALSE;
 
     return Device->CreateDepthStencilState(&desc, &DepthStencilState);
+}
+
+HRESULT KUICanvas::CreateNullTexture()
+{
+    D3D11_TEXTURE2D_DESC texDesc = {};
+    texDesc.Width = 1;
+    texDesc.Height = 1;
+    texDesc.MipLevels = 1;
+    texDesc.ArraySize = 1;
+    texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    texDesc.SampleDesc.Count = 1;
+    texDesc.SampleDesc.Quality = 0;
+    texDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    uint32 whitePixel = 0xFFFFFFFF;
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = &whitePixel;
+    initData.SysMemPitch = sizeof(uint32);
+
+    ComPtr<ID3D11Texture2D> texture;
+    HRESULT hr = Device->CreateTexture2D(&texDesc, &initData, &texture);
+    if (FAILED(hr)) return hr;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = texDesc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+
+    return Device->CreateShaderResourceView(texture.Get(), &srvDesc, &NullTextureSRV);
 }
 
 HRESULT KUICanvas::CompileShaders()
@@ -297,6 +331,7 @@ void KUICanvas::Render(ID3D11DeviceContext* Context)
 
     BatchedVertices.clear();
     BatchedIndices.clear();
+    TexturedBatches.clear();
 
     XMMATRIX projection = XMMatrixOrthographicOffCenterLH(
         0.0f, static_cast<float>(CanvasWidth),
@@ -500,18 +535,109 @@ void KUICanvas::AddQuad(float X, float Y, float Width, float Height, const FColo
 
 void KUICanvas::AddQuad(float X, float Y, float Width, float Height, const FColor& Color, ID3D11ShaderResourceView* Texture)
 {
-    AddQuad(X, Y, Width, Height, Color);
+    if (!Texture)
+    {
+        AddQuad(X, Y, Width, Height, Color);
+        return;
+    }
+
+    AddTexturedQuad(X, Y, Width, Height, Color, FRect(0, 0, 1, 1), Texture);
+}
+
+void KUICanvas::AddTexturedQuad(float X, float Y, float Width, float Height, const FColor& Color, const FRect& UVRect, ID3D11ShaderResourceView* Texture)
+{
+    if (!Texture)
+    {
+        AddQuad(X, Y, Width, Height, Color);
+        return;
+    }
+
+    FTexturedBatch* targetBatch = nullptr;
+    if (!TexturedBatches.empty() && TexturedBatches.back().Texture == Texture)
+    {
+        targetBatch = &TexturedBatches.back();
+    }
+    else
+    {
+        TexturedBatches.push_back(FTexturedBatch());
+        TexturedBatches.back().Texture = Texture;
+        targetBatch = &TexturedBatches.back();
+    }
+
+    XMFLOAT4 color = Color.ToFloat4();
+    uint32 baseIndex = static_cast<uint32>(targetBatch->Vertices.size());
+
+    float u0 = UVRect.X;
+    float v0 = UVRect.Y;
+    float u1 = UVRect.X + UVRect.Width;
+    float v1 = UVRect.Y + UVRect.Height;
+
+    targetBatch->Vertices.push_back(FUIVertex(XMFLOAT3(X, Y, 0), XMFLOAT2(u0, v0), color));
+    targetBatch->Vertices.push_back(FUIVertex(XMFLOAT3(X + Width, Y, 0), XMFLOAT2(u1, v0), color));
+    targetBatch->Vertices.push_back(FUIVertex(XMFLOAT3(X + Width, Y + Height, 0), XMFLOAT2(u1, v1), color));
+    targetBatch->Vertices.push_back(FUIVertex(XMFLOAT3(X, Y + Height, 0), XMFLOAT2(u0, v1), color));
+
+    targetBatch->Indices.push_back(baseIndex + 0);
+    targetBatch->Indices.push_back(baseIndex + 1);
+    targetBatch->Indices.push_back(baseIndex + 2);
+    targetBatch->Indices.push_back(baseIndex + 0);
+    targetBatch->Indices.push_back(baseIndex + 2);
+    targetBatch->Indices.push_back(baseIndex + 3);
+}
+
+void KUICanvas::AddText(KUIFont* Font, const std::wstring& Text, float X, float Y, float Scale, const FColor& Color)
+{
+    if (!Font || !Font->IsInitialized() || Text.empty()) return;
+
+    ID3D11ShaderResourceView* fontTexture = Font->GetTextureSRV();
+
+    FTexturedBatch* targetBatch = nullptr;
+    if (!TexturedBatches.empty() && TexturedBatches.back().Texture == fontTexture)
+    {
+        targetBatch = &TexturedBatches.back();
+    }
+    else
+    {
+        TexturedBatches.push_back(FTexturedBatch());
+        TexturedBatches.back().Texture = fontTexture;
+        targetBatch = &TexturedBatches.back();
+    }
+
+    Font->RenderText(nullptr, Text, X, Y, Scale, Color, targetBatch->Vertices, targetBatch->Indices);
 }
 
 void KUICanvas::FlushDrawCommands(ID3D11DeviceContext* Context)
 {
-    if (BatchedVertices.empty() || BatchedIndices.empty())
-        return;
+    if (!Context) return;
 
-    UpdateBuffers(Context, BatchedVertices, BatchedIndices);
+    if (!BatchedVertices.empty() && !BatchedIndices.empty())
+    {
+        UpdateBuffers(Context, BatchedVertices, BatchedIndices);
 
-    Context->DrawIndexed(static_cast<UINT>(BatchedIndices.size()), 0, 0);
-    
+        Context->PSSetShaderResources(0, 1, NullTextureSRV.GetAddressOf());
+
+        Context->DrawIndexed(static_cast<UINT>(BatchedIndices.size()), 0, 0);
+    }
+
     BatchedVertices.clear();
     BatchedIndices.clear();
+
+    for (auto& batch : TexturedBatches)
+    {
+        if (batch.Vertices.empty() || batch.Indices.empty()) continue;
+
+        UpdateBuffers(Context, batch.Vertices, batch.Indices);
+
+        Context->PSSetShaderResources(0, 1, &batch.Texture);
+
+        Context->DrawIndexed(static_cast<UINT>(batch.Indices.size()), 0, 0);
+
+        batch.Vertices.clear();
+        batch.Indices.clear();
+    }
+
+    TexturedBatches.clear();
+
+    ID3D11ShaderResourceView* nullSRV = nullptr;
+    Context->PSSetShaderResources(0, 1, &nullSRV);
 }

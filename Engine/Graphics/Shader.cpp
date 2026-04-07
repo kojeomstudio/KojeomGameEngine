@@ -973,12 +973,12 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
         Texture2D ShadowMap : register(t3);
         SamplerComparisonState ShadowSampler : register(s0);
 
-        Texture2D AlbedoMap    : register(t0);
-        Texture2D NormalMap    : register(t1);
-        Texture2D MetallicMap  : register(t2);
-        Texture2D RoughnessMap : register(t3);
-        Texture2D AOMap        : register(t4);
-        Texture2D EmissiveMap  : register(t5);
+        Texture2D AlbedoMap    : register(t4);
+        Texture2D NormalMap    : register(t5);
+        Texture2D MetallicMap  : register(t6);
+        Texture2D RoughnessMap : register(t7);
+        Texture2D AOMap        : register(t8);
+        Texture2D EmissiveMap  : register(t9);
 
         SamplerState MaterialSampler : register(s1);
 

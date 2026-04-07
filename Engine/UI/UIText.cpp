@@ -1,6 +1,5 @@
 #include "UIText.h"
 #include "UICanvas.h"
-#include <vector>
 
 KUIText::KUIText()
     : Color(FColor::White())
@@ -35,9 +34,6 @@ void KUIText::Render(ID3D11DeviceContext* Context, KUICanvas* Canvas)
 
     if (!font || !font->IsInitialized()) return;
 
-    std::vector<FUIVertex> vertices;
-    std::vector<uint32> indices;
-
     float scale = FontSize;
     float textX = PositionX;
 
@@ -54,21 +50,11 @@ void KUIText::Render(ID3D11DeviceContext* Context, KUICanvas* Canvas)
 
     if (bHasDropShadow)
     {
-        font->RenderText(Context, Text, textX + DropShadowOffsetX, PositionY + DropShadowOffsetY,
-                         scale, DropShadowColor, vertices, indices);
+        Canvas->AddText(font.get(), Text, textX + DropShadowOffsetX,
+                        PositionY + DropShadowOffsetY, scale, DropShadowColor);
     }
 
-    font->RenderText(Context, Text, textX, PositionY, scale, Color, vertices, indices);
-
-    if (!vertices.empty() && !indices.empty())
-    {
-        UINT stride = sizeof(FUIVertex);
-        UINT offset = 0;
-        ID3D11Buffer* vb = nullptr;
-        ID3D11Buffer* ib = nullptr;
-        Context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-        Context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-    }
+    Canvas->AddText(font.get(), Text, textX, PositionY, scale, Color);
 }
 
 void KUIText::SetText(const std::wstring& InText)

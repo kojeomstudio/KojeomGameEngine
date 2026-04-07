@@ -99,13 +99,13 @@ void KMaterial::BindTextures(ID3D11DeviceContext* Context)
         }
     }
 
-    Context->PSSetShaderResources(0, static_cast<uint32>(EMaterialTextureSlot::Count), srvs);
+    Context->PSSetShaderResources(4, static_cast<uint32>(EMaterialTextureSlot::Count), srvs);
 }
 
 void KMaterial::UnbindTextures(ID3D11DeviceContext* Context)
 {
     ID3D11ShaderResourceView* nullSRVs[static_cast<uint32>(EMaterialTextureSlot::Count)] = {};
-    Context->PSSetShaderResources(0, static_cast<uint32>(EMaterialTextureSlot::Count), nullSRVs);
+    Context->PSSetShaderResources(4, static_cast<uint32>(EMaterialTextureSlot::Count), nullSRVs);
 }
 
 HRESULT KMaterial::CreateConstantBuffer()

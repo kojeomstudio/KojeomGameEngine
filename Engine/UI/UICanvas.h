@@ -10,6 +10,13 @@
 
 class KUIElement;
 
+struct FTexturedBatch
+{
+    ID3D11ShaderResourceView* Texture = nullptr;
+    std::vector<FUIVertex> Vertices;
+    std::vector<uint32> Indices;
+};
+
 class KUICanvas
 {
 public:
@@ -47,6 +54,8 @@ public:
     
     void AddQuad(float X, float Y, float Width, float Height, const FColor& Color);
     void AddQuad(float X, float Y, float Width, float Height, const FColor& Color, ID3D11ShaderResourceView* Texture);
+    void AddTexturedQuad(float X, float Y, float Width, float Height, const FColor& Color, const FRect& UVRect, ID3D11ShaderResourceView* Texture);
+    void AddText(KUIFont* Font, const std::wstring& Text, float X, float Y, float Scale, const FColor& Color);
     
     void FlushDrawCommands(ID3D11DeviceContext* Context);
 
@@ -59,6 +68,7 @@ private:
     HRESULT CreateRasterizerState();
     HRESULT CreateDepthStencilState();
     HRESULT CompileShaders();
+    HRESULT CreateNullTexture();
 
     void UpdateConstantBuffer(ID3D11DeviceContext* Context, const XMMATRIX& Transform);
     void UpdateBuffers(ID3D11DeviceContext* Context, const std::vector<FUIVertex>& Vertices, const std::vector<uint32>& Indices);
@@ -78,6 +88,8 @@ private:
     ComPtr<ID3D11RasterizerState> RasterizerState;
     ComPtr<ID3D11DepthStencilState> DepthStencilState;
 
+    ComPtr<ID3D11ShaderResourceView> NullTextureSRV;
+
     std::list<std::shared_ptr<KUIElement>> Elements;
     std::shared_ptr<KUIFont> DefaultFont;
 
@@ -90,4 +102,5 @@ private:
     
     std::vector<FUIVertex> BatchedVertices;
     std::vector<uint32> BatchedIndices;
+    std::vector<FTexturedBatch> TexturedBatches;
 };

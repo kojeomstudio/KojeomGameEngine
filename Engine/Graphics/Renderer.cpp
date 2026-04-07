@@ -262,8 +262,8 @@ void KRenderer::RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
     DrawCallCount++;
     VertexCount += static_cast<int32>(InMesh->GetVertexCount());
 
-    ID3D11ShaderResourceView* nullSRVs[7] = {};
-    Context->PSSetShaderResources(0, 7, nullSRVs);
+    ID3D11ShaderResourceView* nullSRVs[10] = {};
+    Context->PSSetShaderResources(0, 10, nullSRVs);
 
     PBRShader->Unbind(Context);
 }

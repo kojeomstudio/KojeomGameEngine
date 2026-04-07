@@ -10,6 +10,15 @@ KAnimationState::KAnimationState(const std::string& InName)
 {
 }
 
+KAnimationState::~KAnimationState()
+{
+    for (auto* Transition : Transitions)
+    {
+        delete Transition;
+    }
+    Transitions.clear();
+}
+
 void KAnimationState::AddTransition(KAnimationTransition* Transition)
 {
     if (Transition)
@@ -20,13 +29,19 @@ void KAnimationState::AddTransition(KAnimationTransition* Transition)
 
 void KAnimationState::RemoveTransition(const std::string& TargetStateName)
 {
-    Transitions.erase(
-        std::remove_if(Transitions.begin(), Transitions.end(),
-            [&TargetStateName](KAnimationTransition* T) {
-                return T && T->GetTargetState() == TargetStateName;
-            }),
-        Transitions.end()
-    );
+    auto It = Transitions.begin();
+    while (It != Transitions.end())
+    {
+        if (*It && (*It)->GetTargetState() == TargetStateName)
+        {
+            delete *It;
+            It = Transitions.erase(It);
+        }
+        else
+        {
+            ++It;
+        }
+    }
 }
 
 void KAnimationState::AddNotify(const FAnimNotify& Notify)

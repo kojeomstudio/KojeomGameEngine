@@ -1,6 +1,5 @@
 #include "UIImage.h"
 #include "UICanvas.h"
-#include <vector>
 
 KUIImage::KUIImage()
     : Tint(FColor::White())
@@ -30,11 +29,6 @@ void KUIImage::Render(ID3D11DeviceContext* Context, KUICanvas* Canvas)
 {
     if (!IsVisible() || !TextureSRV) return;
 
-    std::vector<FUIVertex> vertices;
-    std::vector<uint32> indices;
-
-    XMFLOAT4 color = Tint.ToFloat4();
-
     float x = PositionX;
     float y = PositionY;
     float w = Width;
@@ -58,31 +52,5 @@ void KUIImage::Render(ID3D11DeviceContext* Context, KUICanvas* Canvas)
         }
     }
 
-    float u0 = UVRect.X;
-    float v0 = UVRect.Y;
-    float u1 = UVRect.X + UVRect.Width;
-    float v1 = UVRect.Y + UVRect.Height;
-
-    uint32 baseIndex = 0;
-
-    vertices.push_back(FUIVertex(XMFLOAT3(x, y, 0), XMFLOAT2(u0, v0), color));
-    vertices.push_back(FUIVertex(XMFLOAT3(x + w, y, 0), XMFLOAT2(u1, v0), color));
-    vertices.push_back(FUIVertex(XMFLOAT3(x + w, y + h, 0), XMFLOAT2(u1, v1), color));
-    vertices.push_back(FUIVertex(XMFLOAT3(x, y + h, 0), XMFLOAT2(u0, v1), color));
-
-    indices.push_back(baseIndex + 0);
-    indices.push_back(baseIndex + 1);
-    indices.push_back(baseIndex + 2);
-    indices.push_back(baseIndex + 0);
-    indices.push_back(baseIndex + 2);
-    indices.push_back(baseIndex + 3);
-
-    Context->PSSetShaderResources(0, 1, TextureSRV.GetAddressOf());
-
-    UINT stride = sizeof(FUIVertex);
-    UINT offset = 0;
-    ID3D11Buffer* vb = nullptr;
-    ID3D11Buffer* ib = nullptr;
-    Context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-    Context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
+    Canvas->AddTexturedQuad(x, y, w, h, Tint, UVRect, TextureSRV.Get());
 }

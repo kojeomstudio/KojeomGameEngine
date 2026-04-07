@@ -1,12 +1,140 @@
 ﻿#include "Texture.h"
 
-// UTexture class implementation
+#include <wincodec.h>
+#pragma comment(lib, "windowscodecs.lib")
 
 HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filename)
 {
-    // For now, return success (texture loading implementation can be added later)
-    // This would typically use DirectXTex library or similar
-    LOG_WARNING("Texture loading from file not yet implemented: " + StringUtils::WideToMultiByte(Filename));
+    IWICImagingFactory* wicFactory = nullptr;
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(&wicFactory));
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Failed to create WIC imaging factory");
+        return hr;
+    }
+
+    IWICBitmapDecoder* decoder = nullptr;
+    hr = wicFactory->CreateDecoderFromFilename(Filename.c_str(), nullptr, GENERIC_READ,
+        WICDecodeMetadataCacheOnLoad, &decoder);
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Failed to create WIC bitmap decoder: " + StringUtils::WideToMultiByte(Filename));
+        wicFactory->Release();
+        return hr;
+    }
+
+    IWICBitmapFrameDecode* frame = nullptr;
+    hr = decoder->GetFrame(0, &frame);
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Failed to get WIC bitmap frame");
+        decoder->Release();
+        wicFactory->Release();
+        return hr;
+    }
+
+    IWICFormatConverter* converter = nullptr;
+    hr = wicFactory->CreateFormatConverter(&converter);
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Failed to create WIC format converter");
+        frame->Release();
+        decoder->Release();
+        wicFactory->Release();
+        return hr;
+    }
+
+    hr = converter->Initialize(frame, GUID_WICPixelFormat32bppRGBA,
+        WICBitmapDitherTypeNone, nullptr, 0.0f, WICBitmapPaletteTypeMedianCut);
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Failed to initialize WIC format converter");
+        converter->Release();
+        frame->Release();
+        decoder->Release();
+        wicFactory->Release();
+        return hr;
+    }
+
+    UINT textureWidth = 0;
+    UINT textureHeight = 0;
+    hr = converter->GetSize(&textureWidth, &textureHeight);
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Failed to get WIC converted image size");
+        converter->Release();
+        frame->Release();
+        decoder->Release();
+        wicFactory->Release();
+        return hr;
+    }
+
+    UINT stride = textureWidth * 4;
+    UINT imageSize = stride * textureHeight;
+    std::vector<BYTE> pixelData(imageSize);
+
+    hr = converter->CopyPixels(nullptr, stride, imageSize, pixelData.data());
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Failed to copy WIC pixel data");
+        converter->Release();
+        frame->Release();
+        decoder->Release();
+        wicFactory->Release();
+        return hr;
+    }
+
+    Width = textureWidth;
+    Height = textureHeight;
+    Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    D3D11_TEXTURE2D_DESC textureDesc = {};
+    textureDesc.Width = textureWidth;
+    textureDesc.Height = textureHeight;
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.Format = Format;
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.SampleDesc.Quality = 0;
+    textureDesc.Usage = D3D11_USAGE_DEFAULT;
+    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    textureDesc.CPUAccessFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = pixelData.data();
+    initData.SysMemPitch = stride;
+    initData.SysMemSlicePitch = 0;
+
+    hr = Device->CreateTexture2D(&textureDesc, &initData, &Texture);
+    if (FAILED(hr))
+    {
+        KLogger::HResultError(hr, "Failed to create texture from file: " + StringUtils::WideToMultiByte(Filename));
+        converter->Release();
+        frame->Release();
+        decoder->Release();
+        wicFactory->Release();
+        return hr;
+    }
+
+    converter->Release();
+    frame->Release();
+    decoder->Release();
+    wicFactory->Release();
+
+    hr = CreateShaderResourceView(Device);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    hr = CreateSamplerState(Device);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    LOG_INFO("Texture loaded: " + StringUtils::WideToMultiByte(Filename));
     return S_OK;
 }
 

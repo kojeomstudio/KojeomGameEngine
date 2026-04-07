@@ -64,7 +64,7 @@ class KAnimationState
 public:
     KAnimationState();
     KAnimationState(const std::string& InName);
-    ~KAnimationState() = default;
+    ~KAnimationState();
 
     KAnimationState(const KAnimationState&) = delete;
     KAnimationState& operator=(const KAnimationState&) = delete;

@@ -34,6 +34,8 @@ struct FConstantBuffer
     XMMATRIX ProjectionMatrix;
 };
 
+static_assert(sizeof(FConstantBuffer) % 16 == 0, "FConstantBuffer must be 16-byte aligned");
+
 /**
  * @brief 3D Mesh class
  * 
