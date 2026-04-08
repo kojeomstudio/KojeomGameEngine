@@ -63,10 +63,10 @@ Engine/
 ```
 Editor/
 ├── EngineInterop/      # C++ DLL exposing flat C API (extern "C") for P/Invoke
-│   ├── EngineAPI.h     # 106 exported functions for engine operations
+│   ├── EngineAPI.h     # 107 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
 └── KojeomEditor/       # C# WPF editor (.NET 8.0)
-    ├── Services/       # EngineInterop P/Invoke wrapper (1111 lines), UndoRedoService
+    ├── Services/       # EngineInterop P/Invoke wrapper (888 lines, 100 DllImport), UndoRedoService
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel
     └── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser
 ```
@@ -171,8 +171,8 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 - Registered subsystems: `KAudioSubsystem`, `KPhysicsSubsystem`
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes 106 flat C functions (`extern "C"`, `__declspec(dllexport)`)
-- C# consumes via P/Invoke (`DllImport`, ~80 DllImport declarations in `EngineInterop.cs`)
+- `EngineInterop.dll` exposes 107 flat C functions (`extern "C"`, `__declspec(dllexport)`)
+- C# consumes via P/Invoke (`DllImport`, 100 DllImport declarations in `EngineInterop.cs`)
 - Internal `FEngineWrapper` class manages engine instance, model loader, and debug renderer
 - String returns use `thread_local std::string` buffers
 - Preprocessor: `ENGINEAPI_EXPORTS` controls dllexport/dllimport
