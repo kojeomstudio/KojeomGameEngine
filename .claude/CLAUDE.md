@@ -56,7 +56,7 @@ samples/            # 16개 샘플 프로젝트
   - 엔진 컴포넌트: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KTerrainComponent`, `KWaterComponent`
   - `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4)
 - **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KDebugUI`
-- **C#/C++ Interop**: `EngineInterop.dll` flat C API (106 functions) -> C# P/Invoke
+- **C#/C++ Interop**: `EngineInterop.dll` flat C API (107 functions) -> C# P/Invoke
 
 ## Git Commit Format
 

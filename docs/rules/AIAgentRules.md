@@ -66,7 +66,7 @@ Editor/
 │   ├── EngineAPI.h     # 107 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
 └── KojeomEditor/       # C# WPF editor (.NET 8.0)
-    ├── Services/       # EngineInterop P/Invoke wrapper (888 lines, 100 DllImport), UndoRedoService
+    ├── Services/       # EngineInterop P/Invoke wrapper (1,111 lines, 100 DllImport), UndoRedoService
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel
     └── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser
 ```
