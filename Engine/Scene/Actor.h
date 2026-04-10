@@ -166,9 +166,6 @@ public:
     }
 
 private:
-    void SerializeActorHierarchy(KBinaryArchive& Archive, KActor* Actor);
-    void DeserializeActorHierarchy(KBinaryArchive& Archive, KActor* Parent);
-
 private:
     std::string Name;
     std::vector<ActorPtr> Actors;

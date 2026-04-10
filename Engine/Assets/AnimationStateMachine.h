@@ -84,9 +84,9 @@ public:
     void SetBlendDuration(float Duration) { BlendDuration = Duration; }
     float GetBlendDuration() const { return BlendDuration; }
 
-    void AddTransition(KAnimationTransition* Transition);
+    void AddTransition(std::unique_ptr<KAnimationTransition> Transition);
     void RemoveTransition(const std::string& TargetStateName);
-    const std::vector<KAnimationTransition*>& GetTransitions() const { return Transitions; }
+    const std::vector<std::unique_ptr<KAnimationTransition>>& GetTransitions() const { return Transitions; }
 
     void AddNotify(const FAnimNotify& Notify);
     void ClearNotifies() { Notifies.clear(); }
@@ -109,7 +109,7 @@ public:
 private:
     std::string Name;
     std::shared_ptr<KAnimation> Animation;
-    std::vector<KAnimationTransition*> Transitions;
+    std::vector<std::unique_ptr<KAnimationTransition>> Transitions;
     std::vector<FAnimNotify> Notifies;
 
     float CurrentTime = 0.0f;

@@ -1446,3 +1446,63 @@ void KRenderer::RenderSky()
 
     SkySystem.Render(CurrentCamera, GraphicsDevice->GetDepthStencilView());
 }
+
+void KRenderer::OnResize(UINT32 NewWidth, UINT32 NewHeight)
+{
+    if (!GraphicsDevice || NewWidth == 0 || NewHeight == 0)
+    {
+        return;
+    }
+
+    ID3D11Device* Device = GraphicsDevice->GetDevice();
+
+    if (DeferredRenderer.IsInitialized())
+    {
+        DeferredRenderer.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (PostProcessor.IsInitialized())
+    {
+        PostProcessor.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (SSAO.IsInitialized())
+    {
+        SSAO.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (SSR.IsInitialized())
+    {
+        SSR.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (TAA.IsInitialized())
+    {
+        TAA.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (VolumetricFog.IsInitialized())
+    {
+        VolumetricFog.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (SSGI.IsInitialized())
+    {
+        SSGI.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (MotionBlur.IsInitialized())
+    {
+        MotionBlur.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (DepthOfField.IsInitialized())
+    {
+        DepthOfField.Resize(Device, NewWidth, NewHeight);
+    }
+
+    if (LensEffects.IsInitialized())
+    {
+        LensEffects.Resize(Device, NewWidth, NewHeight);
+    }
+}

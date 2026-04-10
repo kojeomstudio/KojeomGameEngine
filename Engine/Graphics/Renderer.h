@@ -132,6 +132,8 @@ public:
 
     KGraphicsDevice* GetGraphicsDevice() const { return GraphicsDevice; }
 
+    void OnResize(UINT32 NewWidth, UINT32 NewHeight);
+
     KShaderProgram* GetBasicShader() const { return BasicShader.get(); }
     KTextureManager* GetTextureManager() { return &TextureManager; }
 

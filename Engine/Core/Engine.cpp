@@ -332,6 +332,12 @@ void KEngine::OnResize(UINT32 NewWidth, UINT32 NewHeight)
         }
     }
 
+    // Propagate resize to renderer subsystems
+    if (Renderer)
+    {
+        Renderer->OnResize(NewWidth, NewHeight);
+    }
+
     // Update camera aspect ratio
     if (Camera)
     {

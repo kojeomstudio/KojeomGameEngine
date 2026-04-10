@@ -279,11 +279,25 @@ ActorPtr KScene::CreateActor(const std::string& ActorName)
 
 void KScene::AddActor(ActorPtr Actor)
 {
-    if (Actor)
+    if (!Actor) return;
+
+    const std::string& actorName = Actor->GetName();
+    auto it = ActorMap.find(actorName);
+    if (it != ActorMap.end())
     {
-        ActorMap[Actor->GetName()] = Actor;
-        Actors.push_back(std::move(Actor));
+        ActorMap.erase(it);
+        for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
+        {
+            if ((*ait)->GetName() == actorName)
+            {
+                Actors.erase(ait);
+                break;
+            }
+        }
     }
+
+    ActorMap[actorName] = Actor;
+    Actors.push_back(std::move(Actor));
 }
 
 void KScene::RemoveActor(const std::string& ActorName)
@@ -339,22 +353,4 @@ void KScene::Clear()
     ActorMap.clear();
 }
 
-void KScene::SerializeActorHierarchy(KBinaryArchive& Archive, KActor* Actor)
-{
-    if (Actor) Actor->Serialize(Archive);
-}
 
-void KScene::DeserializeActorHierarchy(KBinaryArchive& Archive, KActor* Parent)
-{
-    auto actor = std::make_shared<KActor>();
-    actor->Deserialize(Archive);
-
-    if (Parent)
-    {
-        Parent->AddChild(actor);
-    }
-    else
-    {
-        AddActor(actor);
-    }
-}

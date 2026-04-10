@@ -12,18 +12,14 @@ KAnimationState::KAnimationState(const std::string& InName)
 
 KAnimationState::~KAnimationState()
 {
-    for (auto* Transition : Transitions)
-    {
-        delete Transition;
-    }
     Transitions.clear();
 }
 
-void KAnimationState::AddTransition(KAnimationTransition* Transition)
+void KAnimationState::AddTransition(std::unique_ptr<KAnimationTransition> Transition)
 {
     if (Transition)
     {
-        Transitions.push_back(Transition);
+        Transitions.push_back(std::move(Transition));
     }
 }
 
@@ -34,7 +30,6 @@ void KAnimationState::RemoveTransition(const std::string& TargetStateName)
     {
         if (*It && (*It)->GetTargetState() == TargetStateName)
         {
-            delete *It;
             It = Transitions.erase(It);
         }
         else
@@ -303,14 +298,15 @@ KAnimationTransition* KAnimationStateMachine::AddTransition(const std::string& F
         return nullptr;
     }
 
-    auto Transition = new KAnimationTransition(FromState, ToState);
+    auto Transition = std::make_unique<KAnimationTransition>(FromState, ToState);
     Transition->SetBlendDuration(BlendDuration);
     Transition->SetHasExitTime(bHasExitTime);
     Transition->SetExitTime(ExitTime);
 
-    SourceState->AddTransition(Transition);
+    KAnimationTransition* TransitionPtr = Transition.get();
+    SourceState->AddTransition(std::move(Transition));
 
-    return Transition;
+    return TransitionPtr;
 }
 
 void KAnimationStateMachine::RemoveTransition(const std::string& FromState, const std::string& ToState)
@@ -330,11 +326,11 @@ KAnimationTransition* KAnimationStateMachine::GetTransition(const std::string& F
         return nullptr;
     }
 
-    for (auto* Transition : SourceState->GetTransitions())
+    for (const auto& Transition : SourceState->GetTransitions())
     {
         if (Transition && Transition->GetTargetState() == ToState)
         {
-            return Transition;
+            return Transition.get();
         }
     }
 
@@ -607,7 +603,7 @@ void KAnimationStateMachine::CheckTransitions()
         return;
     }
 
-    for (auto* Transition : CurrentState->GetTransitions())
+    for (const auto& Transition : CurrentState->GetTransitions())
     {
         if (!Transition)
         {
@@ -630,7 +626,7 @@ void KAnimationStateMachine::CheckTransitions()
 
             if (bConditionsMet && NormalizedTime >= Transition->GetExitTime())
             {
-                ProcessTransition(Transition);
+                ProcessTransition(Transition.get());
                 return;
             }
         }
@@ -638,7 +634,7 @@ void KAnimationStateMachine::CheckTransitions()
         {
             if (bConditionsMet)
             {
-                ProcessTransition(Transition);
+                ProcessTransition(Transition.get());
                 return;
             }
         }

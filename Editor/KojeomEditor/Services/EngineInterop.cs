@@ -983,6 +983,27 @@ public class EngineInterop : IDisposable
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void DebugRenderer_RenderFrame(IntPtr engine, float deltaTime);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Model_Unload(IntPtr engine, [MarshalAs(UnmanagedType.LPWStr)] string path);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Actor_GetSkeletalMeshComponent(IntPtr actor);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Actor_GetLightComponent(IntPtr actor);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr SkeletalMeshComponent_PlayAnimation(IntPtr component, [MarshalAs(UnmanagedType.LPStr)] string animName);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void SkeletalMeshComponent_StopAnimation(IntPtr component);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int SkeletalMeshComponent_GetAnimationCount(IntPtr component);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Model_LoadAndGetStaticMesh(IntPtr engine, [MarshalAs(UnmanagedType.LPWStr)] string path);
+
     #endregion
 
     public void SetActorName(IntPtr actor, string name)
@@ -1107,5 +1128,46 @@ public class EngineInterop : IDisposable
     {
         if (!_isInitialized || _enginePtr == IntPtr.Zero) return;
         DebugRenderer_RenderFrame(_enginePtr, deltaTime);
+    }
+
+    public void UnloadModel(string path)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return;
+        Model_Unload(_enginePtr, path);
+    }
+
+    public IntPtr GetActorSkeletalMeshComponent(IntPtr actor)
+    {
+        if (actor == IntPtr.Zero) return IntPtr.Zero;
+        return Actor_GetSkeletalMeshComponent(actor);
+    }
+
+    public IntPtr GetActorLightComponent(IntPtr actor)
+    {
+        if (actor == IntPtr.Zero) return IntPtr.Zero;
+        return Actor_GetLightComponent(actor);
+    }
+
+    public IntPtr PlayAnimation(IntPtr component, string animName)
+    {
+        if (component == IntPtr.Zero) return IntPtr.Zero;
+        return SkeletalMeshComponent_PlayAnimation(component, animName);
+    }
+
+    public void StopAnimation(IntPtr component)
+    {
+        if (component != IntPtr.Zero) SkeletalMeshComponent_StopAnimation(component);
+    }
+
+    public int GetSkeletalMeshAnimationCount(IntPtr component)
+    {
+        if (component == IntPtr.Zero) return 0;
+        return SkeletalMeshComponent_GetAnimationCount(component);
+    }
+
+    public IntPtr LoadAndGetStaticMesh(string path)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return IntPtr.Zero;
+        return Model_LoadAndGetStaticMesh(_enginePtr, path);
     }
 }

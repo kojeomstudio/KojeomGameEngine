@@ -908,11 +908,6 @@ std::shared_ptr<KStaticMesh> KModelLoader::ProcessMesh(void* AssimpMesh, void* A
         staticMesh->CalculateBounds();
     }
 
-    if (mesh->HasBones() && OutModel->Skeleton)
-    {
-        ProcessBones(mesh, OutModel, 0);
-    }
-
     return staticMesh;
 #else
     return nullptr;
