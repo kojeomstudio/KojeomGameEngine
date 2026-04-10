@@ -30,7 +30,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | Scene | `Engine/Scene/` | 4 | 629 | Actor-Component system, scene management |
 | DebugUI | `Engine/DebugUI/` | 2 | 241 | ImGui debug overlay |
 | Utils | `Engine/Utils/` | 3 | 260 | Common.h, Logger.h, Math.h |
-| **Total** | | **147** | **34,401** | |
+| **Total** | | **135** | **34,401** | |
 
 ## Graphics Sub-Systems
 
@@ -67,13 +67,18 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 ### Singletons
 - `KEngine::GetInstance()` - global engine instance
+- `KEngine::InitializeWithExternalHwnd()` - embeds engine in an external window handle
+- `KEngine::RunApplication<T>()` - template factory method for app entry point
 - `KInputManager` - keyboard, mouse, raw input, action mapping
 - `KAudioManager` - XAudio2 audio engine
 - `KDebugUI` - ImGui debug overlay
 
 ### Subsystem Interface
 - `ISubsystem` - base interface with `Initialize()`, `Tick()`, `Shutdown()` lifecycle methods
-- `KSubsystemRegistry` - type-based registration, ordered initialization and reverse-order shutdown
+- `ESubsystemState` enum: `Uninitialized`, `Initialized`, `Running`, `Shutdown`
+- `KSubsystemRegistry` - type-safe registration via `Register<T>()` with `std::type_index` keys, ordered initialization and reverse-order shutdown
+- `KAudioSubsystem` wraps `KAudioManager` as an ISubsystem adapter
+- `KPhysicsSubsystem` wraps `KPhysicsWorld` as an ISubsystem adapter
 
 ### C#/C++ Interop
 - `EngineInterop.dll` exposes 107 flat C functions (`extern "C"`)
@@ -91,6 +96,12 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 - `KAnimationInstance` - runtime animation playback with speed control, play modes (Once/Loop/PingPong)
 - `KAnimationStateMachine` - state machine with transitions, conditions (float/bool parameters), blending, notifies
 - GPU skinning via `FSkinnedVertex` (4 bone influences) and `FBoneMatrixBuffer`
+
+### Shader Architecture
+- Two-class system: `KShader` (individual compiled shader) and `KShaderProgram` (combined VS+PS program)
+- All shaders are compiled from **inline HLSL source strings** via `KShader::CompileFromString()` — there are NO `.hlsl` shader files in the repository
+- `EShaderType` enum: `Vertex`, `Pixel`
+- `KShaderProgram` manages vertex + pixel shader pair, input layout, and constant buffer reflection
 
 ### Skeletal Mesh Shadow Casting
 - `FShadowCaster` struct includes skeletal mesh fields: `bIsSkeletal`, `SkeletalVertexBuffer`, `SkeletalIndexBuffer`, `SkeletalIndexCount`, `BoneMatrixBuffer`
@@ -169,6 +180,8 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 | DebugRenderer | 4 | DrawGrid, DrawAxis, SetEnabled, RenderFrame |
 | Other | 3 | GetLightComponent (stub), AddChild, GetChild, GetParent |
 
+> **Note:** 7 of the 107 C API functions lack corresponding C# DllImport declarations: `Model_Unload`, `Model_LoadAndGetStaticMesh`, `Actor_GetSkeletalMeshComponent`, `Actor_GetLightComponent` (stub), `SkeletalMeshComponent_PlayAnimation`, `SkeletalMeshComponent_StopAnimation`, `SkeletalMeshComponent_GetAnimationCount`.
+
 ## Sample Projects
 
 | Sample | Feature | Path |
@@ -216,7 +229,7 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 
 | Category | Count |
 |----------|-------|
-| Engine source files (.h + .cpp) | 147 |
+| Engine source files (.h + .cpp) | 135 (79 .h + 56 .cpp) |
 | Engine total lines | ~34,401 |
 | Editor C# files | 14 |
 | Editor XAML files | 9 |

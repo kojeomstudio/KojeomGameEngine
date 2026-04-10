@@ -139,6 +139,14 @@ private:
 
 All constant buffers must be 16-byte aligned. Use `static_assert` to validate sizes. Pad struct members as needed.
 
+### Shader Architecture
+
+The engine uses a two-class shader system:
+- **`KShader`** — individual compiled shader (vertex or pixel), created via `KShader::CompileFromString()` from inline HLSL source strings
+- **`KShaderProgram`** — combined vertex + pixel shader pair with input layout and constant buffer reflection
+- **`EShaderType`** enum: `Vertex`, `Pixel`
+- **IMPORTANT**: There are NO `.hlsl` shader files in the repository. All shaders are embedded as inline C++ string literals and compiled at runtime. When adding new shaders, define them as inline string literals, not as separate `.hlsl` files.
+
 ### Shader Register Conventions
 
 - `b0`: Transform buffer (per-object)
@@ -163,7 +171,13 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 - `KEngine` (global instance via `GetInstance()`)
 - `KInputManager` (global instance)
 - `KAudioManager` (global instance)
+- `KPhysicsWorld` (global instance)
 - `KDebugUI` (global instance, `KojeomEngine::KDebugUI`)
+- `KAudioManager` and `KPhysicsWorld` also have `ISubsystem` adapter wrappers:
+  - `KAudioSubsystem` wraps `KAudioManager`
+  - `KPhysicsSubsystem` wraps `KPhysicsWorld`
+  - Access via `KEngine::GetSubsystem<T>()` as alternative to singleton `GetInstance()`
+- `ESubsystemState` enum: `Uninitialized`, `Initialized`, `Running`, `Shutdown`
 
 ### Subsystem Interface
 - `ISubsystem` -- base interface for all engine modules (Initialize, Tick, Shutdown)
@@ -258,3 +272,5 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 5. **Do not** ignore compiler warnings
 6. **Do not** change the build configuration without updating documentation
 7. **Do not** add new dependencies without explicit approval
+8. **Do not** create `.hlsl` shader files. All shaders must be defined as inline C++ string literals and compiled at runtime via `KShader::CompileFromString()`.
+9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. Currently 7 C API functions are missing C# bindings.

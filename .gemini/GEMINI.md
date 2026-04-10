@@ -50,12 +50,25 @@ Editor/
 samples/            # 15개 샘플 프로젝트
 ```
 
+## Shader Architecture
+
+엔진은 두 클래스로 구성된 셰이더 시스템을 사용합니다:
+- **`KShader`** — 개별 컴파일된 셰이더(버텍스 또는 픽셀), 인라인 HLSL 소스 문자열에서 `KShader::CompileFromString()`으로 생성
+- **`KShaderProgram`** — 버텍스 + 픽셀 셰이더 페어와 입력 레이아웃, 상수 버퍼 리플렉션을 결합
+- **`EShaderType`** enum: `Vertex`, `Pixel`
+- **중요**: 저장소에 `.hlsl` 셰이더 파일이 존재하지 않습니다. 모든 셰이더는 인라인 C++ 문자열 리터럴로 임베드되어 런타임에 컴파일됩니다. 새 셰이더를 추가할 때는 별도 `.hlsl` 파일이 아닌 인라인 문자열 리터럴로 정의하십시오.
+
 ## Architecture Patterns
 
 - **Entity-Component**: `KActor`가 `KActorComponent` 소유 (`GetComponent<T>()`)
   - 엔진 컴포넌트: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KTerrainComponent`, `KWaterComponent`
   - `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4)
-- **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KDebugUI`
+- **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KPhysicsWorld`, `KDebugUI`
+  - `KAudioManager`와 `KPhysicsWorld`는 `ISubsystem` 어댑터 래퍼도 제공:
+    - `KAudioSubsystem`이 `KAudioManager`를 래핑
+    - `KPhysicsSubsystem`이 `KPhysicsWorld`를 래핑
+    - `KEngine::GetSubsystem<T>()`으로 싱글톤 `GetInstance()`` 대신 접근 가능
+  - `ESubsystemState` enum: `Uninitialized`, `Initialized`, `Running`, `Shutdown`
 - **C#/C++ Interop**: `EngineInterop.dll` flat C API (107 functions) -> C# P/Invoke
 
 ## Git Commit Format
@@ -102,6 +115,8 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 - main 브랜치에 디버그/테스트 코드 커밋
 - 기존 API 파괴적 변경 없이 사용처 업데이트 누락
 - 승인 없는 새로운 의존성 추가
+- `.hlsl` 셰이더 파일 생성 (모든 셰이더는 인라인 C++ 문자열 리터럴로 정의하고 `KShader::CompileFromString()`으로 런타임 컴파일해야 함)
+- `EngineAPI.h`/`EngineAPI.cpp`에 새 C API 함수 추가 시 `Editor/KojeomEditor/Services/EngineInterop.cs`에 해당 C# `DllImport` 선언 누락 (현재 7개 C API 함수에 C# 바인딩이 누락되어 있음)
 
 ## Build Verification
 
