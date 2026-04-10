@@ -59,18 +59,18 @@ KojeomGameEngine은 12개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 | Module | Files | Lines | Description |
 |--------|------:|------:|-------------|
-| Graphics | 73 | 23,314 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20 서브시스템) |
-| Assets | 16 | 4,809 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 모델 로더 (FBX/OBJ/GLTF) |
-| UI | 27 | 2,577 | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
-| Core | 3 | 1,086 | KEngine - 윈도우 관리, 메인 루프, 서브시스템 소유, ISubsystem 인터페이스, KSubsystemRegistry |
-| Physics | 6 | 1,122 | 리지드바디, 충돌 감지, Raycast |
-| Audio | 6 | 999 | XAudio2 오디오, 3D 사운드 |
-| Serialization | 4 | 945 | 바이너리/JSON 아카이브 |
-| Input | 3 | 774 | 키보드, 마우스, Raw Input, Action Mapping |
-| Scene | 4 | 763 | Actor-Component 시스템, 씬 관리 |
-| DebugUI | 2 | 264 | ImGui 디버그 오버레이 |
-| Utils | 3 | 303 | Common.h, Logger.h, Math.h |
-| **Total** | **147** | **36,956** | |
+| Graphics | 73 | 22,744 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20 서브시스템) |
+| Assets | 16 | 4,187 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 모델 로더 (FBX/OBJ/GLTF) |
+| UI | 27 | 2,183 | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
+| Core | 3 | 916 | KEngine - 윈도우 관리, 메인 루프, 서브시스템 소유, ISubsystem 인터페이스, KSubsystemRegistry |
+| Physics | 6 | 922 | 리지드바디, 충돌 감지, Raycast |
+| Audio | 6 | 845 | XAudio2 오디오, 3D 사운드 |
+| Serialization | 4 | 819 | 바이너리/JSON 아카이브 |
+| Input | 3 | 655 | 키보드, 마우스, Raw Input, Action Mapping |
+| Scene | 4 | 629 | Actor-Component 시스템, 씬 관리 |
+| DebugUI | 2 | 241 | ImGui 디버그 오버레이 |
+| Utils | 3 | 260 | Common.h, Logger.h, Math.h |
+| **Total** | **147** | **34,401** | |
 
 ### Editor
 
@@ -81,8 +81,8 @@ KojeomGameEngine은 12개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 ### Samples
 
-16개 샘플 프로그램이 `samples/` 폴더에 위치합니다:
-BasicRendering, Lighting, PBR, PostProcessing, Terrain, Water, Sky, Particles, SkeletalMesh, Gameplay, Physics, UI, Layout, AnimationStateMachine, LOD, DebugRendering
+15개 샘플 프로그램이 `samples/` 폴더에 위치합니다:
+BasicRendering, Lighting, PBR, PostProcessing, Terrain, Water, Sky, Particles, SkeletalMesh, Gameplay, Physics, UI, AnimationStateMachine, LOD, DebugRendering
 
 ## Document Standards
 

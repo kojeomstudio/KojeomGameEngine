@@ -47,7 +47,7 @@ Editor/
 ├── EngineInterop/  # C API DLL (extern "C" P/Invoke)
 └── KojeomEditor/   # C# WPF 에디터 (.NET 8.0)
 
-samples/            # 16개 샘플 프로젝트
+samples/            # 15개 샘플 프로젝트
 ```
 
 ## Architecture Patterns
