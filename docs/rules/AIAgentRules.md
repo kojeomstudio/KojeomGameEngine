@@ -66,7 +66,7 @@ Editor/
 │   ├── EngineAPI.h     # 107 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
 └── KojeomEditor/       # C# WPF editor (.NET 8.0)
-    ├── Services/       # EngineInterop P/Invoke wrapper (1,111 lines, 100 DllImport), UndoRedoService
+    ├── Services/       # EngineInterop P/Invoke wrapper (1,173 lines, 107 DllImport), UndoRedoService
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel
     └── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser
 ```
@@ -186,7 +186,7 @@ The engine uses a two-class shader system:
 
 ### C#/C++ Interop
 - `EngineInterop.dll` exposes 107 flat C functions (`extern "C"`, `__declspec(dllexport)`)
-- C# consumes via P/Invoke (`DllImport`, 100 DllImport declarations in `EngineInterop.cs`)
+- C# consumes via P/Invoke (`DllImport`, 107 DllImport declarations in `EngineInterop.cs`)
 - Internal `FEngineWrapper` class manages engine instance, model loader, and debug renderer
 - String returns use `thread_local std::string` buffers
 - Preprocessor: `ENGINEAPI_EXPORTS` controls dllexport/dllimport
@@ -273,4 +273,4 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 6. **Do not** change the build configuration without updating documentation
 7. **Do not** add new dependencies without explicit approval
 8. **Do not** create `.hlsl` shader files. All shaders must be defined as inline C++ string literals and compiled at runtime via `KShader::CompileFromString()`.
-9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. Currently 7 C API functions are missing C# bindings.
+9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. All 107 C API functions currently have C# bindings.

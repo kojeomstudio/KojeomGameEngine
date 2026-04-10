@@ -116,7 +116,7 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 - 기존 API 파괴적 변경 없이 사용처 업데이트 누락
 - 승인 없는 새로운 의존성 추가
 - `.hlsl` 셰이더 파일 생성 (모든 셰이더는 인라인 C++ 문자열 리터럴로 정의하고 `KShader::CompileFromString()`으로 런타임 컴파일해야 함)
-- `EngineAPI.h`/`EngineAPI.cpp`에 새 C API 함수 추가 시 `Editor/KojeomEditor/Services/EngineInterop.cs`에 해당 C# `DllImport` 선언 누락 (현재 7개 C API 함수에 C# 바인딩이 누락되어 있음)
+- `EngineAPI.h`/`EngineAPI.cpp`에 새 C API 함수 추가 시 `Editor/KojeomEditor/Services/EngineInterop.cs`에 해당 C# `DllImport` 선언 누락 (현재 107개 C API 함수 모두 C# 바인딩이 완료되어 있음)
 
 ## Build Verification
 

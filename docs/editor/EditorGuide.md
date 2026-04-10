@@ -43,7 +43,7 @@ Editor/
     ├── MainWindow.xaml / MainWindow.xaml.cs   # Root window with menus, toolbar, status bar
     ├── KojeomEditor.csproj                   # .NET 8.0 project with native DLL copy target
     ├── Services/                             # Business logic and engine bridge
-    │   ├── EngineInterop.cs                  # P/Invoke wrapper (100 DllImport declarations)
+     │   ├── EngineInterop.cs                  # P/Invoke wrapper (107 DllImport declarations)
     │   └── UndoRedoService.cs                # Command-pattern undo/redo system
     ├── ViewModels/                           # MVVM ViewModels
     │   ├── MainViewModel.cs                  # Root VM, ViewModelBase, RelayCommand, ETransformMode
@@ -82,7 +82,7 @@ The editor communicates with the native C++ engine through a **flat C API** brid
 
 ```
  C# Editor (EngineInterop.cs)  ──P/Invoke──>  EngineInterop.dll (EngineAPI.cpp)  ──>  Engine C++ Core
-     100 DllImport declarations               extern "C" API (107 functions)        KEngine, KRenderer, etc.
+      107 DllImport declarations               extern "C" API (107 functions)        KEngine, KRenderer, etc.
 ```
 
 ### C++ Side (`Editor/EngineInterop/EngineAPI.h`)
@@ -105,7 +105,7 @@ All native functions are declared as `extern "C"` with `ENGINEAPI` export macro.
 
 ### C# Side (`Editor/KojeomEditor/Services/EngineInterop.cs`)
 
-The `EngineInterop` class wraps all 100 P/Invoke declarations with a managed API. It implements `IDisposable` for proper cleanup of the native engine instance. Every method guards against uninitialized state by checking `_isInitialized` and `_enginePtr`.
+The `EngineInterop` class wraps all 107 P/Invoke declarations with a managed API. It implements `IDisposable` for proper cleanup of the native engine instance. Every method guards against uninitialized state by checking `_isInitialized` and `_enginePtr`.
 
 **P/Invoke declaration pattern:**
 
