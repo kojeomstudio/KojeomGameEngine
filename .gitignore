@@ -144,6 +144,23 @@ Examples/*_x64/
 *~
 
 # ================================
+# Security / Sensitive Files
+# ================================
+.env
+.env.*
+secrets.json
+credentials.json
+*.pem
+*.key
+*.pfx
+*.cer
+*.p12
+*.pubxml
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+# ================================
 # OS Generated Files
 # ================================
 .DS_Store
