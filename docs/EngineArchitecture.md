@@ -12,7 +12,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 ├── Editor/
 │   ├── EngineInterop/         # C++ DLL (flat C API for P/Invoke)
 │   └── KojeomEditor/          # C# WPF editor (.NET 8.0)
-└── samples/                   # 15 sample projects
+└── samples/                   # 16 sample projects (15 top-level + 1 nested)
 ```
 
 ## Engine Modules
@@ -196,6 +196,7 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 | Gameplay | Input handling + audio playback | `samples/Gameplay/` |
 | Physics | Physics simulation, collision, ball spawning | `samples/Physics/` |
 | UI | Canvas UI system elements, layout system | `samples/UI/` |
+| UI Layout | Vertical, horizontal, grid layouts | `samples/UI/Layout/` |
 | AnimationStateMachine | Animation state machine, transitions, blending, locomotion | `samples/AnimationStateMachine/` |
 | LOD | Level-of-detail generation and switching | `samples/LOD/` |
 | DebugRendering | Debug renderer, debug UI overlay | `samples/DebugRendering/` |
@@ -233,7 +234,7 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Editor XAML files | 9 |
 | Editor C# lines | ~3,389 |
 | Editor XAML lines | ~730 |
-| Sample projects | 15 |
+| Sample projects | 16 |
 | Engine modules | 12 |
 | Graphics sub-systems | 20 |
 | EngineInterop API functions | 107 |

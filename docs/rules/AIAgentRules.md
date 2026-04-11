@@ -12,7 +12,7 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 - **Core Engine:** `Engine/` (Static Library, .lib)
 - **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop)
 - **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0)
-- **Samples:** `samples/` (15 sample projects: BasicRendering, Lighting, PBR, PostProcessing, Terrain, Water, Sky, Particles, SkeletalMesh, Gameplay, Physics, UI, AnimationStateMachine, LOD, DebugRendering)
+- **Samples:** `samples/` (16 sample projects: BasicRendering, Lighting, PBR, PostProcessing, Terrain, Water, Sky, Particles, SkeletalMesh, Gameplay, Physics, UI, UILayout, AnimationStateMachine, LOD, DebugRendering)
 
 ## Engine Module Structure
 
@@ -171,12 +171,11 @@ The engine uses a two-class shader system:
 - `KEngine` (global instance via `GetInstance()`)
 - `KInputManager` (global instance)
 - `KAudioManager` (global instance)
-- `KPhysicsWorld` (global instance)
 - `KDebugUI` (global instance, `KojeomEngine::KDebugUI`)
-- `KAudioManager` and `KPhysicsWorld` also have `ISubsystem` adapter wrappers:
+- `KAudioManager` also has an `ISubsystem` adapter wrapper:
   - `KAudioSubsystem` wraps `KAudioManager`
-  - `KPhysicsSubsystem` wraps `KPhysicsWorld`
   - Access via `KEngine::GetSubsystem<T>()` as alternative to singleton `GetInstance()`
+- `KPhysicsWorld` is a regular class owned by `KPhysicsSubsystem` (NOT a singleton)
 - `ESubsystemState` enum: `Uninitialized`, `Initialized`, `Running`, `Shutdown`
 
 ### Subsystem Interface

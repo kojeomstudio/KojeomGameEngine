@@ -47,7 +47,7 @@ Editor/
 ├── EngineInterop/  # C API DLL (extern "C" P/Invoke)
 └── KojeomEditor/   # C# WPF 에디터 (.NET 8.0)
 
-samples/            # 15개 샘플 프로젝트
+samples/            # 16개 샘플 프로젝트
 ```
 
 ## Shader Architecture
@@ -63,11 +63,11 @@ samples/            # 15개 샘플 프로젝트
 - **Entity-Component**: `KActor`가 `KActorComponent` 소유 (`GetComponent<T>()`)
   - 엔진 컴포넌트: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KTerrainComponent`, `KWaterComponent`
   - `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4)
-- **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KPhysicsWorld`, `KDebugUI`
-  - `KAudioManager`와 `KPhysicsWorld`는 `ISubsystem` 어댑터 래퍼도 제공:
+- **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KDebugUI` (via `GetInstance()`)
+  - `KAudioManager`는 `ISubsystem` 어댑터 래퍼도 제공:
     - `KAudioSubsystem`이 `KAudioManager`를 래핑
-    - `KPhysicsSubsystem`이 `KPhysicsWorld`를 래핑
     - `KEngine::GetSubsystem<T>()`으로 싱글톤 `GetInstance()` 대신 접근 가능
+  - `KPhysicsWorld`는 `KPhysicsSubsystem`이 소유하는 일반 클래스 (싱글톤 아님)
   - `ESubsystemState` enum: `Uninitialized`, `Initialized`, `Running`, `Shutdown`
 - **C#/C++ Interop**: `EngineInterop.dll` flat C API (107 functions) -> C# P/Invoke
 

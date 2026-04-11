@@ -10,7 +10,7 @@ C++17 / DirectX 11 game engine with a WPF-based editor (C# / .NET 8.0). Supports
 - **Core Engine:** `Engine/` (static library, .lib, third-party at `Engine/third_party/`)
 - **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL exposing flat C API for P/Invoke)
 - **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, x64)
-- **Samples:** `samples/` (15 sample projects demonstrating engine features)
+- **Samples:** `samples/` (16 sample projects demonstrating engine features)
 
 ## Build Commands
 
@@ -31,7 +31,7 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 ## Testing
 
 There is **no automated test framework** in this project. No test runner, test framework, or test projects exist. Validation is done through:
-- 15 sample projects under `samples/`
+- 16 sample projects under `samples/`
 - `LOG_INFO`, `LOG_WARNING`, `LOG_ERROR` macros for debug output
 - `_CrtSetDbgFlag` for debug memory leak detection
 

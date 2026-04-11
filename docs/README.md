@@ -12,6 +12,8 @@ docs/
 │   └── AssetSystem.md              # 정적/스켈레탈 메시, 애니메이션, 모델 로더
 ├── audio/                           # 오디오 시스템 문서
 │   └── AudioSystem.md              # XAudio2 오디오, 3D 사운드
+├── debugui/                         # 디버그 UI 문서
+│   └── DebugUISystem.md            # ImGui 디버그 오버레이
 ├── editor/                          # 에디터 문서
 │   └── EditorGuide.md              # WPF 에디터 아키텍처, MVVM, P/Invoke
 ├── input/                           # 입력 시스템 문서
@@ -26,6 +28,8 @@ docs/
 │   └── SerializationSystem.md      # 바이너리/JSON 아카이브
 ├── ui/                              # UI 시스템 문서
 │   └── UISystem.md                 # 캔버스 기반 UI, 위젯, 레이아웃
+├── utils/                           # 유틸리티 문서
+│   └── UtilsSystem.md              # Common.h, Logger.h, Math.h
 └── rules/                           # AI 에이전트 규칙 및 가이드라인
     └── AIAgentRules.md             # AI 에이전트 작업 규칙
 ```
@@ -42,6 +46,8 @@ docs/
 - [Audio System Documentation](audio/AudioSystem.md) - XAudio2 오디오, 3D 사운드
 - [Physics System Documentation](physics/PhysicsSystem.md) - 리지드바디, 충돌 감지, Raycast
 - [UI System Documentation](ui/UISystem.md) - 캔버스 기반 UI, 위젯, 레이아웃
+- [Debug UI System Documentation](debugui/DebugUISystem.md) - ImGui 디버그 오버레이
+- [Utility System Documentation](utils/UtilsSystem.md) - Common.h, Logger.h, Math.h
 - [Serialization System Documentation](serialization/SerializationSystem.md) - 바이너리/JSON 아카이브
 - [Editor Guide](editor/EditorGuide.md) - WPF 에디터 아키텍처, MVVM, P/Invoke
 
@@ -81,8 +87,8 @@ KojeomGameEngine은 12개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 ### Samples
 
-15개 샘플 프로그램이 `samples/` 폴더에 위치합니다:
-BasicRendering, Lighting, PBR, PostProcessing, Terrain, Water, Sky, Particles, SkeletalMesh, Gameplay, Physics, UI, AnimationStateMachine, LOD, DebugRendering
+16개 샘플 프로그램이 `samples/` 폴더에 위치합니다:
+BasicRendering, Lighting, PBR, PostProcessing, Terrain, Water, Sky, Particles, SkeletalMesh, Gameplay, Physics, UI, UI/Layout, AnimationStateMachine, LOD, DebugRendering
 
 ## Document Standards
 
