@@ -5,10 +5,21 @@
 
 bool KJsonArchive::LoadFromFile(const std::wstring& Path)
 {
-    std::ifstream file(Path);
+    std::ifstream file(Path, std::ios::binary);
     if (!file.is_open())
     {
         LOG_ERROR("Failed to open JSON file: " + StringUtils::WideToMultiByte(Path));
+        return false;
+    }
+
+    file.seekg(0, std::ios::end);
+    auto fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    if (fileSize > 100 * 1024 * 1024)
+    {
+        LOG_ERROR("JSON file too large: " + std::to_string(fileSize) + " bytes");
+        file.close();
         return false;
     }
 
@@ -226,7 +237,7 @@ void KJsonArchive::SkipWhitespace(const std::string& Str, size_t& Pos) const
     }
 }
 
-JsonValuePtr KJsonArchive::ParseValue(const std::string& Str, size_t& Pos) const
+JsonValuePtr KJsonArchive::ParseValue(const std::string& Str, size_t& Pos, int32 Depth) const
 {
     SkipWhitespace(Str, Pos);
 
@@ -235,15 +246,21 @@ JsonValuePtr KJsonArchive::ParseValue(const std::string& Str, size_t& Pos) const
         return std::make_shared<KJsonNull>();
     }
 
+    if (Depth > MaxNestingDepth)
+    {
+        LOG_ERROR("JSON parser: maximum nesting depth exceeded");
+        return std::make_shared<KJsonNull>();
+    }
+
     char c = Str[Pos];
 
     if (c == '{')
     {
-        return ParseObject(Str, Pos);
+        return ParseObject(Str, Pos, Depth + 1);
     }
     else if (c == '[')
     {
-        return ParseArray(Str, Pos);
+        return ParseArray(Str, Pos, Depth + 1);
     }
     else if (c == '"')
     {
@@ -266,7 +283,7 @@ JsonValuePtr KJsonArchive::ParseValue(const std::string& Str, size_t& Pos) const
     return std::make_shared<KJsonNull>();
 }
 
-JsonObjectPtr KJsonArchive::ParseObject(const std::string& Str, size_t& Pos) const
+JsonObjectPtr KJsonArchive::ParseObject(const std::string& Str, size_t& Pos, int32 Depth) const
 {
     auto obj = CreateObject();
 
@@ -297,7 +314,7 @@ JsonObjectPtr KJsonArchive::ParseObject(const std::string& Str, size_t& Pos) con
         }
         ++Pos;
 
-        auto value = ParseValue(Str, Pos);
+        auto value = ParseValue(Str, Pos, Depth);
         obj->Set(key, value);
 
         SkipWhitespace(Str, Pos);
@@ -321,7 +338,7 @@ JsonObjectPtr KJsonArchive::ParseObject(const std::string& Str, size_t& Pos) con
     return obj;
 }
 
-JsonArrayPtr KJsonArchive::ParseArray(const std::string& Str, size_t& Pos) const
+JsonArrayPtr KJsonArchive::ParseArray(const std::string& Str, size_t& Pos, int32 Depth) const
 {
     auto arr = CreateArray();
 
@@ -336,7 +353,7 @@ JsonArrayPtr KJsonArchive::ParseArray(const std::string& Str, size_t& Pos) const
 
     while (Pos < Str.size())
     {
-        auto value = ParseValue(Str, Pos);
+        auto value = ParseValue(Str, Pos, Depth);
         arr->Add(value);
 
         SkipWhitespace(Str, Pos);

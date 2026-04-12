@@ -428,10 +428,16 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
                 {
                     if (posSlash1 > 0)
                     {
-                        int posIdx = std::stoi(vertexStr.substr(0, posSlash1)) - 1;
-                        if (posIdx >= 0 && posIdx < (int)positions.size())
+                        try
                         {
-                            vertex.Position = positions[posIdx];
+                            int posIdx = std::stoi(vertexStr.substr(0, posSlash1)) - 1;
+                            if (posIdx >= 0 && posIdx < (int)positions.size())
+                            {
+                                vertex.Position = positions[posIdx];
+                            }
+                        }
+                        catch (const std::exception&)
+                        {
                         }
                     }
 
@@ -441,30 +447,48 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
                         std::string texStr = vertexStr.substr(posSlash1 + 1, posSlash2 - posSlash1 - 1);
                         if (!texStr.empty())
                         {
-                            int texIdx = std::stoi(texStr) - 1;
-                            if (texIdx >= 0 && texIdx < (int)texcoords.size())
+                            try
                             {
-                                vertex.TexCoord = texcoords[texIdx];
+                                int texIdx = std::stoi(texStr) - 1;
+                                if (texIdx >= 0 && texIdx < (int)texcoords.size())
+                                {
+                                    vertex.TexCoord = texcoords[texIdx];
+                                }
+                            }
+                            catch (const std::exception&)
+                            {
                             }
                         }
 
                         std::string normStr = vertexStr.substr(posSlash2 + 1);
                         if (!normStr.empty())
                         {
-                            int normIdx = std::stoi(normStr) - 1;
-                            if (normIdx >= 0 && normIdx < (int)normals.size())
+                            try
                             {
-                                vertex.Normal = normals[normIdx];
+                                int normIdx = std::stoi(normStr) - 1;
+                                if (normIdx >= 0 && normIdx < (int)normals.size())
+                                {
+                                    vertex.Normal = normals[normIdx];
+                                }
+                            }
+                            catch (const std::exception&)
+                            {
                             }
                         }
                     }
                 }
                 else
                 {
-                    int posIdx = std::stoi(vertexStr) - 1;
-                    if (posIdx >= 0 && posIdx < (int)positions.size())
+                    try
                     {
-                        vertex.Position = positions[posIdx];
+                        int posIdx = std::stoi(vertexStr) - 1;
+                        if (posIdx >= 0 && posIdx < (int)positions.size())
+                        {
+                            vertex.Position = positions[posIdx];
+                        }
+                    }
+                    catch (const std::exception&)
+                    {
                     }
                 }
 

@@ -5,13 +5,17 @@
 #include <vector>
 #include <string>
 #include <type_traits>
+#include <limits>
 
 class KBinaryArchive
 {
 public:
     enum class EMode { Read, Write };
 
-    KBinaryArchive(EMode InMode) : Mode(InMode), ReadPosition(0) {}
+    static constexpr uint32 MaxStringSize = 16 * 1024 * 1024;
+    static constexpr uint32 MaxFileSize = 512 * 1024 * 1024;
+
+    KBinaryArchive(EMode InMode) : Mode(InMode), ReadPosition(0), bHeaderValid(false) {}
     ~KBinaryArchive() = default;
 
     KBinaryArchive(const KBinaryArchive&) = delete;
@@ -22,6 +26,7 @@ public:
     bool IsOpen() const { return Stream.is_open(); }
     bool IsReading() const { return Mode == EMode::Read; }
     bool IsWriting() const { return Mode == EMode::Write; }
+    bool IsHeaderValid() const { return bHeaderValid; }
 
     KBinaryArchive& operator<<(int8 Value) { Write(&Value, sizeof(Value)); return *this; }
     KBinaryArchive& operator<<(uint8 Value) { Write(&Value, sizeof(Value)); return *this; }
@@ -67,6 +72,12 @@ public:
     {
         uint32 Length;
         *this >> Length;
+        if (Length > MaxStringSize)
+        {
+            Length = 0;
+            Value.clear();
+            return *this;
+        }
         Value.resize(Length);
         Read(&Value[0], Length);
         return *this;
@@ -76,6 +87,12 @@ public:
     {
         uint32 Length;
         *this >> Length;
+        if (Length > MaxStringSize || Length > std::numeric_limits<uint32>::max() / sizeof(wchar_t))
+        {
+            Length = 0;
+            Value.clear();
+            return *this;
+        }
         Value.resize(Length);
         Read(&Value[0], Length * sizeof(wchar_t));
         return *this;
@@ -173,4 +190,12 @@ private:
     std::vector<uint8> Buffer;
     size_t ReadPosition;
     std::fstream Stream;
+    bool bHeaderValid;
+
+    static constexpr uint32 MagicNumber = 0x4B42494E;
+    static constexpr uint32 CurrentVersion = 1;
+
+    uint32 ComputeChecksum() const;
+    void WriteHeader();
+    bool ReadAndValidateHeader();
 };

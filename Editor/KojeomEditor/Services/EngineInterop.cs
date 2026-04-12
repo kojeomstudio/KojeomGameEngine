@@ -267,7 +267,8 @@ public class EngineInterop : IDisposable
             return null;
         }
 
-        return Marshal.PtrToStringAnsi(Actor_GetName(actor));
+        IntPtr ptr = Actor_GetName(actor);
+        return ptr != IntPtr.Zero ? Marshal.PtrToStringAnsi(ptr) : null;
     }
 
     public void SetRenderPath(int path)
@@ -414,7 +415,8 @@ public class EngineInterop : IDisposable
     public string? GetComponentName(IntPtr actor, int index)
     {
         if (actor == IntPtr.Zero) return null;
-        return Marshal.PtrToStringAnsi(Actor_GetComponentName(actor, index));
+        IntPtr ptr = Actor_GetComponentName(actor, index);
+        return ptr != IntPtr.Zero ? Marshal.PtrToStringAnsi(ptr) : null;
     }
 
     public int GetComponentType(IntPtr actor, int index)
@@ -622,7 +624,8 @@ public class EngineInterop : IDisposable
     public string? GetAnimationName(IntPtr component, int index)
     {
         if (component == IntPtr.Zero) return null;
-        return Marshal.PtrToStringAnsi(SkeletalMeshComponent_GetAnimationName(component, index));
+        IntPtr ptr = SkeletalMeshComponent_GetAnimationName(component, index);
+        return ptr != IntPtr.Zero ? Marshal.PtrToStringAnsi(ptr) : null;
     }
 
     public int ModelHasSkeleton(IntPtr model)
@@ -640,7 +643,8 @@ public class EngineInterop : IDisposable
     public string? GetModelAnimationName(IntPtr model, int index)
     {
         if (model == IntPtr.Zero) return null;
-        return Marshal.PtrToStringAnsi(Model_GetAnimationName(model, index));
+        IntPtr ptr = Model_GetAnimationName(model, index);
+        return ptr != IntPtr.Zero ? Marshal.PtrToStringAnsi(ptr) : null;
     }
 
     public void AddChild(IntPtr parent, IntPtr child)

@@ -216,11 +216,13 @@ private:
     std::string EscapeString(const std::string& Str) const;
     std::string UnescapeString(const std::string& Str) const;
     void SerializeValue(std::ostringstream& Stream, const JsonValuePtr& Value) const;
-    JsonValuePtr ParseValue(const std::string& Str, size_t& Pos) const;
-    JsonObjectPtr ParseObject(const std::string& Str, size_t& Pos) const;
-    JsonArrayPtr ParseArray(const std::string& Str, size_t& Pos) const;
+    JsonValuePtr ParseValue(const std::string& Str, size_t& Pos, int32 Depth = 0) const;
+    JsonObjectPtr ParseObject(const std::string& Str, size_t& Pos, int32 Depth = 0) const;
+    JsonArrayPtr ParseArray(const std::string& Str, size_t& Pos, int32 Depth = 0) const;
     std::string ParseString(const std::string& Str, size_t& Pos) const;
     double ParseNumber(const std::string& Str, size_t& Pos) const;
     bool ParseBool(const std::string& Str, size_t& Pos) const;
     void SkipWhitespace(const std::string& Str, size_t& Pos) const;
+
+    static constexpr int32 MaxNestingDepth = 200;
 };
