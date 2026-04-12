@@ -254,6 +254,17 @@ void KAnimationStateMachine::RemoveState(const std::string& Name)
         }
         States.erase(It);
 
+    if (BlendState.bIsActive)
+    {
+        if (BlendState.SourceState == CurrentState || BlendState.TargetState == CurrentState)
+        {
+            BlendState.bIsActive = false;
+            BlendState.SourceState = nullptr;
+            BlendState.TargetState = nullptr;
+            BlendState.Transition = nullptr;
+            BlendState.BlendProgress = 0.0f;
+        }
+
         if (CurrentStateName == Name)
         {
             if (!DefaultStateName.empty() && States.count(DefaultStateName))
@@ -267,6 +278,7 @@ void KAnimationStateMachine::RemoveState(const std::string& Name)
                 CurrentStateName.clear();
             }
         }
+    }
     }
 }
 
@@ -413,6 +425,7 @@ void KAnimationStateMachine::ForceState(const std::string& StateName, float Blen
         BlendState.TargetState = TargetState;
         BlendState.BlendDuration = BlendDuration;
         BlendState.BlendProgress = 0.0f;
+        BlendState.bIsActive = true;
         
         PreviousStateName = CurrentStateName;
         CurrentStateName = StateName;

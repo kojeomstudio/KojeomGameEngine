@@ -62,7 +62,6 @@ public:
 private:
     static void Log(ELevel Level, const std::string& Message)
     {
-#ifdef _DEBUG
         std::string Prefix;
         switch (Level)
         {
@@ -73,11 +72,10 @@ private:
 
         std::string FullMessage = Prefix + Message + "\n";
         
-        // Console output
-        std::cout << FullMessage;
-        
-        // Output to Visual Studio output window
         OutputDebugStringA(FullMessage.c_str());
+
+#ifdef _DEBUG
+        std::cout << FullMessage;
 #endif
     }
 }; 

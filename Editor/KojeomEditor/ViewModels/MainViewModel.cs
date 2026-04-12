@@ -39,6 +39,7 @@ public class MainViewModel : ViewModelBase
         {
             _engine = value;
             _sceneViewModel.Engine = value;
+            _propertiesViewModel.Engine = value;
         }
     }
 

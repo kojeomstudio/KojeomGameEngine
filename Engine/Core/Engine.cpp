@@ -67,6 +67,7 @@ HRESULT KEngine::Initialize(HINSTANCE InInstanceHandle, const std::wstring& InWi
 
     // Initialize camera
     Camera = std::make_unique<KCamera>();
+    if (InHeight == 0) InHeight = 1;
     Camera->SetPerspective(
         EngineConstants::DEFAULT_FOV,
         static_cast<float>(InWidth) / static_cast<float>(InHeight),
@@ -128,6 +129,7 @@ HRESULT KEngine::InitializeWithExternalHwnd(HWND InExternalHwnd, UINT32 InWidth,
     }
 
     Camera = std::make_unique<KCamera>();
+    if (InHeight == 0) InHeight = 1;
     Camera->SetPerspective(
         EngineConstants::DEFAULT_FOV,
         static_cast<float>(InWidth) / static_cast<float>(InHeight),

@@ -87,22 +87,38 @@ void KPhysicsWorld::BroadPhase()
 {
     PotentialPairs.clear();
 
-    std::vector<std::pair<uint32_t, FAABB>> AABBs;
+    std::vector<std::pair<uint32_t, FAABB>> dynamicAABBs;
+    std::vector<std::pair<uint32_t, FAABB>> staticAABBs;
     for (const auto& Pair : Bodies)
     {
-        if (Pair.second->GetBodyType() != EPhysicsBodyType::Static)
+        if (Pair.second->GetBodyType() == EPhysicsBodyType::Static)
         {
-            AABBs.push_back({ Pair.first, Pair.second->GetAABB() });
+            staticAABBs.push_back({ Pair.first, Pair.second->GetAABB() });
+        }
+        else
+        {
+            dynamicAABBs.push_back({ Pair.first, Pair.second->GetAABB() });
         }
     }
 
-    for (size_t i = 0; i < AABBs.size(); ++i)
+    for (size_t i = 0; i < dynamicAABBs.size(); ++i)
     {
-        for (size_t j = i + 1; j < AABBs.size(); ++j)
+        for (size_t j = i + 1; j < dynamicAABBs.size(); ++j)
         {
-            if (AABBs[i].second.Intersects(AABBs[j].second))
+            if (dynamicAABBs[i].second.Intersects(dynamicAABBs[j].second))
             {
-                PotentialPairs.push_back({ AABBs[i].first, AABBs[j].first });
+                PotentialPairs.push_back({ dynamicAABBs[i].first, dynamicAABBs[j].first });
+            }
+        }
+    }
+
+    for (size_t i = 0; i < dynamicAABBs.size(); ++i)
+    {
+        for (size_t j = 0; j < staticAABBs.size(); ++j)
+        {
+            if (dynamicAABBs[i].second.Intersects(staticAABBs[j].second))
+            {
+                PotentialPairs.push_back({ dynamicAABBs[i].first, staticAABBs[j].first });
             }
         }
     }

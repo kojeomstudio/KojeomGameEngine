@@ -43,7 +43,7 @@ HRESULT KMesh::Initialize(ID3D11Device* Device,
 void KMesh::Render(ID3D11DeviceContext* Context)
 {
     // Set vertex buffer
-    UINT32 Stride = sizeof(FVertex);
+    UINT32 Stride = VertexStride;
     UINT32 Offset = 0;
     Context->IASetVertexBuffers(0, 1, VertexBuffer.GetAddressOf(), &Stride, &Offset);
 
@@ -143,6 +143,7 @@ HRESULT KMesh::InitializeFromBuffer(ID3D11Buffer* InVertexBuffer, UINT32 InVerte
     VertexBuffer = InVertexBuffer;
     VertexCount = InVertexCount;
     IndexCount = 0;
+    VertexStride = InVertexStride > 0 ? InVertexStride : sizeof(FVertex);
 
     return S_OK;
 }
@@ -161,6 +162,7 @@ HRESULT KMesh::InitializeFromBuffers(ID3D11Device* Device,
     IndexBuffer = InIndexBuffer;
     VertexCount = InVertexCount;
     IndexCount = InIndexCount;
+    VertexStride = InVertexStride > 0 ? InVertexStride : sizeof(FVertex);
 
     HRESULT hr = CreateConstantBuffer(Device);
     if (FAILED(hr))

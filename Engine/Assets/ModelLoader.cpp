@@ -260,7 +260,7 @@ HRESULT KModelLoader::LoadWithAssimp(const std::wstring& Path, FLoadedModel* Out
     
     if (Options.bGenerateNormals)
     {
-        flags |= aiProcess_GenNormals | aiProcess_GenSmoothNormals;
+        flags |= aiProcess_GenSmoothNormals;
     }
     if (Options.bGenerateTangents)
     {
@@ -716,6 +716,11 @@ void KModelLoader::ProcessNode(void* AssimpNode, void* AssimpScene, FLoadedModel
             {
                 OutModel->StaticMesh = staticMesh;
             }
+            else
+            {
+                staticMesh->SetName(OutModel->StaticMesh->GetName() + "_sub" + std::to_string(i));
+                LOG_WARNING("Multiple meshes detected; only first mesh is stored as primary StaticMesh");
+            }
         }
     }
 
@@ -855,7 +860,7 @@ std::shared_ptr<KStaticMesh> KModelLoader::ProcessMesh(void* AssimpMesh, void* A
         }
 
         auto skeletalMesh = std::make_shared<KSkeletalMesh>();
-        skeletalMesh->CreateFromData(nullptr, skinnedVertices, indices);
+        skeletalMesh->CreateFromData(Device, skinnedVertices, indices);
         skeletalMesh->SetName(meshName);
         OutModel->SkeletalMesh = skeletalMesh;
     }

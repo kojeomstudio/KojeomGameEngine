@@ -166,7 +166,6 @@ public:
     }
 
 private:
-private:
     std::string Name;
     std::vector<ActorPtr> Actors;
     std::unordered_map<std::string, ActorPtr> ActorMap;

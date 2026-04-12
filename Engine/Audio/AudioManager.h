@@ -87,6 +87,8 @@ private:
 
     std::unordered_map<std::string, std::shared_ptr<KSound>> Sounds;
     std::unordered_map<uint32_t, FActiveVoice> ActiveVoices;
+    std::vector<uint32_t> PendingVoiceCleanup;
+    CRITICAL_SECTION AudioLock;
 
     uint32_t NextVoiceId;
     bool bIsInitialized;

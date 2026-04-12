@@ -84,7 +84,19 @@ public:
         static_assert(std::is_base_of_v<ISubsystem, T>, "T must derive from ISubsystem");
         std::type_index key(typeid(T));
         SubsystemMap[key] = Subsystem;
-        SubsystemOrder.push_back(key);
+        bool alreadyExists = false;
+        for (const auto& existingKey : SubsystemOrder)
+        {
+            if (existingKey == key)
+            {
+                alreadyExists = true;
+                break;
+            }
+        }
+        if (!alreadyExists)
+        {
+            SubsystemOrder.push_back(key);
+        }
     }
 
     /**

@@ -230,6 +230,7 @@ public class SceneViewModel : ViewModelBase
             vm.RotationX = rx;
             vm.RotationY = ry;
             vm.RotationZ = rz;
+            vm.RotationW = rw;
 
             _engine.GetActorScale(actorPtr, out float sx, out float sy, out float sz);
             vm.ScaleX = sx;
@@ -327,14 +328,14 @@ public class SceneViewModel : ViewModelBase
                     var newValues = (actor.RotationX, actor.RotationY, actor.RotationZ);
                     if ((oldRx, oldRy, oldRz) != newValues)
                     {
-                        _engine.SetActorRotation(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3, 0);
+                        _engine.SetActorRotation(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3, actor.RotationW);
                         _undoRedo.ExecuteAction(new SetPropertyAction<(float, float, float)>(
                             actor, "Rotation", (oldRx, oldRy, oldRz), newValues,
                             v => { actor.RotationX = v.Item1; actor.RotationY = v.Item2; actor.RotationZ = v.Item3; }));
                         break;
                     }
                 }
-                _engine.SetActorRotation(actor.NativePtr, actor.RotationX, actor.RotationY, actor.RotationZ, 0);
+                _engine.SetActorRotation(actor.NativePtr, actor.RotationX, actor.RotationY, actor.RotationZ, actor.RotationW);
                 break;
             }
             case nameof(ActorViewModel.ScaleX):
@@ -372,7 +373,7 @@ public class ActorViewModel : ViewModelBase
     private string _name = "Actor";
     private string _actorType = "Actor";
     private float _positionX, _positionY, _positionZ;
-    private float _rotationX, _rotationY, _rotationZ;
+    private float _rotationX, _rotationY, _rotationZ, _rotationW = 1.0f;
     private float _scaleX = 1, _scaleY = 1, _scaleZ = 1;
     private bool _isVisible = true;
     private IntPtr _nativePtr = IntPtr.Zero;
@@ -427,6 +428,12 @@ public class ActorViewModel : ViewModelBase
     {
         get => _rotationZ;
         set { _rotationZ = value; OnPropertyChanged(nameof(RotationZ)); }
+    }
+
+    public float RotationW
+    {
+        get => _rotationW;
+        set { _rotationW = value; OnPropertyChanged(nameof(RotationW)); }
     }
 
     public float ScaleX

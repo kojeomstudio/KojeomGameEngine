@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "EngineAPI.h"
+#include <new>
 #include <Engine/Core/Engine.h>
 #include <Engine/Graphics/Renderer.h>
 #include <Engine/Graphics/Camera.h>
@@ -50,8 +51,15 @@ extern "C"
 
     ENGINEAPI void* Engine_Create()
     {
-        g_EngineWrapper = new FEngineWrapper();
-        return g_EngineWrapper;
+        try
+        {
+            g_EngineWrapper = new (std::nothrow) FEngineWrapper();
+            return g_EngineWrapper;
+        }
+        catch (...)
+        {
+            return nullptr;
+        }
     }
 
     ENGINEAPI void Engine_Destroy(void* engine)
@@ -938,8 +946,14 @@ extern "C"
     {
         if (!engine || !path) return nullptr;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-        auto texture = wrapper->Engine->GetRenderer()->GetTextureManager()->LoadTexture(
-            wrapper->Engine->GetGraphicsDevice()->GetDevice(), std::wstring(path));
+        if (!wrapper->Engine) return nullptr;
+        auto* renderer = wrapper->Engine->GetRenderer();
+        if (!renderer) return nullptr;
+        auto* textureMgr = renderer->GetTextureManager();
+        if (!textureMgr) return nullptr;
+        auto* graphicsDevice = wrapper->Engine->GetGraphicsDevice();
+        if (!graphicsDevice) return nullptr;
+        auto texture = textureMgr->LoadTexture(graphicsDevice->GetDevice(), std::wstring(path));
         return texture ? texture.get() : nullptr;
     }
 

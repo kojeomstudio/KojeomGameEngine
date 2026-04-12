@@ -53,7 +53,8 @@ void KAnimationInstance::SetCurrentTime(float Time)
 {
     if (!CurrentState.Animation) return;
 
-    float duration = CurrentState.Animation->GetDuration();
+    float duration = CurrentState.Animation->GetDurationInSeconds();
+    if (duration <= 0.0f) return;
     CurrentState.CurrentTime = std::max(0.0f, std::min(Time, duration));
 }
 
@@ -61,7 +62,7 @@ float KAnimationInstance::GetNormalizedTime() const
 {
     if (!CurrentState.Animation) return 0.0f;
 
-    float duration = CurrentState.Animation->GetDuration();
+    float duration = CurrentState.Animation->GetDurationInSeconds();
     if (duration <= 0.0f) return 0.0f;
 
     return CurrentState.CurrentTime / duration;
@@ -74,9 +75,11 @@ void KAnimationInstance::Update(float DeltaTime)
         return;
     }
 
-    float duration = CurrentState.Animation->GetDuration();
-    float tickDuration = CurrentState.Animation->GetTicksPerSecond() > 0.0f ?
-        1.0f / CurrentState.Animation->GetTicksPerSecond() : 1.0f;
+    float duration = CurrentState.Animation->GetDurationInSeconds();
+    if (duration <= 0.0f)
+    {
+        return;
+    }
 
     float speedMultiplier = CurrentState.bReverse ? -1.0f : 1.0f;
     CurrentState.CurrentTime += DeltaTime * CurrentState.PlaybackSpeed * speedMultiplier;

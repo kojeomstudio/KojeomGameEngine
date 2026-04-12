@@ -20,16 +20,8 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Build Engine
-        run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /t:Engine
-        shell: cmd
-
-      - name: Build EngineInterop
-        run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /t:EngineInterop
-        shell: cmd
-
-      - name: Build All Samples
-        run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /t:BasicRenderingSample,LightingSample,PBRSample,PostProcessingSample,TerrainSample,WaterSample,SkySample,ParticlesSample,SkeletalMeshSample,GameplaySample,PhysicsSample,UISample,LayoutSample,AnimationStateMachineSample,LODSample,DebugRenderingSample
+      - name: Build Solution
+        run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /v:minimal
         shell: cmd
 
   build-csharp:

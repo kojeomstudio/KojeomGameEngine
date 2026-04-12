@@ -46,6 +46,7 @@ KAudioManager::KAudioManager()
     , NextVoiceId(1)
     , bIsInitialized(false)
 {
+    InitializeCriticalSection(&AudioLock);
     Instance = this;
 }
 
@@ -129,6 +130,8 @@ void KAudioManager::Shutdown()
     }
 
     Sounds.clear();
+    PendingVoiceCleanup.clear();
+    DeleteCriticalSection(&AudioLock);
     bIsInitialized = false;
     LOG_INFO("Audio manager shutdown");
 }
@@ -141,6 +144,29 @@ void KAudioManager::Update(float DeltaTime)
     }
 
     std::vector<uint32_t> VoicesToRemove;
+
+    EnterCriticalSection(&AudioLock);
+    VoicesToRemove.swap(PendingVoiceCleanup);
+    LeaveCriticalSection(&AudioLock);
+
+    for (uint32_t VoiceId : VoicesToRemove)
+    {
+        auto It = ActiveVoices.find(VoiceId);
+        if (It != ActiveVoices.end() && !It->second.Params.bLooping)
+        {
+            if (It->second.SourceVoice)
+            {
+                It->second.SourceVoice->DestroyVoice();
+                It->second.SourceVoice = nullptr;
+            }
+            if (It->second.Callback)
+            {
+                delete It->second.Callback;
+                It->second.Callback = nullptr;
+            }
+            ActiveVoices.erase(It);
+        }
+    }
 
     for (const auto& Pair : ActiveVoices)
     {
@@ -522,17 +548,7 @@ void KAudioManager::SetListenerParams(const FListenerParams& Params)
 
 void KAudioManager::OnVoiceEnded(uint32_t VoiceId)
 {
-    auto It = ActiveVoices.find(VoiceId);
-    if (It != ActiveVoices.end() && !It->second.Params.bLooping)
-    {
-        if (It->second.SourceVoice)
-        {
-            It->second.SourceVoice->DestroyVoice();
-        }
-        if (It->second.Callback)
-        {
-            delete It->second.Callback;
-        }
-        ActiveVoices.erase(It);
-    }
+    EnterCriticalSection(&AudioLock);
+    PendingVoiceCleanup.push_back(VoiceId);
+    LeaveCriticalSection(&AudioLock);
 }

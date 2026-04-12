@@ -201,10 +201,10 @@ HRESULT KScene::Load(const std::wstring& Path)
 
     Clear();
 
-    uint32 NumActors;
-    Archive >> NumActors;
+    uint32 NumRootActors;
+    Archive >> NumRootActors;
 
-    for (uint32 i = 0; i < NumActors; ++i)
+    for (uint32 i = 0; i < NumRootActors; ++i)
     {
         auto actor = std::make_shared<KActor>();
         actor->Deserialize(Archive);
@@ -230,8 +230,15 @@ HRESULT KScene::Save(const std::wstring& Path)
     Archive << SCENE_VERSION;
     Archive << Name;
 
-    uint32 NumActors = static_cast<uint32>(Actors.size());
-    Archive << NumActors;
+    uint32 NumRootActors = 0;
+    for (auto& actor : Actors)
+    {
+        if (!actor->GetParent())
+        {
+            ++NumRootActors;
+        }
+    }
+    Archive << NumRootActors;
 
     for (auto& actor : Actors)
     {

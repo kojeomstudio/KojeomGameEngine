@@ -63,7 +63,6 @@ artifacts/
 *.a
 *.la
 *.lai
-*.lai
 
 # Shared objects (Linux/Unix)
 *.so
@@ -126,13 +125,16 @@ cmake-build-*/
 bin/
 lib/
 Engine/x64/
-Examples/*_x64/
+samples/*_x64/
 
 # Build recipes
 *.recipe
 
 # TLog files
-*.tlog/
+*.tlog
+
+# Export files
+*.exp
 
 # ================================
 # Temporary Files
@@ -168,4 +170,11 @@ appsettings.*.json
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
+
+# ================================
+# Security
+# ================================
+*.credentials
+*.keychain
+token.*
+oauth.*

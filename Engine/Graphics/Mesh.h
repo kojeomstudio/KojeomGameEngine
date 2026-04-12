@@ -137,4 +137,5 @@ private:
     // Mesh information
     UINT32 VertexCount = 0;
     UINT32 IndexCount = 0;
+    UINT32 VertexStride = sizeof(FVertex);
 }; 

@@ -104,6 +104,10 @@ public:
     {
         uint32 Count;
         *this >> Count;
+        if (Count > 1000000)
+        {
+            Count = 0;
+        }
         Value.resize(Count);
         for (uint32 i = 0; i < Count; ++i)
         {

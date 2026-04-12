@@ -413,6 +413,7 @@ void KRenderer::Cleanup()
     SSAO.Cleanup();
     SSR.Cleanup();
     TAA.Cleanup();
+    SSGI.Cleanup();
     VolumetricFog.Cleanup();
     CommandBuffer.Cleanup();
     OcclusionCuller.Cleanup();
@@ -421,6 +422,10 @@ void KRenderer::Cleanup()
     PostProcessor.Cleanup();
     DeferredRenderer.Cleanup();
     ShadowRenderer.Cleanup();
+    MotionBlur.Cleanup();
+    DepthOfField.Cleanup();
+    LensEffects.Cleanup();
+    DebugUI.Cleanup();
     ShadowConstantBuffer.Reset();
     SkeletalTransformBuffer.Reset();
     DefaultMaterialBuffer.Reset();

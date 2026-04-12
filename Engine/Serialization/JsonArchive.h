@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <memory>
 #include <functional>
+#include <sstream>
 
 class KJsonValue;
 class KJsonObject;

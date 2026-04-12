@@ -42,6 +42,8 @@ public:
     HRESULT Initialize();
     void Cleanup();
 
+    void SetDevice(ID3D11Device* InDevice) { Device = InDevice; }
+
     std::shared_ptr<FLoadedModel> LoadModel(const std::wstring& Path, const FModelLoadOptions& Options = FModelLoadOptions());
     std::shared_ptr<FLoadedModel> LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options = FModelLoadOptions());
 
@@ -68,6 +70,7 @@ private:
     void ProcessAnimations(void* AssimpScene, FLoadedModel* OutModel);
 
     std::unordered_map<std::wstring, std::shared_ptr<FLoadedModel>> LoadedModels;
+    ID3D11Device* Device = nullptr;
     bool bInitialized = false;
     bool bAssimpAvailable = false;
 };
