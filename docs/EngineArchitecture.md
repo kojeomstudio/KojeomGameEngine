@@ -19,27 +19,27 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 77 | 23,365 | Full rendering pipeline (20 sub-systems) |
-| Assets | `Engine/Assets/` | 16 | 4,824 | Static/skeletal mesh, skeleton, animation, model loader |
-| UI | `Engine/UI/` | 27 | 2,688 | Canvas-based UI system |
-| Physics | `Engine/Physics/` | 6 | 1,138 | Rigid body, collision detection, raycast |
-| Core | `Engine/Core/` | 3 | 1,106 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
-| Audio | `Engine/Audio/` | 6 | 1,017 | XAudio2 audio, 3D sound |
-| Serialization | `Engine/Serialization/` | 4 | 950 | Binary archive, JSON archive |
-| Input | `Engine/Input/` | 3 | 774 | Keyboard, mouse, raw input, action mapping |
-| Scene | `Engine/Scene/` | 4 | 762 | Actor-Component system, scene management |
-| DebugUI | `Engine/DebugUI/` | 2 | 264 | ImGui debug overlay |
-| Utils | `Engine/Utils/` | 3 | 301 | Common.h, Logger.h, Math.h |
-| **Total** | | **151** | **37,189** | |
+| Graphics | `Engine/Graphics/` | 73 | 19,875 | Full rendering pipeline (20 sub-systems) |
+| Assets | `Engine/Assets/` | 16 | 4,203 | Static/skeletal mesh, skeleton, animation, model loader |
+| UI | `Engine/UI/` | 27 | 2,183 | Canvas-based UI system |
+| Physics | `Engine/Physics/` | 6 | 937 | Rigid body, collision detection, raycast |
+| Core | `Engine/Core/` | 3 | 935 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
+| Audio | `Engine/Audio/` | 6 | 861 | XAudio2 audio, 3D sound |
+| Serialization | `Engine/Serialization/` | 4 | 824 | Binary archive, JSON archive |
+| Input | `Engine/Input/` | 3 | 655 | Keyboard, mouse, raw input, action mapping |
+| Scene | `Engine/Scene/` | 4 | 628 | Actor-Component system, scene management |
+| DebugUI | `Engine/DebugUI/` | 2 | 241 | ImGui debug overlay |
+| Utils | `Engine/Utils/` | 3 | 257 | Common.h, Logger.h, Math.h |
+| **Total** | | **147** | **31,599** | |
 
 ## Graphics Sub-Systems
 
 | Sub-System | Path | Files | Lines | Feature |
 |------------|------|------:|------:|---------|
-| Core | `Graphics/` (root) | 15 | 6,042 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
-| PostProcess | `Graphics/PostProcess/` | 10 | 3,440 | HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects |
+| Core | `Graphics/` (root) | 15 | 6,041 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
+| PostProcess | `Graphics/PostProcess/` | 10 | 3,540 | HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects |
 | Shadow | `Graphics/Shadow/` | 8 | 1,338 | Shadow maps, cascaded shadow maps |
-| Deferred | `Graphics/Deferred/` | 4 | 1,364 | G-Buffer, deferred renderer |
+| Deferred | `Graphics/Deferred/` | 4 | 1,464 | G-Buffer, deferred renderer |
 | IBL | `Graphics/IBL/` | 2 | 1,093 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
 | Debug | `Graphics/Debug/` | 2 | 982 | Debug wireframe/shape rendering |
 | LOD | `Graphics/LOD/` | 4 | 904 | LOD generation and system |
@@ -51,7 +51,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | Volumetric | `Graphics/Volumetric/` | 2 | 641 | Volumetric fog |
 | SSR | `Graphics/SSR/` | 2 | 649 | Screen-space reflections |
 | Sky | `Graphics/Sky/` | 2 | 646 | Procedural sky rendering |
-| CommandBuffer | `Graphics/CommandBuffer/` | 2 | 548 | Deferred command recording |
+| CommandBuffer | `Graphics/CommandBuffer/` | 2 | 536 | Deferred command recording |
 | Culling | `Graphics/Culling/` | 4 | 635 | Frustum and GPU occlusion culling |
 | TAA | `Graphics/TAA/` | 2 | 591 | Temporal anti-aliasing |
 | Performance | `Graphics/Performance/` | 2 | 379 | GPU timer, frame stats |
@@ -120,8 +120,8 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 ```
 Editor/KojeomEditor/ (.NET 8.0, WPF)
 ├── Services/
-│       ├── EngineInterop.cs      # P/Invoke wrapper (1,173 lines, 107 DllImport declarations)
-│   └── UndoRedoService.cs    # Undo/Redo system (276 lines, command pattern)
+│       ├── EngineInterop.cs      # P/Invoke wrapper (936 lines, 107 DllImport declarations)
+│   └── UndoRedoService.cs    # Undo/Redo system (231 lines, command pattern)
 ├── ViewModels/
 │   ├── MainViewModel.cs      # Main window VM, transform mode state
 │   ├── SceneViewModel.cs     # Scene hierarchy VM, engine sync
@@ -144,7 +144,7 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 |----------|-------|
 | C# source files | 14 |
 | XAML files | 9 |
-| C# lines of code | 4,066 |
+| C# lines of code | 3,397 |
 | XAML lines | 789 |
 
 ### Editor Features
@@ -228,11 +228,11 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 
 | Category | Count |
 |----------|-------|
-| Engine source files (.h + .cpp) | 151 |
-| Engine total lines | ~37,189 |
+| Engine source files (.h + .cpp) | 147 |
+| Engine total lines | ~31,599 |
 | Editor C# files | 14 |
 | Editor XAML files | 9 |
-| Editor C# lines | ~4,066 |
+| Editor C# lines | ~3,397 |
 | Editor XAML lines | ~789 |
 | Sample projects | 16 |
 | Engine modules | 12 |
