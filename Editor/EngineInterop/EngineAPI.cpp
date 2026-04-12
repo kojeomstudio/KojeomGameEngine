@@ -12,6 +12,7 @@
 #include <Engine/Scene/Actor.h>
 #include <Engine/Assets/StaticMeshComponent.h>
 #include <Engine/Assets/SkeletalMeshComponent.h>
+#include <Engine/Assets/LightComponent.h>
 #include <Engine/Graphics/Debug/DebugRenderer.h>
 
 class FEngineWrapper
@@ -156,7 +157,19 @@ extern "C"
     {
         if (!sceneMgr || !path || !scene) return E_INVALIDARG;
         KSceneManager* mgr = static_cast<KSceneManager*>(sceneMgr);
-        auto scenePtr = std::shared_ptr<KScene>(static_cast<KScene*>(scene), [](KScene*) {});
+        KScene* rawScene = static_cast<KScene*>(scene);
+
+        const auto& allScenes = mgr->GetAllScenes();
+        for (const auto& pair : allScenes)
+        {
+            if (pair.second.get() == rawScene)
+            {
+                return mgr->SaveScene(std::wstring(path), pair.second);
+            }
+        }
+
+        LOG_WARNING("Scene_Save: Scene not found in manager, attempting save with non-owning reference");
+        auto scenePtr = std::shared_ptr<KScene>(rawScene, [](KScene*) {});
         return mgr->SaveScene(std::wstring(path), scenePtr);
     }
 
@@ -164,8 +177,19 @@ extern "C"
     {
         if (!sceneMgr || !scene) return;
         KSceneManager* mgr = static_cast<KSceneManager*>(sceneMgr);
-        auto scenePtr = std::shared_ptr<KScene>(static_cast<KScene*>(scene), [](KScene*) {});
-        mgr->SetActiveScene(scenePtr);
+        KScene* rawScene = static_cast<KScene*>(scene);
+
+        const auto& allScenes = mgr->GetAllScenes();
+        for (const auto& pair : allScenes)
+        {
+            if (pair.second.get() == rawScene)
+            {
+                mgr->SetActiveScene(pair.second);
+                return;
+            }
+        }
+
+        LOG_WARNING("Scene_SetActive: Scene not found in manager");
     }
 
     ENGINEAPI void* Scene_GetActive(void* sceneMgr)
@@ -445,8 +469,7 @@ extern "C"
         if (index >= 0 && index < static_cast<int>(components.size()))
         {
             KActorComponent* comp = components[index].get();
-            if (dynamic_cast<KStaticMeshComponent*>(comp)) return 2;
-            if (dynamic_cast<KSkeletalMeshComponent*>(comp)) return 3;
+            return static_cast<int>(comp->GetComponentTypeID());
         }
         return 0;
     }
@@ -515,18 +538,10 @@ extern "C"
     {
         if (!actor) return nullptr;
         KActor* kactor = static_cast<KActor*>(actor);
-        ComponentPtr newComp;
-        switch (componentType)
+        ComponentPtr newComp = CreateComponentByType(static_cast<EComponentType>(componentType));
+        if (!newComp)
         {
-        case 2:
-            newComp = std::make_shared<KStaticMeshComponent>();
-            break;
-        case 3:
-            newComp = std::make_shared<KSkeletalMeshComponent>();
-            break;
-        default:
             newComp = std::make_shared<KActorComponent>();
-            break;
         }
         kactor->AddComponent(newComp);
         return newComp.get();
@@ -549,7 +564,8 @@ extern "C"
     ENGINEAPI void* Actor_GetLightComponent(void* actor)
     {
         if (!actor) return nullptr;
-        return nullptr;
+        KActor* kactor = static_cast<KActor*>(actor);
+        return kactor->GetComponent<KLightComponent>();
     }
 
     ENGINEAPI void* StaticMeshComponent_SetMesh(void* component, const wchar_t* meshPath)

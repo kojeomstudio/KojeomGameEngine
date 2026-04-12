@@ -5,6 +5,7 @@
 #include "../Assets/Skeleton.h"
 #include "../Assets/Animation.h"
 #include "../Assets/SkeletalMeshComponent.h"
+#include <future>
 #include <memory>
 #include <vector>
 #include <string>

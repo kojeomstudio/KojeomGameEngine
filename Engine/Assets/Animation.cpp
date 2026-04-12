@@ -64,12 +64,11 @@ size_t FAnimationChannel::GetPositionKeyIndex(float Time) const
     if (PositionKeys.empty()) return 0;
     if (PositionKeys.size() == 1) return 0;
     
-    for (size_t i = 0; i < PositionKeys.size() - 1; ++i)
-    {
-        if (Time < PositionKeys[i + 1].Time)
-            return i;
-    }
-    return PositionKeys.size() - 1;
+    auto it = std::upper_bound(PositionKeys.begin(), PositionKeys.end(), Time,
+        [](float t, const FTransformKey& key) { return t < key.Time; });
+    if (it == PositionKeys.end()) return PositionKeys.size() - 1;
+    size_t idx = static_cast<size_t>(std::distance(PositionKeys.begin(), it));
+    return idx > 0 ? idx - 1 : 0;
 }
 
 size_t FAnimationChannel::GetRotationKeyIndex(float Time) const
@@ -77,12 +76,11 @@ size_t FAnimationChannel::GetRotationKeyIndex(float Time) const
     if (RotationKeys.empty()) return 0;
     if (RotationKeys.size() == 1) return 0;
     
-    for (size_t i = 0; i < RotationKeys.size() - 1; ++i)
-    {
-        if (Time < RotationKeys[i + 1].Time)
-            return i;
-    }
-    return RotationKeys.size() - 1;
+    auto it = std::upper_bound(RotationKeys.begin(), RotationKeys.end(), Time,
+        [](float t, const FTransformKey& key) { return t < key.Time; });
+    if (it == RotationKeys.end()) return RotationKeys.size() - 1;
+    size_t idx = static_cast<size_t>(std::distance(RotationKeys.begin(), it));
+    return idx > 0 ? idx - 1 : 0;
 }
 
 size_t FAnimationChannel::GetScaleKeyIndex(float Time) const
@@ -90,12 +88,11 @@ size_t FAnimationChannel::GetScaleKeyIndex(float Time) const
     if (ScaleKeys.empty()) return 0;
     if (ScaleKeys.size() == 1) return 0;
     
-    for (size_t i = 0; i < ScaleKeys.size() - 1; ++i)
-    {
-        if (Time < ScaleKeys[i + 1].Time)
-            return i;
-    }
-    return ScaleKeys.size() - 1;
+    auto it = std::upper_bound(ScaleKeys.begin(), ScaleKeys.end(), Time,
+        [](float t, const FTransformKey& key) { return t < key.Time; });
+    if (it == ScaleKeys.end()) return ScaleKeys.size() - 1;
+    size_t idx = static_cast<size_t>(std::distance(ScaleKeys.begin(), it));
+    return idx > 0 ? idx - 1 : 0;
 }
 
 XMFLOAT3 FAnimationChannel::InterpolatePosition(float Time) const

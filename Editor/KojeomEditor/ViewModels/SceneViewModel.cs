@@ -133,7 +133,7 @@ public class SceneViewModel : ViewModelBase
         if (type == "StaticMesh" && nativePtr != IntPtr.Zero)
         {
             actor.AddComponent(new StaticMeshComponentViewModel());
-            var compPtr = _engine!.AddComponent(nativePtr, 2);
+            var compPtr = _engine!.AddComponent(nativePtr, NativeComponentType.StaticMesh);
             if (compPtr != IntPtr.Zero)
             {
                 _engine!.CreateDefaultMesh(compPtr);
@@ -141,12 +141,12 @@ public class SceneViewModel : ViewModelBase
         }
         else if (type == "SkeletalMesh" && nativePtr != IntPtr.Zero)
         {
-            var compPtr = _engine!.AddComponent(nativePtr, 3);
+            var compPtr = _engine!.AddComponent(nativePtr, NativeComponentType.SkeletalMesh);
         }
         else if (type == "Light" && nativePtr != IntPtr.Zero)
         {
             actor.AddComponent(new LightComponentViewModel());
-            var compPtr = _engine!.AddComponent(nativePtr, 4);
+            var compPtr = _engine!.AddComponent(nativePtr, NativeComponentType.Light);
         }
 
         if (_undoRedo != null)

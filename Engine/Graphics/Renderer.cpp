@@ -1168,6 +1168,12 @@ void KRenderer::ApplyTAA()
 
     XMMATRIX CurrentViewProjection = CurrentCamera->GetViewMatrix() * CurrentCamera->GetProjectionMatrix();
 
+    if (bFirstTAAFrame)
+    {
+        PreviousViewProjection = CurrentViewProjection;
+        bFirstTAAFrame = false;
+    }
+
     TAA.ApplyTAA(
         GraphicsDevice->GetContext(),
         DeferredRenderer.GetLightingOutputSRV(),

@@ -21,6 +21,7 @@ enum class EComponentType : uint32
     SkeletalMesh = 2,
     Water = 3,
     Terrain = 4,
+    Light = 5,
 };
 
 using ActorPtr = std::shared_ptr<KActor>;

@@ -3,6 +3,16 @@ using System.Runtime.InteropServices;
 
 namespace KojeomEditor.Services;
 
+public static class NativeComponentType
+{
+    public const int Base = 0;
+    public const int StaticMesh = 1;
+    public const int SkeletalMesh = 2;
+    public const int Water = 3;
+    public const int Terrain = 4;
+    public const int Light = 5;
+}
+
 public class EngineInterop : IDisposable
 {
     private IntPtr _enginePtr;
@@ -593,6 +603,12 @@ public class EngineInterop : IDisposable
         return Texture_Load(_enginePtr, path);
     }
 
+    public void UnloadTexture(string path)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return;
+        Texture_Unload(_enginePtr, path);
+    }
+
     public void PauseAnimation(IntPtr component)
     {
         if (component != IntPtr.Zero) SkeletalMeshComponent_PauseAnimation(component);
@@ -661,6 +677,41 @@ public class EngineInterop : IDisposable
     {
         if (component == IntPtr.Zero) return IntPtr.Zero;
         return StaticMeshComponent_SetMesh(component, meshPath);
+    }
+
+    public void SetDirectionalLightDirection(float x, float y, float z)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetDirectionalLightDirection(renderer, x, y, z);
+    }
+
+    public void SetDirectionalLightColor(float r, float g, float b, float a)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetDirectionalLightColor(renderer, r, g, b, a);
+    }
+
+    public void SetDirectionalLightAmbient(float r, float g, float b, float a)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetDirectionalLightAmbient(renderer, r, g, b, a);
+    }
+
+    public (float posX, float posY, float posZ, float colorR, float colorG, float colorB, float intensity, float radius, float falloff) GetPointLight(int index)
+    {
+        var renderer = GetRenderer();
+        if (renderer == IntPtr.Zero) return (0, 0, 0, 0, 0, 0, 0, 0, 0);
+        Renderer_GetPointLight(renderer, index,
+            out float posX, out float posY, out float posZ,
+            out float colorR, out float colorG, out float colorB, out float intensity,
+            out float radius, out float falloff);
+        return (posX, posY, posZ, colorR, colorG, colorB, intensity, radius, falloff);
+    }
+
+    public IntPtr LoadAndGetSkeletalMesh(string path)
+    {
+        if (!_isInitialized || _enginePtr == IntPtr.Zero) return IntPtr.Zero;
+        return Model_LoadAndGetSkeletalMesh(_enginePtr, path);
     }
 
     #region P/Invoke declarations

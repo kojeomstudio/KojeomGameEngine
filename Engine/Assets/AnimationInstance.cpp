@@ -113,13 +113,41 @@ void KAnimationInstance::Update(float DeltaTime)
     case EAnimationPlayMode::PingPong:
         if (CurrentState.CurrentTime >= duration)
         {
-            CurrentState.CurrentTime = duration - (CurrentState.CurrentTime - duration);
-            CurrentState.bReverse = !CurrentState.bReverse;
+            float overflow = CurrentState.CurrentTime - duration;
+            float fullCycle = duration * 2.0f;
+            if (fullCycle > 0.0f)
+            {
+                overflow = fmodf(overflow, fullCycle);
+            }
+            if (overflow <= duration)
+            {
+                CurrentState.CurrentTime = duration - overflow;
+                CurrentState.bReverse = true;
+            }
+            else
+            {
+                CurrentState.CurrentTime = overflow - duration;
+                CurrentState.bReverse = false;
+            }
         }
         else if (CurrentState.CurrentTime < 0.0f)
         {
-            CurrentState.CurrentTime = -CurrentState.CurrentTime;
-            CurrentState.bReverse = !CurrentState.bReverse;
+            float underflow = -CurrentState.CurrentTime;
+            float fullCycle = duration * 2.0f;
+            if (fullCycle > 0.0f)
+            {
+                underflow = fmodf(underflow, fullCycle);
+            }
+            if (underflow <= duration)
+            {
+                CurrentState.CurrentTime = underflow;
+                CurrentState.bReverse = true;
+            }
+            else
+            {
+                CurrentState.CurrentTime = duration - (underflow - duration);
+                CurrentState.bReverse = false;
+            }
         }
         break;
     }
@@ -173,9 +201,58 @@ void KAnimationInstance::EvaluateAnimation()
         }
     }
 
+    std::vector<uint32> sortedBones;
+    sortedBones.reserve(boneCount);
+    std::vector<int32> parentCount(boneCount, 0);
     for (uint32 i = 0; i < boneCount; ++i)
     {
-        CalculateBoneTransformRecursive(i, localTransforms);
+        const FBone* bone = Skeleton->GetBone(i);
+        if (bone && bone->ParentIndex >= 0)
+        {
+            parentCount[bone->ParentIndex]++;
+        }
+    }
+    std::vector<uint32> queue;
+    for (uint32 i = 0; i < boneCount; ++i)
+    {
+        if (parentCount[i] == 0)
+        {
+            queue.push_back(i);
+        }
+    }
+    while (!queue.empty())
+    {
+        uint32 boneIdx = queue.back();
+        queue.pop_back();
+        sortedBones.push_back(boneIdx);
+
+        for (uint32 i = 0; i < boneCount; ++i)
+        {
+            const FBone* bone = Skeleton->GetBone(i);
+            if (bone && bone->ParentIndex == static_cast<int32>(boneIdx))
+            {
+                parentCount[i]--;
+                if (parentCount[i] == 0)
+                {
+                    queue.push_back(i);
+                }
+            }
+        }
+    }
+
+    for (uint32 boneIdx : sortedBones)
+    {
+        const FBone* bone = Skeleton->GetBone(boneIdx);
+        if (!bone) continue;
+
+        if (bone->ParentIndex >= 0)
+        {
+            BoneMatrices[boneIdx] = localTransforms[boneIdx] * BoneMatrices[bone->ParentIndex];
+        }
+        else
+        {
+            BoneMatrices[boneIdx] = localTransforms[boneIdx];
+        }
     }
 }
 

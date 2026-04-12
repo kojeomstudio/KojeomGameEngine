@@ -2,6 +2,7 @@
 #include "../Graphics/Renderer.h"
 #include "../Assets/StaticMeshComponent.h"
 #include "../Assets/SkeletalMeshComponent.h"
+#include "../Assets/LightComponent.h"
 #include "../Graphics/Water/Water.h"
 #include "../Graphics/Terrain/Terrain.h"
 
@@ -23,6 +24,8 @@ ComponentPtr CreateComponentByType(EComponentType Type)
         return std::make_shared<KStaticMeshComponent>();
     case EComponentType::SkeletalMesh:
         return std::make_shared<KSkeletalMeshComponent>();
+    case EComponentType::Light:
+        return std::make_shared<KLightComponent>();
     case EComponentType::Water:
         return std::make_shared<KWaterComponent>();
     case EComponentType::Terrain:
@@ -284,47 +287,72 @@ ActorPtr KScene::CreateActor(const std::string& ActorName)
     return actor;
 }
 
-void KScene::AddActor(ActorPtr Actor)
-{
-    if (!Actor) return;
-
-    const std::string& actorName = Actor->GetName();
-    auto it = ActorMap.find(actorName);
-    if (it != ActorMap.end())
+    void KScene::AddActor(ActorPtr Actor)
     {
-        ActorMap.erase(it);
-        for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
+        if (!Actor) return;
+
+        const std::string& actorName = Actor->GetName();
+        auto it = ActorMap.find(actorName);
+        if (it != ActorMap.end())
         {
-            if ((*ait)->GetName() == actorName)
+            ActorMap.erase(it);
+            for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
             {
-                Actors.erase(ait);
-                break;
+                if ((*ait)->GetName() == actorName)
+                {
+                    Actors.erase(ait);
+                    break;
+                }
+            }
+        }
+
+        ActorMap[actorName] = Actor;
+        Actor->BeginPlay();
+        Actors.push_back(std::move(Actor));
+    }
+
+    void KScene::RemoveActor(const std::string& ActorName)
+    {
+        auto it = ActorMap.find(ActorName);
+        if (it != ActorMap.end())
+        {
+            ActorPtr actor = it->second;
+
+            auto childrenCopy = actor->GetChildren();
+            for (auto& child : childrenCopy)
+            {
+                child->SetParent(nullptr);
+                const std::string& childName = child->GetName();
+                if (!childName.empty())
+                {
+                    auto childIt = ActorMap.find(childName);
+                    if (childIt != ActorMap.end() && childIt->second == child)
+                    {
+                        ActorMap.erase(childIt);
+                    }
+                }
+                for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
+                {
+                    if (*ait == child)
+                    {
+                        ait = Actors.erase(ait);
+                        break;
+                    }
+                }
+            }
+
+            ActorMap.erase(it);
+
+            for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
+            {
+                if (*ait == actor)
+                {
+                    Actors.erase(ait);
+                    break;
+                }
             }
         }
     }
-
-    ActorMap[actorName] = Actor;
-    Actors.push_back(std::move(Actor));
-}
-
-void KScene::RemoveActor(const std::string& ActorName)
-{
-    auto it = ActorMap.find(ActorName);
-    if (it != ActorMap.end())
-    {
-        ActorPtr actor = it->second;
-        ActorMap.erase(it);
-
-        for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
-        {
-            if (*ait == actor)
-            {
-                Actors.erase(ait);
-                break;
-            }
-        }
-    }
-}
 
 void KScene::RemoveActor(KActor* Actor)
 {

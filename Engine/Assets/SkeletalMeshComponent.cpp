@@ -124,7 +124,7 @@ KSkeletalMeshComponent::~KSkeletalMeshComponent()
 
 void KSkeletalMeshComponent::Tick(float DeltaTime)
 {
-    if (bAnimationPlaying && AnimationInstance)
+    if (AnimationInstance && AnimationInstance->GetState() != EAnimationState::Stopped)
     {
         AnimationInstance->Update(DeltaTime);
         ComputeBoneMatrices();
@@ -150,12 +150,12 @@ void KSkeletalMeshComponent::Render(KRenderer* Renderer)
         return;
     }
 
-    if (bAnimationPlaying && !BoneMatrixBuffer)
+    if (!BoneMatrixBuffer)
     {
         CreateBoneMatrixBuffer(graphicsDevice->GetDevice());
     }
 
-    if (bAnimationPlaying && BoneMatrixBuffer)
+    if (BoneMatrixBuffer)
     {
         UpdateBoneMatrices(context);
     }
@@ -357,14 +357,14 @@ void KSkeletalMeshComponent::ComputeBoneMatrices()
         
         for (uint32 i = animBoneCount; i < boneCount; ++i)
         {
-            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(bones[i].InverseBindPose);
+            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(bones[i].BindPose * bones[i].InverseBindPose);
         }
     }
     else
     {
         for (uint32 i = 0; i < boneCount; ++i)
         {
-            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(bones[i].InverseBindPose);
+            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(bones[i].BindPose * bones[i].InverseBindPose);
         }
     }
 

@@ -45,6 +45,22 @@ void KStaticMeshComponent::Serialize(KBinaryArchive& Archive)
     }
     Archive << meshPath;
     Archive << bCastShadow;
+
+    if (Material)
+    {
+        const FPBRMaterialParams& params = Material->GetParams();
+        Archive << params.AlbedoColor.x << params.AlbedoColor.y << params.AlbedoColor.z << params.AlbedoColor.w;
+        Archive << params.Metallic;
+        Archive << params.Roughness;
+        Archive << params.AO;
+    }
+    else
+    {
+        XMFLOAT4 white(1, 1, 1, 1);
+        Archive << white.x << white.y << white.z << white.w;
+        float zero = 0.0f;
+        Archive << zero << zero << zero;
+    }
 }
 
 void KStaticMeshComponent::Deserialize(KBinaryArchive& Archive)
@@ -54,4 +70,32 @@ void KStaticMeshComponent::Deserialize(KBinaryArchive& Archive)
     std::string meshPath;
     Archive >> meshPath;
     Archive >> bCastShadow;
+
+    if (Material)
+    {
+        float albedoR, albedoG, albedoB, albedoA;
+        float metallic, roughness, ao;
+        Archive >> albedoR >> albedoG >> albedoB >> albedoA;
+        Archive >> metallic;
+        Archive >> roughness;
+        Archive >> ao;
+        Material->SetAlbedoColor(XMFLOAT4(albedoR, albedoG, albedoB, albedoA));
+        Material->SetMetallic(metallic);
+        Material->SetRoughness(roughness);
+        Material->SetAO(ao);
+    }
+    else
+    {
+        XMFLOAT4 color;
+        float val;
+        Archive >> color.x >> color.y >> color.z >> color.w;
+        Archive >> val >> val >> val;
+    }
+
+    if (!meshPath.empty() && !StaticMesh)
+    {
+        auto mesh = std::make_shared<KStaticMesh>();
+        mesh->SetName(meshPath);
+        StaticMesh = mesh;
+    }
 }

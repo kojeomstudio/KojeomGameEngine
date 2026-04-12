@@ -21,18 +21,11 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.vcxproj') }}
-          restore-keys: nuget-${{ runner.os }}-
-
       - name: Build Solution
         run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /v:minimal
         shell: cmd
 
-      - name: Upload EngineInterop artifacts
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: engine-interop-${{ matrix.configuration }}
@@ -43,6 +36,30 @@ jobs:
             lib/x64/${{ matrix.configuration }}/Engine.pdb
           if-no-files-found: warn
           retention-days: 7
+
+  build-samples:
+    name: Build Sample ${{ matrix.sample }} (${{ matrix.configuration }})
+    runs-on: windows-latest
+    needs: build-cpp
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: [BasicRenderingSample, SkeletalMeshSample]
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: engine-interop-${{ matrix.configuration }}
+
+      - name: Build ${{ matrix.sample }}
+        run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /t:${{ matrix.sample }} /v:minimal
+        shell: cmd
 
   build-csharp:
     name: Build C# Editor (${{ matrix.configuration }})
@@ -55,24 +72,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: ~/.nuget/packages
-          key: dotnet-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: dotnet-${{ runner.os }}-
-
-      - name: Build EngineInterop (${{ matrix.configuration }})
-        run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /t:EngineInterop /v:minimal
-        shell: cmd
+          name: engine-interop-${{ matrix.configuration }}
 
       - name: Restore Dependencies
         run: dotnet restore Editor/KojeomEditor/KojeomEditor.csproj

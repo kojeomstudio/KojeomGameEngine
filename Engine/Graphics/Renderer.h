@@ -290,6 +290,7 @@ private:
     bool bSkyEnabled = false;
 
     XMMATRIX PreviousViewProjection = XMMatrixIdentity();
+    bool bFirstTAAFrame = true;
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;

@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <future>
+#include <chrono>
 
 #ifdef USE_ASSIMP
 #include <assimp/Importer.hpp>
@@ -110,7 +112,28 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModel(const std::wstring& Path, 
 
 std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options)
 {
-    return LoadModel(Path, Options);
+    if (IsModelLoaded(Path))
+    {
+        return LoadedModels[Path];
+    }
+
+    std::shared_ptr<FLoadedModel> result;
+    std::future<std::shared_ptr<FLoadedModel>> future = std::async(std::launch::async, [this, Path, Options]() -> std::shared_ptr<FLoadedModel> {
+        return this->LoadModel(Path, Options);
+    });
+
+    auto status = future.wait_for(std::chrono::milliseconds(0));
+    if (status == std::future_status::ready)
+    {
+        result = future.get();
+    }
+    else
+    {
+        LOG_INFO("Model load started asynchronously: " + StringUtils::WideToMultiByte(Path));
+        result = future.get();
+    }
+
+    return result;
 }
 
 bool KModelLoader::IsModelLoaded(const std::wstring& Path) const
@@ -1260,47 +1283,7 @@ HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* Ou
                 if (idxPos != std::string::npos)
                 {
                     auto idxArray = extractIntArray(idxPos);
-                    for (int32 idx : idxArray)
-                    {
-                        if (idx < 0)
-                        {
-                            indices.push_back(~idx);
-                            size_t currentFaceStart = indices.size();
-                            if (currentFaceStart >= 3)
-                            {
-                                int32 v0 = indices[currentFaceStart - 3];
-                                int32 v1 = indices[currentFaceStart - 2];
-                                int32 v2 = indices[currentFaceStart - 1];
-                            }
-                        }
-                        else
-                        {
-                            indices.push_back(idx);
-                        }
-                    }
-
-                    size_t faceCount = 0;
-                    std::vector<int32> polygonIndices;
-                    for (size_t i = 0; i < idxArray.size(); ++i)
-                    {
-                        polygonIndices.push_back(idxArray[i] >= 0 ? idxArray[i] : ~idxArray[i]);
-                        if (idxArray[i] < 0 || i == idxArray.size() - 1)
-                        {
-                            faceCount++;
-                            if (polygonIndices.size() >= 3)
-                            {
-                                int32 v0 = polygonIndices[0];
-                                for (size_t j = 1; j + 1 < polygonIndices.size(); ++j)
-                                {
-                                    if (j == 1)
-                                    {
-                                    }
-                                }
-                            }
-                            polygonIndices.clear();
-                        }
-                    }
-
+                    
                     std::vector<int32> triangleIndices;
                     std::vector<int32> currentPoly;
                     for (int32 idx : idxArray)
