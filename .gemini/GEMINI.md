@@ -32,7 +32,7 @@ C++17 / DirectX 11 기반 게임 엔진입니다. WPF 기반 에디터(Editor/Ko
 ```
 Engine/
 ├── Core/           # KEngine - 윈도우, 메인 루프, 서브시스템 관리, ISubsystem 인터페이스, KSubsystemRegistry
-├── Graphics/       # 렌더링 파이프라인 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, 등)
+│   ├── Graphics/       # 렌더링 파이프라인 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, FXAA, Color Grading, 등)
 ├── Input/          # 키보드, 마우스, 액션 매핑
 ├── Audio/          # XAudio2 기반 오디오, 3D 사운드
 ├── Physics/        # 리지드바디, 충돌 감지, 물리 월드

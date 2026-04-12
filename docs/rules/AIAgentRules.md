@@ -30,7 +30,7 @@ Engine/
 │   ├── Light.h                   # Directional, Point, Spot light structures
 │   ├── Shadow/                   # Shadow maps, cascaded shadow maps
 │   ├── Deferred/                 # G-Buffer, deferred renderer
-│   ├── PostProcess/              # HDR, lens effects (bloom), auto exposure, DOF, motion blur
+│   ├── PostProcess/              # HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects
 │   ├── SSAO/                     # Screen-space ambient occlusion
 │   ├── SSR/                      # Screen-space reflections
 │   ├── TAA/                      # Temporal anti-aliasing
@@ -38,7 +38,7 @@ Engine/
 │   ├── Sky/                      # Procedural atmospheric sky rendering
 │   ├── Volumetric/               # Volumetric fog
 │   ├── Water/                    # Water rendering with reflection/refraction
-│   ├── Terrain/                  # Terrain rendering with LOD and splat-map texturing
+│   ├── Terrain/                  # Terrain rendering with LOD, height map, splat-map texturing
 │   ├── Culling/                  # Frustum culling, GPU occlusion culling
 │   ├── CommandBuffer/            # Deferred command-based rendering with sort keys
 │   ├── Instanced/                # GPU instanced rendering

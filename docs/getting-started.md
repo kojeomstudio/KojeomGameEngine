@@ -44,7 +44,7 @@ KojeomEngine/
 │       ├── ViewModels/        # MVVM 뷰모델
 │       ├── Views/             # XAML 뷰
 │       └── Styles/            # XAML 스타일
-├── samples/                   # 샘플 프로젝트 (15개)
+├── samples/                   # 샘플 프로젝트 (16개)
 │   ├── BasicRendering/        # 기본 렌더링
 │   ├── Lighting/              # 조명
 │   ├── PBR/                   # PBR 재질

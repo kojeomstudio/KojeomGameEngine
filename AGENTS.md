@@ -158,7 +158,7 @@ Engine/
 │   ├── Debug/      # Debug renderer
 │   ├── Shadow/     # Shadow maps, cascaded shadow maps
 │   ├── Deferred/   # G-Buffer, deferred renderer
-│   ├── PostProcess/# HDR, lens effects (bloom), auto exposure, DOF, motion blur
+│   ├── PostProcess/# HDR, lens effects (bloom), FXAA, color grading, auto exposure, DOF, motion blur
 │   ├── SSAO/       # Screen-space ambient occlusion
 │   ├── SSR/        # Screen-space reflections
 │   ├── TAA/        # Temporal anti-aliasing
@@ -166,7 +166,7 @@ Engine/
 │   ├── Sky/        # Procedural sky
 │   ├── Volumetric/ # Volumetric fog
 │   ├── Water/      # Water rendering
-│   ├── Terrain/    # Terrain rendering
+│   ├── Terrain/    # Terrain rendering with height map, splat-map texturing, LOD
 │   ├── Culling/    # Frustum and GPU occlusion culling
 │   ├── Instanced/  # GPU instanced rendering
 │   ├── IBL/        # Image-based lighting
