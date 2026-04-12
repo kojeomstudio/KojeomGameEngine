@@ -19,18 +19,18 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 73 | 19,875 | Full rendering pipeline (20 sub-systems) |
-| Assets | `Engine/Assets/` | 16 | 4,203 | Static/skeletal mesh, skeleton, animation, model loader |
-| UI | `Engine/UI/` | 27 | 2,183 | Canvas-based UI system |
-| Physics | `Engine/Physics/` | 6 | 937 | Rigid body, collision detection, raycast |
-| Core | `Engine/Core/` | 3 | 935 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
-| Audio | `Engine/Audio/` | 6 | 861 | XAudio2 audio, 3D sound |
-| Serialization | `Engine/Serialization/` | 4 | 824 | Binary archive, JSON archive |
-| Input | `Engine/Input/` | 3 | 655 | Keyboard, mouse, raw input, action mapping |
-| Scene | `Engine/Scene/` | 4 | 628 | Actor-Component system, scene management |
-| DebugUI | `Engine/DebugUI/` | 2 | 241 | ImGui debug overlay |
-| Utils | `Engine/Utils/` | 3 | 257 | Common.h, Logger.h, Math.h |
-| **Total** | | **147** | **31,599** | |
+| Graphics | `Engine/Graphics/` | 74 | 23,498 | Full rendering pipeline (20 sub-systems) |
+| Assets | `Engine/Assets/` | 19 | 5,180 | Static/skeletal mesh, skeleton, animation, state machine, model loader |
+| UI | `Engine/UI/` | 27 | 2,577 | Canvas-based UI system |
+| Physics | `Engine/Physics/` | 6 | 1,138 | Rigid body, collision detection, raycast |
+| Core | `Engine/Core/` | 3 | 1,106 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
+| Audio | `Engine/Audio/` | 6 | 1,071 | XAudio2 audio, 3D sound |
+| Serialization | `Engine/Serialization/` | 4 | 1,092 | Binary archive, JSON archive |
+| Scene | `Engine/Scene/` | 4 | 791 | Actor-Component system, scene management |
+| Input | `Engine/Input/` | 3 | 774 | Keyboard, mouse, raw input, action mapping |
+| DebugUI | `Engine/DebugUI/` | 2 | 264 | ImGui debug overlay |
+| Utils | `Engine/Utils/` | 3 | 301 | Common.h, Logger.h, Math.h |
+| **Total** | | **151** | **37,792** | |
 
 ## Graphics Sub-Systems
 
@@ -61,9 +61,9 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 ### Entity-Component System
 - `KActor` owns `KActorComponent`s via `GetComponent<T>()`
-- Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`
+- Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`, `KTerrainComponent`, `KWaterComponent`
 - `KScene` manages actors with parent-child hierarchy
-- Component types: Transform, StaticMesh, SkeletalMesh, Light, Camera, Audio (stub), Physics (stub)
+- `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4)
 
 ### Singletons
 - `KEngine::GetInstance()` - global engine instance
@@ -144,8 +144,9 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 |----------|-------|
 | C# source files | 14 |
 | XAML files | 9 |
-| C# lines of code | 3,397 |
+| C# lines of code | 8,650 |
 | XAML lines | 789 |
+| **Editor total** | **23 files, 9,439 lines** |
 
 ### Editor Features
 - **Viewport**: Native Win32 child window with D3D11 rendering, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning, proper HWND positioning via `MoveWindow`/`ScreenToClient` for correct panel resizing
@@ -228,11 +229,11 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 
 | Category | Count |
 |----------|-------|
-| Engine source files (.h + .cpp) | 147 |
-| Engine total lines | ~31,599 |
+| Engine source files (.h + .cpp) | 151 |
+| Engine total lines | ~37,792 |
 | Editor C# files | 14 |
 | Editor XAML files | 9 |
-| Editor C# lines | ~3,397 |
+| Editor C# lines | ~8,650 |
 | Editor XAML lines | ~789 |
 | Sample projects | 16 |
 | Engine modules | 12 |
