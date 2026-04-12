@@ -296,6 +296,7 @@ JsonObjectPtr KJsonArchive::ParseObject(const std::string& Str, size_t& Pos, int
         return obj;
     }
 
+    size_t propertyCount = 0;
     while (Pos < Str.size())
     {
         SkipWhitespace(Str, Pos);
@@ -316,6 +317,13 @@ JsonObjectPtr KJsonArchive::ParseObject(const std::string& Str, size_t& Pos, int
 
         auto value = ParseValue(Str, Pos, Depth);
         obj->Set(key, value);
+
+        ++propertyCount;
+        if (propertyCount > MaxObjectProperties)
+        {
+            LOG_ERROR("JSON parser: object property count exceeds limit");
+            break;
+        }
 
         SkipWhitespace(Str, Pos);
         if (Pos >= Str.size())
@@ -351,10 +359,18 @@ JsonArrayPtr KJsonArchive::ParseArray(const std::string& Str, size_t& Pos, int32
         return arr;
     }
 
+    size_t elementCount = 0;
     while (Pos < Str.size())
     {
         auto value = ParseValue(Str, Pos, Depth);
         arr->Add(value);
+
+        ++elementCount;
+        if (elementCount > MaxArrayElements)
+        {
+            LOG_ERROR("JSON parser: array element count exceeds limit");
+            break;
+        }
 
         SkipWhitespace(Str, Pos);
         if (Pos >= Str.size())

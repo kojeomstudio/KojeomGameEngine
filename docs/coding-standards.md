@@ -161,10 +161,10 @@ HRESULT CreateBuffer(KGraphicsDevice* InDevice, UINT32 InWidth);
 ### P/Invoke 예시
 
 ```csharp
-[DllImport("EngineInterop.dll, CallingConvention = CallingConvention.Cdecl)]
+[DllImport("EngineInterop.dll", CallingConvention = CallingConvention.Cdecl)]
 private static extern IntPtr Engine_Create();
 
-[DllImport("EngineInterop.dll, CallingConvention = CallingConvention.Cdecl)]
+[DllImport("EngineInterop.dll", CallingConvention = CallingConvention.Cdecl)]
 private static extern void Engine_Destroy(IntPtr engine);
 ```
 

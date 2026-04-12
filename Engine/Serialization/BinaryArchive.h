@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Utils/Common.h"
+#include "../Utils/Logger.h"
 #include <fstream>
 #include <vector>
 #include <string>
@@ -15,7 +16,7 @@ public:
     static constexpr uint32 MaxStringSize = 16 * 1024 * 1024;
     static constexpr uint32 MaxFileSize = 512 * 1024 * 1024;
 
-    KBinaryArchive(EMode InMode) : Mode(InMode), ReadPosition(0), bHeaderValid(false) {}
+    KBinaryArchive(EMode InMode) : Mode(InMode), ReadPosition(0), bHeaderValid(false), bHasError(false) {}
     ~KBinaryArchive() = default;
 
     KBinaryArchive(const KBinaryArchive&) = delete;
@@ -27,6 +28,7 @@ public:
     bool IsReading() const { return Mode == EMode::Read; }
     bool IsWriting() const { return Mode == EMode::Write; }
     bool IsHeaderValid() const { return bHeaderValid; }
+    bool HasError() const { return bHasError; }
 
     KBinaryArchive& operator<<(int8 Value) { Write(&Value, sizeof(Value)); return *this; }
     KBinaryArchive& operator<<(uint8 Value) { Write(&Value, sizeof(Value)); return *this; }
@@ -121,8 +123,10 @@ public:
     {
         uint32 Count;
         *this >> Count;
-        if (Count > 1000000)
+        if (Count > 100000)
         {
+            bHasError = true;
+            LOG_ERROR("Binary archive: vector element count exceeds limit");
             Count = 0;
         }
         Value.resize(Count);
@@ -191,6 +195,7 @@ private:
     size_t ReadPosition;
     std::fstream Stream;
     bool bHeaderValid;
+    bool bHasError;
 
     static constexpr uint32 MagicNumber = 0x4B42494E;
     static constexpr uint32 CurrentVersion = 1;

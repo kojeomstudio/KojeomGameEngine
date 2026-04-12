@@ -64,6 +64,7 @@ bool KBinaryArchive::Open(const std::wstring& Path)
             return false;
         }
         Buffer.clear();
+        bHasError = false;
         WriteHeader();
     }
     else
@@ -89,6 +90,7 @@ bool KBinaryArchive::Open(const std::wstring& Path)
         Buffer.resize(fileSize);
         Stream.read(reinterpret_cast<char*>(Buffer.data()), fileSize);
         ReadPosition = 0;
+        bHasError = false;
 
         if (!ReadAndValidateHeader())
         {
@@ -114,6 +116,7 @@ void KBinaryArchive::Close()
     Buffer.clear();
     ReadPosition = 0;
     bHeaderValid = false;
+    bHasError = false;
 }
 
 void KBinaryArchive::Write(const void* Data, size_t Size)
@@ -129,6 +132,7 @@ void KBinaryArchive::Read(void* Data, size_t Size)
     if (ReadPosition + Size > Buffer.size())
     {
         LOG_ERROR("Binary archive read overflow");
+        bHasError = true;
         return;
     }
     memcpy(Data, Buffer.data() + ReadPosition, Size);

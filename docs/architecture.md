@@ -187,7 +187,7 @@ C# WPF 에디터와 C++ 엔진 간의 통신 브릿지입니다. `EngineAPI.h/cp
 
 ### 2. 모듈형 서브시스템 패턴
 - `ISubsystem` 인터페이스: `Initialize()`, `Tick()`, `Shutdown()` 생명주기
-- `KSubsystemRegistry`: 타입 기안 등록/조회, 순차적 초기화/역순 종료
+- `KSubsystemRegistry`: 타입 기반 등록/조회, 순차적 초기화/역순 종료
 - `KAudioSubsystem`, `KPhysicsSubsystem`: ISubsystem 어댑터
 
 ### 3. 엔티티-컴포넌트 패턴
@@ -210,7 +210,7 @@ C# WPF 에디터와 C++ 엔진 간의 통신 브릿지입니다. `EngineAPI.h/cp
 
 ### 포워드 렌더링 파이프라인
 1. 섀도우 패스 (옵션)
-2. 불륨etric 포그 패스 (옵션)
+2. 볼류메트릭 포그 패스 (옵션)
 3. 불투명 오브젝트 렌더링 (Basic / Phong / PBR 셰이더)
 4. SSAO 패스 (옵션, G-Buffer 필요시 디퍼드)
 5. SSR 패스 (옵션)

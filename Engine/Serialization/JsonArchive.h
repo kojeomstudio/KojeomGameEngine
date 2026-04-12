@@ -225,4 +225,6 @@ private:
     void SkipWhitespace(const std::string& Str, size_t& Pos) const;
 
     static constexpr int32 MaxNestingDepth = 200;
+    static constexpr size_t MaxArrayElements = 100000;
+    static constexpr size_t MaxObjectProperties = 10000;
 };

@@ -3,6 +3,8 @@
 #include <fstream>
 #include <cstring>
 
+static constexpr size_t MaxAudioDataSize = 512 * 1024 * 1024;
+
 #pragma pack(push, 1)
 struct FWavHeader
 {
@@ -19,6 +21,50 @@ struct FWavHeader
     uint16_t BitsPerSample;
 };
 #pragma pack(pop)
+
+static bool ValidateWavHeader(const FWavHeader& Header)
+{
+    if (Header.AudioFormat != 1 && Header.AudioFormat != 3)
+    {
+        LOG_ERROR("WAV: unsupported audio format: " + std::to_string(Header.AudioFormat));
+        return false;
+    }
+    if (Header.NumChannels < 1 || Header.NumChannels > 8)
+    {
+        LOG_ERROR("WAV: invalid channel count: " + std::to_string(Header.NumChannels));
+        return false;
+    }
+    if (Header.SampleRate < 8000 || Header.SampleRate > 192000)
+    {
+        LOG_ERROR("WAV: invalid sample rate: " + std::to_string(Header.SampleRate));
+        return false;
+    }
+    if (Header.BitsPerSample != 8 && Header.BitsPerSample != 16 && Header.BitsPerSample != 24 && Header.BitsPerSample != 32)
+    {
+        LOG_ERROR("WAV: invalid bits per sample: " + std::to_string(Header.BitsPerSample));
+        return false;
+    }
+    uint16_t expectedBlockAlign = static_cast<uint16_t>(Header.NumChannels * Header.BitsPerSample / 8);
+    if (Header.BlockAlign != expectedBlockAlign)
+    {
+        LOG_ERROR("WAV: block align mismatch");
+        return false;
+    }
+    return true;
+}
+
+static void FillWaveFormat(std::unique_ptr<uint8_t[]>& WaveFormat, uint32_t Channels, uint32_t SampleRate, uint32_t ByteRate, uint32_t BlockAlign, uint32_t BitsPerSample)
+{
+    auto pFormat = std::make_unique<WAVEFORMATEX>();
+    pFormat->wFormatTag = WAVE_FORMAT_PCM;
+    pFormat->nChannels = static_cast<WORD>(Channels);
+    pFormat->nSamplesPerSec = SampleRate;
+    pFormat->nAvgBytesPerSec = ByteRate;
+    pFormat->nBlockAlign = static_cast<WORD>(BlockAlign);
+    pFormat->wBitsPerSample = static_cast<WORD>(BitsPerSample);
+    pFormat->cbSize = 0;
+    WaveFormat.reset(reinterpret_cast<uint8_t*>(pFormat.release()));
+}
 
 KSound::KSound()
     : SampleRate(44100)
@@ -51,12 +97,27 @@ bool KSound::LoadFromWavFile(const std::wstring& FilePath)
         return false;
     }
 
+    File.seekg(0, std::ios::end);
+    auto fileSize = File.tellg();
+    File.seekg(0, std::ios::beg);
+
+    if (fileSize > static_cast<std::streamoff>(MaxAudioDataSize))
+    {
+        LOG_ERROR("WAV file too large: " + std::to_string(fileSize) + " bytes");
+        return false;
+    }
+
     FWavHeader Header;
     File.read(reinterpret_cast<char*>(&Header), sizeof(FWavHeader));
 
     if (std::strncmp(Header.Riff, "RIFF", 4) != 0 || std::strncmp(Header.Wave, "WAVE", 4) != 0)
     {
         LOG_ERROR("Invalid WAV file format");
+        return false;
+    }
+
+    if (!ValidateWavHeader(Header))
+    {
         return false;
     }
 
@@ -69,6 +130,11 @@ bool KSound::LoadFromWavFile(const std::wstring& FilePath)
 
         if (std::strncmp(ChunkId, "data", 4) == 0)
         {
+            if (ChunkSize > MaxAudioDataSize)
+            {
+                LOG_ERROR("WAV data chunk too large: " + std::to_string(ChunkSize));
+                return false;
+            }
             DataSize = ChunkSize;
             AudioData.resize(DataSize);
             File.read(reinterpret_cast<char*>(AudioData.data()), DataSize);
@@ -88,16 +154,7 @@ bool KSound::LoadFromWavFile(const std::wstring& FilePath)
     ByteRate = Header.ByteRate;
     BlockAlign = Header.BlockAlign;
 
-    WAVEFORMATEX* pFormat = new WAVEFORMATEX();
-    pFormat->wFormatTag = WAVE_FORMAT_PCM;
-    pFormat->nChannels = static_cast<WORD>(Channels);
-    pFormat->nSamplesPerSec = SampleRate;
-    pFormat->nAvgBytesPerSec = ByteRate;
-    pFormat->nBlockAlign = static_cast<WORD>(BlockAlign);
-    pFormat->wBitsPerSample = static_cast<WORD>(BitsPerSample);
-    pFormat->cbSize = 0;
-
-    WaveFormat.reset(reinterpret_cast<uint8_t*>(pFormat));
+    FillWaveFormat(WaveFormat, Channels, SampleRate, ByteRate, BlockAlign, BitsPerSample);
 
     CalculateDuration();
 
@@ -117,6 +174,12 @@ bool KSound::LoadFromMemory(const uint8_t* Data, size_t Size, uint32_t InSampleR
         return false;
     }
 
+    if (Size > MaxAudioDataSize)
+    {
+        LOG_ERROR("Audio data too large for memory load: " + std::to_string(Size));
+        return false;
+    }
+
     SampleRate = InSampleRate;
     Channels = InChannels;
     BitsPerSample = InBitsPerSample;
@@ -128,16 +191,7 @@ bool KSound::LoadFromMemory(const uint8_t* Data, size_t Size, uint32_t InSampleR
     AudioData.resize(Size);
     std::memcpy(AudioData.data(), Data, Size);
 
-    WAVEFORMATEX* pFormat = new WAVEFORMATEX();
-    pFormat->wFormatTag = WAVE_FORMAT_PCM;
-    pFormat->nChannels = static_cast<WORD>(Channels);
-    pFormat->nSamplesPerSec = SampleRate;
-    pFormat->nAvgBytesPerSec = ByteRate;
-    pFormat->nBlockAlign = static_cast<WORD>(BlockAlign);
-    pFormat->wBitsPerSample = static_cast<WORD>(BitsPerSample);
-    pFormat->cbSize = 0;
-
-    WaveFormat.reset(reinterpret_cast<uint8_t*>(pFormat));
+    FillWaveFormat(WaveFormat, Channels, SampleRate, ByteRate, BlockAlign, BitsPerSample);
 
     CalculateDuration();
 

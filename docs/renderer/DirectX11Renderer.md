@@ -215,7 +215,7 @@ cbuffer MaterialBuffer : register(b2)
 
 ### Post-Processing Pipeline (`Graphics/PostProcess/`)
 - **KPostProcessor**: Central post-processing orchestrator
-- **KLensEffects**: Bloom effect (multi-pass Gaussian blur)
+- **KLensEffects**: Chromatic aberration, vignetting, and film grain
 - **KAutoExposure**: Automatic exposure control
 - **KDepthOfField**: Depth-based blur
 - **KMotionBlur**: Velocity-based motion blur

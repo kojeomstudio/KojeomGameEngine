@@ -8,10 +8,29 @@
 
 HRESULT KHeightMap::LoadFromRawFile(const std::wstring& Path, UINT32 InWidth, UINT32 InHeight)
 {
+    static constexpr UINT32 MaxHeightMapDimension = 8192;
+
+    if (InWidth == 0 || InHeight == 0 || InWidth > MaxHeightMapDimension || InHeight > MaxHeightMapDimension)
+    {
+        LOG_ERROR("Invalid height map dimensions: " + std::to_string(InWidth) + "x" + std::to_string(InHeight));
+        return E_INVALIDARG;
+    }
+
     std::ifstream file(Path, std::ios::binary);
     if (!file.is_open())
     {
         LOG_ERROR("Failed to open height map file");
+        return E_FAIL;
+    }
+
+    file.seekg(0, std::ios::end);
+    auto fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    size_t expectedSize = static_cast<size_t>(InWidth) * InHeight;
+    if (fileSize < static_cast<std::streamoff>(expectedSize))
+    {
+        LOG_ERROR("Height map file too small for specified dimensions");
         return E_FAIL;
     }
 

@@ -438,6 +438,7 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
                         }
                         catch (const std::exception&)
                         {
+                            LOG_WARNING("OBJ: failed to parse vertex index: " + vertexStr);
                         }
                     }
 
@@ -457,6 +458,7 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
                             }
                             catch (const std::exception&)
                             {
+                                LOG_WARNING("OBJ: failed to parse texcoord index: " + texStr);
                             }
                         }
 
@@ -473,6 +475,7 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
                             }
                             catch (const std::exception&)
                             {
+                                LOG_WARNING("OBJ: failed to parse normal index: " + normStr);
                             }
                         }
                     }
@@ -489,6 +492,7 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
                     }
                     catch (const std::exception&)
                     {
+                        LOG_WARNING("OBJ: failed to parse vertex index: " + vertexStr);
                     }
                 }
 
@@ -557,6 +561,13 @@ HRESULT KModelLoader::LoadGLTFFallback(const std::wstring& Path, FLoadedModel* O
         if (jsonChunkType != 0x4E4F534A)
         {
             LOG_ERROR("Invalid GLB file (expected JSON chunk)");
+            return E_FAIL;
+        }
+        
+        static constexpr uint32 MaxGLBChunkSize = 256 * 1024 * 1024;
+        if (jsonChunkLength > MaxGLBChunkSize)
+        {
+            LOG_ERROR("GLB JSON chunk too large: " + std::to_string(jsonChunkLength));
             return E_FAIL;
         }
         
