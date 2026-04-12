@@ -23,11 +23,6 @@ void KCommandBuffer::Cleanup()
     Commands.clear();
     Commands.shrink_to_fit();
     
-    memset(LastTextures, 0, sizeof(LastTextures));
-    memset(LastConstantBuffers, 0, sizeof(LastConstantBuffers));
-    LastVertexShader = nullptr;
-    LastPixelShader = nullptr;
-    
     bInitialized = false;
 }
 
@@ -141,10 +136,9 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
         
     case ERenderSortKey::Depth:
         {
-            XMMATRIX ViewProj = XMMatrixIdentity();
             XMFLOAT3 Translation;
             XMStoreFloat3(&Translation, Command.WorldMatrix.r[3]);
-            XMVECTOR Pos = XMVector3TransformCoord(XMLoadFloat3(&Translation), ViewProj);
+            XMVECTOR Pos = XMVector3TransformCoord(XMLoadFloat3(&Translation), CurrentViewProjection);
             float Depth = XMVectorGetZ(Pos);
             UINT32 DepthInt = *reinterpret_cast<UINT32*>(&Depth);
             Key = DepthInt;
@@ -164,10 +158,9 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
     case ERenderSortKey::MaterialThenDepth:
         {
             UINT64 MaterialId = Command.Material ? reinterpret_cast<UINT64>(Command.Material) : 0;
-            XMMATRIX ViewProj = XMMatrixIdentity();
             XMFLOAT3 Translation;
             XMStoreFloat3(&Translation, Command.WorldMatrix.r[3]);
-            XMVECTOR Pos = XMVector3TransformCoord(XMLoadFloat3(&Translation), ViewProj);
+            XMVECTOR Pos = XMVector3TransformCoord(XMLoadFloat3(&Translation), CurrentViewProjection);
             float Depth = XMVectorGetZ(Pos);
             UINT32 DepthInt = *reinterpret_cast<UINT32*>(&Depth);
             Key = ((MaterialId & 0xFFFF) << 48);
@@ -219,11 +212,6 @@ void KCommandBuffer::Execute(ID3D11DeviceContext* Context)
     auto EndTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float, std::milli> Duration = EndTime - StartTime;
     Stats.ExecutionTimeMs = Duration.count();
-    
-    memset(LastTextures, 0, sizeof(LastTextures));
-    memset(LastConstantBuffers, 0, sizeof(LastConstantBuffers));
-    LastVertexShader = nullptr;
-    LastPixelShader = nullptr;
 }
 
 void KCommandBuffer::ExecuteWithFrustumCulling(ID3D11DeviceContext* Context, const KFrustum& Frustum)
@@ -246,7 +234,15 @@ void KCommandBuffer::ExecuteWithFrustumCulling(ID3D11DeviceContext* Context, con
             XMFLOAT4X4 World;
             XMStoreFloat4x4(&World, Cmd.WorldMatrix);
             Sphere.Center = XMFLOAT3(World._41, World._42, World._43);
-            Sphere.Radius = 1.0f;
+            
+            if (Cmd.Bounds.IsValid())
+            {
+                Sphere.Radius = Cmd.Bounds.GetRadius();
+            }
+            else
+            {
+                Sphere.Radius = 1.0f;
+            }
             
             if (!Frustum.ContainsSphere(Sphere))
             {
@@ -265,11 +261,6 @@ void KCommandBuffer::ExecuteWithFrustumCulling(ID3D11DeviceContext* Context, con
     auto EndTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float, std::milli> Duration = EndTime - StartTime;
     Stats.ExecutionTimeMs = Duration.count();
-    
-    memset(LastTextures, 0, sizeof(LastTextures));
-    memset(LastConstantBuffers, 0, sizeof(LastConstantBuffers));
-    LastVertexShader = nullptr;
-    LastPixelShader = nullptr;
 }
 
 void KCommandBuffer::ExecuteCommand(ID3D11DeviceContext* Context, const FRenderCommand& Command)

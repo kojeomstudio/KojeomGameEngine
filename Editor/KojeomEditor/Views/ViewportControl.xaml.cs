@@ -250,6 +250,11 @@ public partial class ViewportControl : UserControl
 
         float speed = CameraSpeed * deltaTime;
 
+        if (_pressedKeys.Contains(Key.LeftShift))
+        {
+            speed *= 2.0f;
+        }
+
         if (_pressedKeys.Contains(Key.W))
         {
             x += forwardX * speed;
@@ -277,10 +282,6 @@ public partial class ViewportControl : UserControl
         if (_pressedKeys.Contains(Key.E))
         {
             y += speed;
-        }
-        if (_pressedKeys.Contains(Key.LeftShift))
-        {
-            speed *= 2.0f;
         }
 
         _engine.SetCameraPosition(x, y, z);
@@ -529,6 +530,7 @@ public partial class ViewportControl : UserControl
         var newActor = new ActorViewModel
         {
             Name = assetName,
+            NativePtr = actorPtr,
             PositionX = spawnX,
             PositionY = spawnY,
             PositionZ = spawnZ

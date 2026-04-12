@@ -74,6 +74,7 @@ public:
     void Update(float DeltaTime);
 
     const std::vector<XMMATRIX>& GetBoneMatrices() const { return BoneMatrices; }
+    const std::vector<XMMATRIX>& GetFinalBoneMatrices() const { return FinalBoneMatrices; }
     const XMMATRIX* GetBoneMatrixData() const { return BoneMatrices.empty() ? nullptr : BoneMatrices.data(); }
     uint32 GetBoneMatrixCount() const { return static_cast<uint32>(BoneMatrices.size()); }
 

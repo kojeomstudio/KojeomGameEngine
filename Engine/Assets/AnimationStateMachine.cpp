@@ -245,6 +245,33 @@ KAnimationState* KAnimationStateMachine::AddState(const std::string& Name, std::
 
 void KAnimationStateMachine::RemoveState(const std::string& Name)
 {
+    if (BlendState.bIsActive)
+    {
+        if ((CurrentStateName == Name && BlendState.TargetState && BlendState.TargetState->GetName() == Name) ||
+            (BlendState.SourceState && BlendState.SourceState->GetName() == Name))
+        {
+            BlendState.bIsActive = false;
+            BlendState.SourceState = nullptr;
+            BlendState.TargetState = nullptr;
+            BlendState.Transition = nullptr;
+            BlendState.BlendProgress = 0.0f;
+        }
+    }
+
+    if (CurrentStateName == Name)
+    {
+        if (!DefaultStateName.empty() && States.count(DefaultStateName))
+        {
+            CurrentState = States[DefaultStateName].get();
+            CurrentStateName = DefaultStateName;
+        }
+        else
+        {
+            CurrentState = nullptr;
+            CurrentStateName.clear();
+        }
+    }
+
     auto It = States.find(Name);
     if (It != States.end())
     {
@@ -253,32 +280,6 @@ void KAnimationStateMachine::RemoveState(const std::string& Name)
             State->RemoveTransition(Name);
         }
         States.erase(It);
-
-    if (BlendState.bIsActive)
-    {
-        if (BlendState.SourceState == CurrentState || BlendState.TargetState == CurrentState)
-        {
-            BlendState.bIsActive = false;
-            BlendState.SourceState = nullptr;
-            BlendState.TargetState = nullptr;
-            BlendState.Transition = nullptr;
-            BlendState.BlendProgress = 0.0f;
-        }
-
-        if (CurrentStateName == Name)
-        {
-            if (!DefaultStateName.empty() && States.count(DefaultStateName))
-            {
-                CurrentState = States[DefaultStateName].get();
-                CurrentStateName = DefaultStateName;
-            }
-            else
-            {
-                CurrentState = nullptr;
-                CurrentStateName.clear();
-            }
-        }
-    }
     }
 }
 

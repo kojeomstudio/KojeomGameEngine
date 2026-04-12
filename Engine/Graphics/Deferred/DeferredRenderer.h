@@ -17,6 +17,7 @@ struct FTransformBuffer
     XMMATRIX View;
     XMMATRIX Projection;
 };
+static_assert(sizeof(FTransformBuffer) % 16 == 0, "FTransformBuffer must be 16-byte aligned");
 
 struct FDeferredMeshRenderData
 {
@@ -37,6 +38,24 @@ struct FForwardTransparentRenderData
     float Alpha = 1.0f;
 };
 
+struct FDeferredPointLightData
+{
+    XMFLOAT3 Position;
+    float Intensity;
+    XMFLOAT3 Color;
+    float Radius;
+};
+
+struct FDeferredSpotLightData
+{
+    XMFLOAT3 Position;
+    float Intensity;
+    XMFLOAT3 Direction;
+    float OuterCone;
+    XMFLOAT3 Color;
+    float InnerCone;
+};
+
 struct FDeferredLightBuffer
 {
     XMFLOAT3 CameraPosition;
@@ -48,9 +67,18 @@ struct FDeferredLightBuffer
     UINT32 NumPointLights;
     UINT32 NumSpotLights;
     float Padding2[2];
-    FPointLight PointLights[8];
-    FSpotLight SpotLights[4];
+    FDeferredPointLightData PointLights[8];
+    FDeferredSpotLightData SpotLights[4];
 };
+static_assert(sizeof(FDeferredLightBuffer) % 16 == 0, "FDeferredLightBuffer must be 16-byte aligned");
+
+struct FDeferredMaterialBuffer
+{
+    XMFLOAT4 BaseColor;
+    float Alpha;
+    float Padding[3];
+};
+static_assert(sizeof(FDeferredMaterialBuffer) % 16 == 0, "FDeferredMaterialBuffer must be 16-byte aligned");
 
 class KDeferredRenderer
 {
@@ -102,6 +130,7 @@ private:
 
     void UpdateTransformBuffer(ID3D11DeviceContext* Context, const XMMATRIX& World, const XMMATRIX& View, const XMMATRIX& Projection);
     void UpdateLightBuffer(ID3D11DeviceContext* Context, KCamera* Camera);
+    void UpdateMaterialBuffer(ID3D11DeviceContext* Context, const XMFLOAT4& InBaseColor, float InAlpha);
 
     void RenderFullscreenQuad(ID3D11DeviceContext* Context);
 
@@ -118,6 +147,7 @@ private:
 
     ComPtr<ID3D11Buffer> TransformConstantBuffer;
     ComPtr<ID3D11Buffer> LightConstantBuffer;
+    ComPtr<ID3D11Buffer> MaterialConstantBuffer;
 
     ComPtr<ID3D11SamplerState> PointSamplerState;
     ComPtr<ID3D11SamplerState> LinearSamplerState;

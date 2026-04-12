@@ -45,6 +45,7 @@ public:
         renderer->AddPointLight(pointLight);
 
         InitializeMaterials(graphicsDevice);
+        InitializeVariationMaterials(graphicsDevice);
 
         auto camera = GetCamera();
         if (camera)
@@ -80,6 +81,25 @@ public:
         m_rubberMaterial->Initialize(device);
         m_rubberMaterial->SetParams(FPBRMaterialParams::Rubber());
         m_rubberMaterial->SetAlbedoColor(XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f));
+    }
+
+    void InitializeVariationMaterials(KGraphicsDevice* device)
+    {
+        for (int row = 0; row < 5; ++row)
+        {
+            for (int col = 0; col < 5; ++col)
+            {
+                auto material = std::make_unique<KMaterial>();
+                material->Initialize(device);
+                FPBRMaterialParams params;
+                params.AlbedoColor = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+                params.Metallic = (float)col / 4.0f;
+                params.Roughness = (float)row / 4.0f;
+                params.AO = 1.0f;
+                material->SetParams(params);
+                m_variationMaterials.push_back(std::move(material));
+            }
+        }
     }
 
     void Update(float deltaTime) override
@@ -129,28 +149,20 @@ protected:
         m_rubberMaterial->UpdateConstantBuffer(graphicsDevice->GetContext());
         renderer->RenderMeshPBR(m_sphereMesh, rubberWorld, m_rubberMaterial.get());
 
+        int materialIndex = 0;
         for (int row = 0; row < 5; ++row)
         {
-            float roughness = (float)row / 4.0f;
             for (int col = 0; col < 5; ++col)
             {
-                float metallic = (float)col / 4.0f;
-                
-                KMaterial material;
-                material.Initialize(graphicsDevice);
-                FPBRMaterialParams params;
-                params.AlbedoColor = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
-                params.Metallic = metallic;
-                params.Roughness = roughness;
-                params.AO = 1.0f;
-                material.SetParams(params);
+                KMaterial* material = m_variationMaterials[materialIndex].get();
+                material->UpdateConstantBuffer(graphicsDevice->GetContext());
 
                 float x = -4.0f + col * 2.0f;
                 float z = -8.0f + row * 2.0f;
                 XMMATRIX world = XMMatrixScaling(0.4f, 0.4f, 0.4f) * 
                     XMMatrixTranslation(x, 0.4f, z);
-                material.UpdateConstantBuffer(graphicsDevice->GetContext());
-                renderer->RenderMeshPBR(m_sphereMesh, world, &material);
+                renderer->RenderMeshPBR(m_sphereMesh, world, material);
+                ++materialIndex;
             }
         }
 
@@ -166,6 +178,7 @@ private:
     std::unique_ptr<KMaterial> m_copperMaterial;
     std::unique_ptr<KMaterial> m_plasticMaterial;
     std::unique_ptr<KMaterial> m_rubberMaterial;
+    std::vector<std::unique_ptr<KMaterial>> m_variationMaterials;
     float m_time = 0.0f;
     float m_cameraAngle = 0.0f;
 };

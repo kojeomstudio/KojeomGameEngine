@@ -28,12 +28,22 @@ HRESULT KDeferredRenderer::Initialize(ID3D11Device* Device, UINT32 Width, UINT32
     hr = Device->CreateTexture2D(&lightingTexDesc, nullptr, &LightingOutputTexture);
     if (FAILED(hr))
     {
-        LOG_WARNING("DeferredRenderer: Failed to create lighting output texture");
+        LOG_ERROR("DeferredRenderer: Failed to create lighting output texture");
+        return hr;
     }
-    else
+
+    hr = Device->CreateRenderTargetView(LightingOutputTexture.Get(), nullptr, &LightingOutputRTV);
+    if (FAILED(hr))
     {
-        Device->CreateRenderTargetView(LightingOutputTexture.Get(), nullptr, &LightingOutputRTV);
-        Device->CreateShaderResourceView(LightingOutputTexture.Get(), nullptr, &LightingOutputSRV);
+        LOG_ERROR("DeferredRenderer: Failed to create lighting output RTV");
+        return hr;
+    }
+
+    hr = Device->CreateShaderResourceView(LightingOutputTexture.Get(), nullptr, &LightingOutputSRV);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("DeferredRenderer: Failed to create lighting output SRV");
+        return hr;
     }
 
     hr = CreateGeometryPassShader(Device);
@@ -101,6 +111,7 @@ void KDeferredRenderer::Cleanup()
     ForwardTransparentShader.reset();
     TransformConstantBuffer.Reset();
     LightConstantBuffer.Reset();
+    MaterialConstantBuffer.Reset();
     PointSamplerState.Reset();
     LinearSamplerState.Reset();
     TransparentBlendState.Reset();
@@ -380,6 +391,14 @@ HRESULT KDeferredRenderer::CreateConstantBuffers(ID3D11Device* Device)
         return hr;
     }
 
+    BufferDesc.ByteWidth = sizeof(FDeferredMaterialBuffer);
+    hr = Device->CreateBuffer(&BufferDesc, nullptr, &MaterialConstantBuffer);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("DeferredRenderer: Failed to create material buffer");
+        return hr;
+    }
+
     return S_OK;
 }
 
@@ -568,12 +587,22 @@ void KDeferredRenderer::UpdateLightBuffer(ID3D11DeviceContext* Context, KCamera*
         
         for (size_t i = 0; i < Buffer->NumPointLights; ++i)
         {
-            Buffer->PointLights[i] = PointLights[i];
+            const FPointLight& src = PointLights[i];
+            Buffer->PointLights[i].Position = src.Position;
+            Buffer->PointLights[i].Intensity = src.Intensity;
+            Buffer->PointLights[i].Color = XMFLOAT3(src.Color.x, src.Color.y, src.Color.z);
+            Buffer->PointLights[i].Radius = src.Radius;
         }
         
         for (size_t i = 0; i < Buffer->NumSpotLights; ++i)
         {
-            Buffer->SpotLights[i] = SpotLights[i];
+            const FSpotLight& src = SpotLights[i];
+            Buffer->SpotLights[i].Position = src.Position;
+            Buffer->SpotLights[i].Intensity = src.Intensity;
+            Buffer->SpotLights[i].Direction = src.Direction;
+            Buffer->SpotLights[i].OuterCone = src.OuterCone;
+            Buffer->SpotLights[i].Color = XMFLOAT3(src.Color.x, src.Color.y, src.Color.z);
+            Buffer->SpotLights[i].InnerCone = src.InnerCone;
         }
         
         Context->Unmap(LightConstantBuffer.Get(), 0);
@@ -622,9 +651,65 @@ void KDeferredRenderer::ClearAllLights()
     ClearSpotLights();
 }
 
+void KDeferredRenderer::UpdateMaterialBuffer(ID3D11DeviceContext* Context, const XMFLOAT4& InBaseColor, float InAlpha)
+{
+    FDeferredMaterialBuffer MaterialCB;
+    MaterialCB.BaseColor = InBaseColor;
+    MaterialCB.Alpha = InAlpha;
+    MaterialCB.Padding[0] = MaterialCB.Padding[1] = MaterialCB.Padding[2] = 0.0f;
+
+    D3D11_MAPPED_SUBRESOURCE MappedResource;
+    if (SUCCEEDED(Context->Map(MaterialConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
+    {
+        memcpy(MappedResource.pData, &MaterialCB, sizeof(FDeferredMaterialBuffer));
+        Context->Unmap(MaterialConstantBuffer.Get(), 0);
+    }
+}
+
 HRESULT KDeferredRenderer::Resize(ID3D11Device* Device, UINT32 NewWidth, UINT32 NewHeight)
 {
-    return GBuffer.Resize(Device, NewWidth, NewHeight);
+    HRESULT hr = GBuffer.Resize(Device, NewWidth, NewHeight);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    LightingOutputTexture.Reset();
+    LightingOutputRTV.Reset();
+    LightingOutputSRV.Reset();
+
+    D3D11_TEXTURE2D_DESC lightingTexDesc = {};
+    lightingTexDesc.Width = NewWidth;
+    lightingTexDesc.Height = NewHeight;
+    lightingTexDesc.MipLevels = 1;
+    lightingTexDesc.ArraySize = 1;
+    lightingTexDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    lightingTexDesc.SampleDesc.Count = 1;
+    lightingTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    lightingTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    hr = Device->CreateTexture2D(&lightingTexDesc, nullptr, &LightingOutputTexture);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("DeferredRenderer: Failed to recreate lighting output texture on resize");
+        return hr;
+    }
+
+    hr = Device->CreateRenderTargetView(LightingOutputTexture.Get(), nullptr, &LightingOutputRTV);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("DeferredRenderer: Failed to recreate lighting output RTV on resize");
+        return hr;
+    }
+
+    hr = Device->CreateShaderResourceView(LightingOutputTexture.Get(), nullptr, &LightingOutputSRV);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("DeferredRenderer: Failed to recreate lighting output SRV on resize");
+        return hr;
+    }
+
+    return S_OK;
 }
 
 HRESULT KDeferredRenderer::CreateForwardTransparentShader(ID3D11Device* Device)
@@ -848,23 +933,8 @@ void KDeferredRenderer::RenderForwardTransparentPass(ID3D11DeviceContext* Contex
         UpdateTransformBuffer(Context, RenderData.WorldMatrix, View, Projection);
         Context->VSSetConstantBuffers(0, 1, TransformConstantBuffer.GetAddressOf());
 
-        struct FMaterialBuffer
-        {
-            XMFLOAT4 BaseColor;
-            float Alpha;
-            float Padding[3];
-        } MaterialCB;
-        
-        MaterialCB.BaseColor = RenderData.BaseColor;
-        MaterialCB.Alpha = RenderData.Alpha;
-        MaterialCB.Padding[0] = MaterialCB.Padding[1] = MaterialCB.Padding[2] = 0.0f;
-        
-        D3D11_MAPPED_SUBRESOURCE MappedResource;
-        if (SUCCEEDED(Context->Map(TransformConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
-        {
-            memcpy(MappedResource.pData, &MaterialCB, sizeof(FMaterialBuffer));
-            Context->Unmap(TransformConstantBuffer.Get(), 0);
-        }
+        UpdateMaterialBuffer(Context, RenderData.BaseColor, RenderData.Alpha);
+        Context->PSSetConstantBuffers(2, 1, MaterialConstantBuffer.GetAddressOf());
 
         if (RenderData.DiffuseTexture)
         {

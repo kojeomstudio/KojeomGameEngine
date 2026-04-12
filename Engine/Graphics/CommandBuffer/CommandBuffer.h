@@ -121,6 +121,7 @@ public:
     void SetSortKey(ERenderSortKey SortKey) { CurrentSortKey = SortKey; }
     void SetSortEnabled(bool bEnabled) { bSortEnabled = bEnabled; }
     void SetCullingEnabled(bool bEnabled) { bCullingEnabled = bEnabled; }
+    void SetViewProjection(const XMMATRIX& InViewProj) { CurrentViewProjection = InViewProj; }
     
     void Execute(ID3D11DeviceContext* Context);
     void ExecuteWithFrustumCulling(ID3D11DeviceContext* Context, const class KFrustum& Frustum);
@@ -143,15 +144,11 @@ private:
     std::vector<FRenderCommand> Commands;
     
     ERenderSortKey CurrentSortKey = ERenderSortKey::ShaderThenTexture;
+    XMMATRIX CurrentViewProjection = XMMatrixIdentity();
     bool bSortEnabled = true;
     bool bCullingEnabled = true;
     bool bInitialized = false;
     bool bInFrame = false;
     
     FCommandBufferStats Stats;
-    
-    ID3D11ShaderResourceView* LastTextures[8] = {};
-    ID3D11Buffer* LastConstantBuffers[14] = {};
-    ID3D11VertexShader* LastVertexShader = nullptr;
-    ID3D11PixelShader* LastPixelShader = nullptr;
 };

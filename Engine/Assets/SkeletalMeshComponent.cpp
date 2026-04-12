@@ -347,12 +347,12 @@ void KSkeletalMeshComponent::ComputeBoneMatrices()
 
     if (AnimationInstance && AnimationInstance->IsPlaying())
     {
-        const std::vector<XMMATRIX>& animBoneMatrices = AnimationInstance->GetBoneMatrices();
-        uint32 animBoneCount = std::min(static_cast<uint32>(animBoneMatrices.size()), boneCount);
+        const std::vector<XMMATRIX>& animFinalBoneMatrices = AnimationInstance->GetFinalBoneMatrices();
+        uint32 animBoneCount = std::min(static_cast<uint32>(animFinalBoneMatrices.size()), boneCount);
         
         for (uint32 i = 0; i < animBoneCount; ++i)
         {
-            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(animBoneMatrices[i]);
+            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(animFinalBoneMatrices[i]);
         }
         
         for (uint32 i = animBoneCount; i < boneCount; ++i)
