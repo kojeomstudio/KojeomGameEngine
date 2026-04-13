@@ -193,7 +193,7 @@ C# WPF 에디터와 C++ 엔진 간의 통신 브릿지입니다. `EngineAPI.h/cp
 ### 3. 엔티티-컴포넌트 패턴
 - `KActor`: 컴포넌트 컨테이너 (AddComponent, GetComponent<T>)
 - `KActorComponent`: 컴포넌트 베이스 (Tick, Render, Serialize/Deserialize)
-- `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KWaterComponent`, `KTerrainComponent`
+- `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`, `KWaterComponent`, `KTerrainComponent`
 
 ### 4. 커맨드 버퍼 패턴
 - `KCommandBuffer`: 렌더 커맨드를 버퍼링, 정렬(Shader→Texture→Material→Depth), 컬링 후 일괄 실행

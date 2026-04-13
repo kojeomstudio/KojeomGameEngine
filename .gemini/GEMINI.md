@@ -61,8 +61,8 @@ samples/            # 16개 샘플 프로젝트
 ## Architecture Patterns
 
 - **Entity-Component**: `KActor`가 `KActorComponent` 소유 (`GetComponent<T>()`)
-  - 엔진 컴포넌트: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KTerrainComponent`, `KWaterComponent`
-  - `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4)
+  - 엔진 컴포넌트: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`, `KTerrainComponent`, `KWaterComponent`
+  - `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4), Light(5)
 - **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KDebugUI` (via `GetInstance()`)
   - `KAudioManager`는 `ISubsystem` 어댑터 래퍼도 제공:
     - `KAudioSubsystem`이 `KAudioManager`를 래핑

@@ -28,6 +28,7 @@ enum class EComponentType : uint32
     SkeletalMesh = 2,
     Water = 3,
     Terrain = 4,
+    Light = 5,
 };
 ```
 
@@ -39,6 +40,7 @@ Components are instantiated by type ID during deserialization via `CreateCompone
 | `SkeletalMesh` | `KSkeletalMeshComponent` | `Engine/Assets/SkeletalMeshComponent.h` |
 | `Water` | `KWaterComponent` | `Engine/Graphics/Water/Water.h` |
 | `Terrain` | `KTerrainComponent` | `Engine/Graphics/Terrain/Terrain.h` |
+| `Light` | `KLightComponent` | `Engine/Assets/LightComponent.h` |
 
 ## KActorComponent
 

@@ -144,8 +144,8 @@ private:
 ## Architecture Patterns
 
 - **Entity-Component**: `KActor` owns `KActorComponent`s via `GetComponent<T>()`
-  - Engine components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KTerrainComponent`, `KWaterComponent`
-  - `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4)
+  - Engine components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`, `KTerrainComponent`, `KWaterComponent`
+  - `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4), Light(5)
 - **Singletons**: `KEngine`, `KInputManager`, `KAudioManager`, `KDebugUI` (via `GetInstance()`)
   - `KAudioManager` also has `ISubsystem` adapter: `KAudioSubsystem` wraps `KAudioManager`, accessible via `KEngine::GetSubsystem<T>()`
   - `KPhysicsWorld` is a regular class owned by `KPhysicsSubsystem` (not a singleton)

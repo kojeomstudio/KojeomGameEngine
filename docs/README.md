@@ -65,25 +65,25 @@ KojeomGameEngine은 11개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 | Module | Files | Lines | Description |
 |--------|------:|------:|-------------|
-| Graphics | 73 | 23,498 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20 서브시스템) |
-| Assets | 18 | 5,180 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 모델 로더 (FBX/OBJ/GLTF) |
+| Graphics | 78 | 23,502 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20 서브시스템) |
+| Assets | 19 | 5,203 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 모델 로더 (FBX/OBJ/GLTF), KLightComponent |
 | UI | 27 | 2,577 | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
 | Physics | 6 | 1,138 | 리지드바디, 충돌 감지, Raycast |
 | Core | 3 | 1,106 | KEngine - 윈도우 관리, 메인 루프, 서브시스템 소유, ISubsystem 인터페이스, KSubsystemRegistry |
 | Audio | 6 | 1,071 | XAudio2 오디오, 3D 사운드 |
-| Serialization | 4 | 1,092 | 바이너리/JSON 아카이브 |
+| Serialization | 4 | 1,105 | 바이너리/JSON 아카이브 |
 | Input | 3 | 774 | 키보드, 마우스, Raw Input, Action Mapping |
-| Scene | 4 | 791 | Actor-Component 시스템, 씬 관리 |
+| Scene | 4 | 796 | Actor-Component 시스템, 씬 관리 |
 | DebugUI | 2 | 264 | ImGui 디버그 오버레이 |
 | Utils | 3 | 301 | Common.h, Logger.h, Math.h |
-| **Total** | **149** | **37,792** | |
+| **Total** | **155** | **37,837** | |
 
 ### Editor
 
 | Component | Files | Lines | Description |
 |-----------|------:|------:|-------------|
-| EngineInterop | 2 | 1,274 | C++ DLL (flat C API, 107 exported functions) for C# P/Invoke |
-| KojeomEditor | 23 | 4,880 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Renderer Settings, Content Browser (14 C# + 9 XAML) |
+| EngineInterop | 2 | 1,279 | C++ DLL (flat C API, 107 exported functions) for C# P/Invoke |
+| KojeomEditor | 22 | 4,878 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Renderer Settings, Content Browser (14 C# + 8 XAML) |
 
 ### Samples
 

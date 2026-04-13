@@ -19,18 +19,18 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 73 | 23,498 | Full rendering pipeline (20 sub-systems) |
-| Assets | `Engine/Assets/` | 18 | 5,180 | Static/skeletal mesh, skeleton, animation, state machine, model loader |
+| Graphics | `Engine/Graphics/` | 78 | 23,502 | Full rendering pipeline (20 sub-systems) |
+| Assets | `Engine/Assets/` | 19 | 5,203 | Static/skeletal mesh, skeleton, animation, state machine, model loader, light component |
 | UI | `Engine/UI/` | 27 | 2,577 | Canvas-based UI system |
 | Physics | `Engine/Physics/` | 6 | 1,138 | Rigid body, collision detection, raycast |
 | Core | `Engine/Core/` | 3 | 1,106 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
 | Audio | `Engine/Audio/` | 6 | 1,071 | XAudio2 audio, 3D sound |
-| Serialization | `Engine/Serialization/` | 4 | 1,092 | Binary archive, JSON archive |
-| Scene | `Engine/Scene/` | 4 | 791 | Actor-Component system, scene management |
+| Serialization | `Engine/Serialization/` | 4 | 1,105 | Binary archive, JSON archive |
+| Scene | `Engine/Scene/` | 4 | 796 | Actor-Component system, scene management |
 | Input | `Engine/Input/` | 3 | 774 | Keyboard, mouse, raw input, action mapping |
 | DebugUI | `Engine/DebugUI/` | 2 | 264 | ImGui debug overlay |
 | Utils | `Engine/Utils/` | 3 | 301 | Common.h, Logger.h, Math.h |
-| **Total** | | **149** | **37,792** | |
+| **Total** | | **155** | **37,837** | |
 
 ## Graphics Sub-Systems
 
@@ -63,7 +63,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 - `KActor` owns `KActorComponent`s via `GetComponent<T>()`
 - Components: `KStaticMeshComponent`, `KSkeletalMeshComponent`, `KLightComponent`, `KTerrainComponent`, `KWaterComponent`
 - `KScene` manages actors with parent-child hierarchy
-- `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4)
+- `EComponentType`: Base(0), StaticMesh(1), SkeletalMesh(2), Water(3), Terrain(4), Light(5)
 
 ### Singletons
 - `KEngine::GetInstance()` - global engine instance
@@ -229,10 +229,10 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 
 | Category | Count |
 |----------|-------|
-| Engine source files (.h + .cpp) | 149 |
-| Engine total lines | ~37,792 |
+| Engine source files (.h + .cpp) | 155 |
+| Engine total lines | ~37,837 |
 | Editor C# files | 14 |
-| Editor XAML files | 9 |
+| Editor XAML files | 8 |
 | Editor C# lines | ~4,091 |
 | Editor XAML lines | ~789 |
 | Sample projects | 16 |
