@@ -2,7 +2,7 @@
 
 ## Summary
 
-C++17 / DirectX 11 game engine with WPF-based editor (C# / .NET 8.0). Modular architecture with 12 engine modules, 20 graphics sub-systems, and full editor integration via C#/C++ interop.
+C++17 / DirectX 11 game engine with WPF-based editor (C# / .NET 8.0). Modular architecture with 11 engine modules, 20 graphics sub-systems, and full editor integration via C#/C++ interop.
 
 ## Solution Structure
 
@@ -19,8 +19,8 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 74 | 23,498 | Full rendering pipeline (20 sub-systems) |
-| Assets | `Engine/Assets/` | 19 | 5,180 | Static/skeletal mesh, skeleton, animation, state machine, model loader |
+| Graphics | `Engine/Graphics/` | 73 | 23,498 | Full rendering pipeline (20 sub-systems) |
+| Assets | `Engine/Assets/` | 18 | 5,180 | Static/skeletal mesh, skeleton, animation, state machine, model loader |
 | UI | `Engine/UI/` | 27 | 2,577 | Canvas-based UI system |
 | Physics | `Engine/Physics/` | 6 | 1,138 | Rigid body, collision detection, raycast |
 | Core | `Engine/Core/` | 3 | 1,106 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
@@ -30,7 +30,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | Input | `Engine/Input/` | 3 | 774 | Keyboard, mouse, raw input, action mapping |
 | DebugUI | `Engine/DebugUI/` | 2 | 264 | ImGui debug overlay |
 | Utils | `Engine/Utils/` | 3 | 301 | Common.h, Logger.h, Math.h |
-| **Total** | | **151** | **37,792** | |
+| **Total** | | **149** | **37,792** | |
 
 ## Graphics Sub-Systems
 
@@ -120,8 +120,8 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 ```
 Editor/KojeomEditor/ (.NET 8.0, WPF)
 ├── Services/
-│       ├── EngineInterop.cs      # P/Invoke wrapper (936 lines, 107 DllImport declarations)
-│   └── UndoRedoService.cs    # Undo/Redo system (231 lines, command pattern)
+│   ├── EngineInterop.cs      # P/Invoke wrapper (1,228 lines, 107 DllImport declarations)
+│   └── UndoRedoService.cs    # Undo/Redo system (276 lines, command pattern)
 ├── ViewModels/
 │   ├── MainViewModel.cs      # Main window VM, transform mode state
 │   ├── SceneViewModel.cs     # Scene hierarchy VM, engine sync
@@ -144,9 +144,9 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 |----------|-------|
 | C# source files | 14 |
 | XAML files | 9 |
-| C# lines of code | 8,650 |
+| C# lines of code | 4,091 |
 | XAML lines | 789 |
-| **Editor total** | **23 files, 9,439 lines** |
+| **Editor total** | **23 files, 4,880 lines** |
 
 ### Editor Features
 - **Viewport**: Native Win32 child window with D3D11 rendering, WASD fly camera, mouse picking with raycasting, drag-and-drop asset spawning, proper HWND positioning via `MoveWindow`/`ScreenToClient` for correct panel resizing
@@ -229,14 +229,14 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 
 | Category | Count |
 |----------|-------|
-| Engine source files (.h + .cpp) | 151 |
+| Engine source files (.h + .cpp) | 149 |
 | Engine total lines | ~37,792 |
 | Editor C# files | 14 |
 | Editor XAML files | 9 |
-| Editor C# lines | ~8,650 |
+| Editor C# lines | ~4,091 |
 | Editor XAML lines | ~789 |
 | Sample projects | 16 |
-| Engine modules | 12 |
+| Engine modules | 11 |
 | Graphics sub-systems | 20 |
 | EngineInterop API functions | 107 |
 | Total solution projects | 18 |

@@ -10,8 +10,8 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 
 - **Solution:** `KojeomEngine.sln` (Visual Studio 2022, C++17, x64)
 - **Core Engine:** `Engine/` (Static Library, .lib)
-- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop)
-- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0)
+- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop, 1,274 lines)
+- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, 4,880 lines)
 - **Samples:** `samples/` (16 sample projects: BasicRendering, Lighting, PBR, PostProcessing, Terrain, Water, Sky, Particles, SkeletalMesh, Gameplay, Physics, UI, UILayout, AnimationStateMachine, LOD, DebugRendering)
 
 ## Engine Module Structure
