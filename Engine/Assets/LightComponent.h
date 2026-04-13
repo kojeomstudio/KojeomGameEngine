@@ -49,9 +49,6 @@ public:
     virtual void Deserialize(KBinaryArchive& Archive) override;
 
 private:
-    void ApplyToRenderer(class KRenderer* Renderer);
-
-private:
     ELightType LightType = ELightType::Point;
     FDirectionalLight DirectionalLight;
     FPointLight PointLight;

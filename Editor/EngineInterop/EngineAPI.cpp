@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "EngineAPI.h"
 #include <new>
+#include <unordered_map>
 #include <Engine/Core/Engine.h>
 #include <Engine/Graphics/Renderer.h>
 #include <Engine/Graphics/Camera.h>
@@ -80,7 +81,7 @@ extern "C"
         if (!engine) return E_INVALIDARG;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         
-        HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
+        HINSTANCE hInst = reinterpret_cast<HINSTANCE>(GetWindowLongPtr(hwnd, GWLP_HINSTANCE));
         HRESULT hr = wrapper->Engine->Initialize(hInst, L"KojeomEditor", width, height);
         if (SUCCEEDED(hr))
         {
@@ -143,7 +144,9 @@ extern "C"
     {
         if (!sceneMgr || !name) return nullptr;
         KSceneManager* mgr = static_cast<KSceneManager*>(sceneMgr);
-        return mgr->CreateScene(std::string(name)).get();
+        auto scene = mgr->CreateScene(std::string(name));
+        if (!scene) return nullptr;
+        return scene.get();
     }
 
     ENGINEAPI void* Scene_Load(void* sceneMgr, const wchar_t* path)
@@ -333,7 +336,9 @@ extern "C"
     {
         if (!engine || !path) return nullptr;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-        return wrapper->ModelLoader->LoadModel(std::wstring(path)).get();
+        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        if (!model) return nullptr;
+        return model.get();
     }
 
     ENGINEAPI void Model_Unload(void* engine, const wchar_t* path)

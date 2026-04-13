@@ -75,17 +75,21 @@ void KLightComponent::SetColor(float R, float G, float B, float A)
     case ELightType::Spot:
         SpotLight.Color = color;
         break;
+    default:
+        break;
     }
 }
 
 void KLightComponent::GetColor(float& R, float& G, float& B, float& A) const
 {
+    R = 0.0f; G = 0.0f; B = 0.0f; A = 1.0f;
     const XMFLOAT4* color = nullptr;
     switch (LightType)
     {
     case ELightType::Directional: color = &DirectionalLight.Color; break;
     case ELightType::Point: color = &PointLight.Color; break;
     case ELightType::Spot: color = &SpotLight.Color; break;
+    default: break;
     }
     if (color)
     {

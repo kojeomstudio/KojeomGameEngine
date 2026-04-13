@@ -143,12 +143,14 @@ void KAnimationTransition::AddCondition(const FAnimTransitionCondition& Conditio
 }
 
 bool KAnimationTransition::CheckConditions(const std::unordered_map<std::string, float>& FloatParams,
-                                           const std::unordered_map<std::string, bool>& BoolParams) const
+                                            const std::unordered_map<std::string, bool>& BoolParams) const
 {
     if (Conditions.empty())
     {
         return true;
     }
+
+    bool anyEvaluated = false;
 
     for (const auto& Condition : Conditions)
     {
@@ -157,9 +159,10 @@ bool KAnimationTransition::CheckConditions(const std::unordered_map<std::string,
             auto It = BoolParams.find(Condition.ParameterName);
             if (It == BoolParams.end())
             {
-                continue;
+                return false;
             }
 
+            anyEvaluated = true;
             bool Value = It->second;
             bool Expected = Condition.CompareValue > 0.5f;
 
@@ -180,9 +183,10 @@ bool KAnimationTransition::CheckConditions(const std::unordered_map<std::string,
             auto It = FloatParams.find(Condition.ParameterName);
             if (It == FloatParams.end())
             {
-                continue;
+                return false;
             }
 
+            anyEvaluated = true;
             float Value = It->second;
 
             switch (Condition.ComparisonType)
@@ -209,7 +213,7 @@ bool KAnimationTransition::CheckConditions(const std::unordered_map<std::string,
         }
     }
 
-    return true;
+    return anyEvaluated;
 }
 
 void KAnimationTransition::Reset()
@@ -563,12 +567,21 @@ void KAnimationStateMachine::EvaluateState(KAnimationState* State, float Weight,
         XMMATRIX GlobalTransform = LocalTransforms[BoneIdx];
         
         const FBone* Bone = Skeleton->GetBone(BoneIdx);
-        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX)
+        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex < static_cast<int32>(BoneIdx))
         {
             GlobalTransform = LocalTransforms[BoneIdx] * OutMatrices[Bone->ParentIndex];
         }
 
         OutMatrices[BoneIdx] = GlobalTransform;
+    }
+
+    for (uint32 BoneIdx = 0; BoneIdx < BoneCount; ++BoneIdx)
+    {
+        const FBone* Bone = Skeleton->GetBone(BoneIdx);
+        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex >= static_cast<int32>(BoneIdx))
+        {
+            OutMatrices[BoneIdx] = LocalTransforms[BoneIdx] * OutMatrices[Bone->ParentIndex];
+        }
     }
 
     for (uint32 BoneIdx = 0; BoneIdx < BoneCount; ++BoneIdx)

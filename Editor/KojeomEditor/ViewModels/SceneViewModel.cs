@@ -470,7 +470,7 @@ public class ActorViewModel : ViewModelBase
 
     public ActorViewModel()
     {
-        Components.Add(new ComponentViewModel { Name = "Transform", ComponentType = EComponentType.Transform });
+        Components.Add(new ComponentViewModel { Name = "Transform", ComponentType = EComponentType.Base });
     }
 
     public void AddComponent(ComponentViewModel component)

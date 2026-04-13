@@ -318,6 +318,11 @@ ActorPtr KScene::CreateActor(const std::string& ActorName)
         {
             ActorPtr actor = it->second;
 
+            if (actor->GetParent())
+            {
+                actor->GetParent()->RemoveChild(actor.get());
+            }
+
             auto childrenCopy = actor->GetChildren();
             for (auto& child : childrenCopy)
             {

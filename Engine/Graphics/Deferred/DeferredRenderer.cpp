@@ -497,6 +497,7 @@ void KDeferredRenderer::RenderGeometry(ID3D11DeviceContext* Context)
         }
 
         RenderData.Mesh->Render(Context);
+        Context->VSSetConstantBuffers(0, 1, TransformConstantBuffer.GetAddressOf());
     }
 }
 

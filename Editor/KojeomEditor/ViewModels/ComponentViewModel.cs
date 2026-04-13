@@ -4,20 +4,18 @@ namespace KojeomEditor.ViewModels;
 
 public enum EComponentType
 {
-    Unknown = 0,
-    Transform = 1,
-    StaticMesh = 2,
-    SkeletalMesh = 3,
-    Light = 4,
-    Camera = 5,
-    Audio = 6,
-    Physics = 7
+    Base = 0,
+    StaticMesh = 1,
+    SkeletalMesh = 2,
+    Water = 3,
+    Terrain = 4,
+    Light = 5
 }
 
 public class ComponentViewModel : ViewModelBase
 {
     private string _name = "Component";
-    private EComponentType _componentType = EComponentType.Unknown;
+    private EComponentType _componentType = EComponentType.Base;
 
     public string Name
     {
@@ -163,7 +161,7 @@ public class CameraComponentViewModel : ComponentViewModel
 
     public CameraComponentViewModel()
     {
-        ComponentType = EComponentType.Camera;
+        ComponentType = EComponentType.Base;
         Name = "Camera";
     }
 

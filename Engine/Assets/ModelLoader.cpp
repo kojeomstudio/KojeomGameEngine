@@ -376,8 +376,12 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
     std::vector<FVertex> vertices;
     std::vector<uint32> indices;
 
+    constexpr uint32 MAX_OBJ_VERTICES = 5000000;
+    constexpr uint32 MAX_OBJ_LINES = 10000000;
+    uint32 lineCount = 0;
+
     std::string line;
-    while (std::getline(file, line))
+    while (std::getline(file, line) && ++lineCount <= MAX_OBJ_LINES)
     {
         if (line.empty() || line[0] == '#') continue;
         
@@ -387,6 +391,11 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
 
         if (prefix == "v")
         {
+            if (vertices.size() >= MAX_OBJ_VERTICES)
+            {
+                LOG_WARNING("OBJ vertex count limit reached: " + std::to_string(MAX_OBJ_VERTICES));
+                break;
+            }
             XMFLOAT3 pos;
             iss >> pos.x >> pos.y >> pos.z;
             pos.x *= Options.Scale;

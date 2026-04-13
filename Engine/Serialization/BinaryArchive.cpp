@@ -122,6 +122,12 @@ void KBinaryArchive::Close()
 void KBinaryArchive::Write(const void* Data, size_t Size)
 {
     if (Mode != EMode::Write) return;
+    if (Buffer.size() + Size > MaxFileSize)
+    {
+        LOG_ERROR("Binary archive write would exceed max size limit");
+        bHasError = true;
+        return;
+    }
     const uint8* Bytes = static_cast<const uint8*>(Data);
     Buffer.insert(Buffer.end(), Bytes, Bytes + Size);
 }

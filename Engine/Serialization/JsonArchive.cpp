@@ -497,7 +497,14 @@ double KJsonArchive::ParseNumber(const std::string& Str, size_t& Pos) const
         }
     }
 
-    return std::stod(Str.substr(start, Pos - start));
+    try
+    {
+        return std::stod(Str.substr(start, Pos - start));
+    }
+    catch (const std::exception&)
+    {
+        return 0.0;
+    }
 }
 
 bool KJsonArchive::ParseBool(const std::string& Str, size_t& Pos) const
