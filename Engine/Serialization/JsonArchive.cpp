@@ -5,6 +5,12 @@
 
 bool KJsonArchive::LoadFromFile(const std::wstring& Path)
 {
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("JSON archive: path contains traversal patterns");
+        return false;
+    }
+
     std::ifstream file(Path, std::ios::binary);
     if (!file.is_open())
     {

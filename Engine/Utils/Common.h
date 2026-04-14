@@ -75,6 +75,51 @@ namespace StringUtils
     }
 }
 
+namespace PathUtils
+{
+    inline bool ContainsTraversal(const std::wstring& Path)
+    {
+        if (Path.empty()) return true;
+
+        std::wstring normalized = Path;
+        for (auto& c : normalized)
+        {
+            if (c == L'/') c = L'\\';
+        }
+
+        if (normalized.find(L"..\\") != std::wstring::npos ||
+            normalized.find(L"../") != std::wstring::npos)
+        {
+            return true;
+        }
+
+        if (normalized.size() >= 2 && normalized[0] == L'\\' && normalized[1] == L'\\')
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    inline bool IsPathSafe(const std::wstring& Path, const std::wstring& BaseDir)
+    {
+        if (ContainsTraversal(Path)) return false;
+
+        if (BaseDir.empty()) return true;
+
+        wchar_t fullPath[MAX_PATH] = {};
+        wchar_t resolvedBase[MAX_PATH] = {};
+
+        if (!_wfullpath(fullPath, Path.c_str(), MAX_PATH)) return false;
+        if (!_wfullpath(resolvedBase, BaseDir.c_str(), MAX_PATH)) return false;
+
+        size_t basePathLen = wcslen(resolvedBase);
+        if (wcsncmp(fullPath, resolvedBase, basePathLen) != 0) return false;
+
+        return true;
+    }
+}
+
 namespace EngineConstants
 {
     constexpr UINT32 DEFAULT_WINDOW_WIDTH = 1024;

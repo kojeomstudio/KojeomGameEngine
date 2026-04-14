@@ -48,6 +48,12 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModel(const std::wstring& Path, 
         return nullptr;
     }
 
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("Model loader: path contains traversal patterns");
+        return nullptr;
+    }
+
     if (IsModelLoaded(Path))
     {
         return GetLoadedModel(Path);
