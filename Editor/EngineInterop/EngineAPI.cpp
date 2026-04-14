@@ -1040,13 +1040,28 @@ extern "C"
         return "";
     }
 
-    ENGINEAPI void Actor_AddChild(void* parent, void* child)
+    ENGINEAPI bool Actor_AddChild(void* parent, void* child)
     {
-        if (!parent || !child) return;
+        if (!parent || !child) return false;
         KActor* parentActor = static_cast<KActor*>(parent);
         KActor* childActor = static_cast<KActor*>(child);
-        auto childPtr = std::shared_ptr<KActor>(childActor, [](KActor*) {});
-        parentActor->AddChild(childPtr);
+
+        if (parentActor == childActor) return false;
+
+        bool childFound = false;
+        const auto& children = parentActor->GetChildren();
+        for (const auto& c : children)
+        {
+            if (c.get() == childActor)
+            {
+                childFound = true;
+                break;
+            }
+        }
+        if (childFound) return true;
+
+        LOG_WARNING("Actor_AddChild: child actor ownership cannot be verified. Use Actor_Create within the same scene hierarchy.");
+        return false;
     }
 
     ENGINEAPI int Actor_GetChildCount(void* actor)

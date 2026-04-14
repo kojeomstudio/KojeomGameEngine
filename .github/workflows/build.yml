@@ -34,9 +34,7 @@ jobs:
           name: engine-interop-${{ matrix.configuration }}
           path: |
             Editor/EngineInterop/bin/x64/${{ matrix.configuration }}/EngineInterop.dll
-            Editor/EngineInterop/bin/x64/${{ matrix.configuration }}/EngineInterop.pdb
             lib/x64/${{ matrix.configuration }}/Engine.lib
-            lib/x64/${{ matrix.configuration }}/Engine.pdb
           if-no-files-found: error
           retention-days: 7
 

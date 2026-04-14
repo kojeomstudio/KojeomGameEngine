@@ -124,7 +124,7 @@ extern "C"
     ENGINEAPI int Model_GetAnimationCount(void* model);
     ENGINEAPI const char* Model_GetAnimationName(void* model, int index);
 
-    ENGINEAPI void Actor_AddChild(void* parent, void* child);
+    ENGINEAPI bool Actor_AddChild(void* parent, void* child);
     ENGINEAPI int Actor_GetChildCount(void* actor);
     ENGINEAPI void* Actor_GetChild(void* actor, int index);
     ENGINEAPI void* Actor_GetParent(void* actor);

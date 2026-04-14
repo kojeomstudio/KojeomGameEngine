@@ -952,7 +952,8 @@ public class EngineInterop : IDisposable
     private static extern IntPtr Model_GetAnimationName(IntPtr model, int index);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    private static extern void Actor_AddChild(IntPtr parent, IntPtr child);
+    [return: MarshalAs(UnmanagedType.U1)]
+    private static extern bool Actor_AddChild(IntPtr parent, IntPtr child);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int Actor_GetChildCount(IntPtr actor);

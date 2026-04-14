@@ -21,6 +21,13 @@ bool KBinaryArchive::ReadAndValidateHeader()
     Read(&version, sizeof(version));
     Read(&storedChecksum, sizeof(storedChecksum));
 
+    if (bHasError)
+    {
+        LOG_ERROR("Binary archive: failed to read header data");
+        bHeaderValid = false;
+        return false;
+    }
+
     if (magic != MagicNumber)
     {
         LOG_ERROR("Binary archive: invalid magic number");
@@ -31,6 +38,14 @@ bool KBinaryArchive::ReadAndValidateHeader()
     if (version > CurrentVersion)
     {
         LOG_ERROR("Binary archive: unsupported version " + std::to_string(version));
+        bHeaderValid = false;
+        return false;
+    }
+
+    uint32 computedChecksum = ComputeChecksum();
+    if (storedChecksum != 0 && storedChecksum != computedChecksum)
+    {
+        LOG_ERROR("Binary archive: checksum mismatch (stored and computed checksums do not match)");
         bHeaderValid = false;
         return false;
     }
