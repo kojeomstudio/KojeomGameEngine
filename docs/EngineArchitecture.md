@@ -19,43 +19,43 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 73 | 19,900 | Full rendering pipeline (20 sub-systems) |
-| Assets | `Engine/Assets/` | 18 | 4,544 | Static/skeletal mesh, skeleton, animation, state machine, model loader, light component |
-| UI | `Engine/UI/` | 27 | 2,183 | Canvas-based UI system |
-| Physics | `Engine/Physics/` | 6 | 937 | Rigid body, collision detection, raycast |
-| Serialization | `Engine/Serialization/` | 4 | 973 | Binary archive, JSON archive |
-| Core | `Engine/Core/` | 3 | 935 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
-| Input | `Engine/Input/` | 3 | 655 | Keyboard, mouse, raw input, action mapping |
-| Audio | `Engine/Audio/` | 6 | 910 | XAudio2 audio, 3D sound |
-| Scene | `Engine/Scene/` | 4 | 659 | Actor-Component system, scene management |
-| DebugUI | `Engine/DebugUI/` | 2 | 241 | ImGui debug overlay |
-| Utils | `Engine/Utils/` | 3 | 257 | Common.h, Logger.h, Math.h |
-| **Total** | | **149** | **32,194** | |
+| Graphics | `Engine/Graphics/` | 73 | 23,508 | Full rendering pipeline (20 sub-systems) |
+| Assets | `Engine/Assets/` | 18 | 5,233 | Static/skeletal mesh, skeleton, animation, state machine, model loader, light component |
+| UI | `Engine/UI/` | 27 | 2,598 | Canvas-based UI system |
+| Physics | `Engine/Physics/` | 6 | 1,138 | Rigid body, collision detection, raycast |
+| Serialization | `Engine/Serialization/` | 4 | 1,174 | Binary archive, JSON archive |
+| Core | `Engine/Core/` | 3 | 1,106 | KEngine singleton, Win32 window, main loop, ISubsystem, KSubsystemRegistry |
+| Input | `Engine/Input/` | 3 | 774 | Keyboard, mouse, raw input, action mapping |
+| Audio | `Engine/Audio/` | 6 | 1,078 | XAudio2 audio, 3D sound |
+| Scene | `Engine/Scene/` | 4 | 796 | Actor-Component system, scene management |
+| DebugUI | `Engine/DebugUI/` | 2 | 264 | ImGui debug overlay |
+| Utils | `Engine/Utils/` | 3 | 346 | Common.h, Logger.h, Math.h |
+| **Total** | | **149** | **38,015** | |
 
 ## Graphics Sub-Systems
 
 | Sub-System | Path | Files | Lines | Feature |
 |------------|------|------:|------:|---------|
-| Core | `Graphics/` (root) | 10 | 5,773 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
-| PostProcess | `Graphics/PostProcess/` | 10 | 2,964 | HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects |
-| Shadow | `Graphics/Shadow/` | 8 | 1,152 | Shadow maps, cascaded shadow maps |
-| Deferred | `Graphics/Deferred/` | 4 | 1,267 | G-Buffer, deferred renderer |
-| IBL | `Graphics/IBL/` | 2 | 931 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
-| Debug | `Graphics/Debug/` | 2 | 874 | Debug wireframe/shape rendering |
-| LOD | `Graphics/LOD/` | 4 | 784 | LOD generation and system |
-| SSAO | `Graphics/SSAO/` | 2 | 630 | Screen-space ambient occlusion |
-| Terrain | `Graphics/Terrain/` | 2 | 687 | Terrain rendering with splat-map texturing |
-| SSGI | `Graphics/SSGI/` | 2 | 624 | Screen-space global illumination |
-| Particle | `Graphics/Particle/` | 2 | 563 | Particle system |
-| Water | `Graphics/Water/` | 2 | 541 | Water rendering |
-| Volumetric | `Graphics/Volumetric/` | 2 | 519 | Volumetric fog |
-| SSR | `Graphics/SSR/` | 2 | 515 | Screen-space reflections |
-| CommandBuffer | `Graphics/CommandBuffer/` | 2 | 513 | Deferred command recording |
-| Sky | `Graphics/Sky/` | 2 | 574 | Procedural sky rendering |
-| Culling | `Graphics/Culling/` | 4 | 527 | Frustum and GPU occlusion culling |
-| TAA | `Graphics/TAA/` | 2 | 490 | Temporal anti-aliasing |
-| Performance | `Graphics/Performance/` | 2 | 309 | GPU timer, frame stats |
-| Instanced | `Graphics/Instanced/` | 2 | 227 | GPU instanced rendering |
+| Core | `Graphics/` (root) | 10 | 6,051 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
+| PostProcess | `Graphics/PostProcess/` | 10 | 3,540 | HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects |
+| Shadow | `Graphics/Shadow/` | 8 | 1,338 | Shadow maps, cascaded shadow maps |
+| Deferred | `Graphics/Deferred/` | 4 | 1,465 | G-Buffer, deferred renderer |
+| IBL | `Graphics/IBL/` | 2 | 1,093 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
+| Debug | `Graphics/Debug/` | 2 | 982 | Debug wireframe/shape rendering |
+| LOD | `Graphics/LOD/` | 4 | 904 | LOD generation and system |
+| SSAO | `Graphics/SSAO/` | 2 | 795 | Screen-space ambient occlusion |
+| Terrain | `Graphics/Terrain/` | 2 | 873 | Terrain rendering with splat-map texturing |
+| SSGI | `Graphics/SSGI/` | 2 | 784 | Screen-space global illumination |
+| Particle | `Graphics/Particle/` | 2 | 677 | Particle system |
+| Water | `Graphics/Water/` | 2 | 655 | Water rendering |
+| Volumetric | `Graphics/Volumetric/` | 2 | 641 | Volumetric fog |
+| SSR | `Graphics/SSR/` | 2 | 649 | Screen-space reflections |
+| CommandBuffer | `Graphics/CommandBuffer/` | 2 | 536 | Deferred command recording |
+| Sky | `Graphics/Sky/` | 2 | 646 | Procedural sky rendering |
+| Culling | `Graphics/Culling/` | 4 | 635 | Frustum and GPU occlusion culling |
+| TAA | `Graphics/TAA/` | 2 | 591 | Temporal anti-aliasing |
+| Performance | `Graphics/Performance/` | 2 | 379 | GPU timer, frame stats |
+| Instanced | `Graphics/Instanced/` | 2 | 274 | GPU instanced rendering |
 
 ## Key Design Patterns
 
@@ -167,19 +167,18 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 | Engine Lifecycle | 7 | Create, Destroy, Initialize, Tick, Render, Resize, InitializeEmbedded |
 | Subsystem Access | 2 | GetSceneManager, GetRenderer |
 | Scene Management | 8 | Create, Load, Save, SetActive, GetActive, Raycast, GetActorCount, GetActorAt |
-| Actor Management | 20 | Create, Destroy, Transform (Get/Set), Name, Components, Visibility, Hierarchy |
-| Camera | 10 | GetMain, Transform, Matrices, FOV, Near/Far |
-| Renderer Settings | 12 | RenderPath, DebugMode, Stats, SSAO, PostProcess, Shadow, Sky, TAA, DebugUI, SSR, VolumetricFog |
+| Actor Management | 23 | Create, Destroy, Transform (Get/Set), Name, Components, Visibility, Hierarchy |
+| Camera | 11 | GetMain, Transform, Matrices, FOV, Near/Far |
+| Renderer Settings | 12 | RenderPath, DebugMode, Stats, SSAO, PostProcess, Shadow, Sky, TAA, DebugUI, SSR, VolumetricFog, ShadowSceneBounds |
 | Directional Light | 7 | Set/Get properties, Direction, Color, Ambient, Intensity |
 | Point Light | 4 | Add, Clear, Count, Get |
 | Spot Light | 2 | Add, Clear |
 | Material | 8 | Set/Get Albedo, Metallic, Roughness, AO (connected to editor MaterialEditorControl) |
-| StaticMesh Component | 4 | Get, SetMesh, GetMaterial, CreateDefaultMesh |
-| SkeletalMesh Component | 8 | Get, Play/Stop/Pause/Resume, AnimationCount, AnimationName, LoadModel |
-| Model Loading | 6 | Load, Unload, LoadStaticMesh, LoadSkeletalMesh, HasSkeleton, AnimationInfo |
+| StaticMesh Component | 3 | SetMesh, GetMaterial, CreateDefaultMesh |
+| SkeletalMesh Component | 7 | Play/Stop/Pause/Resume, AnimationCount, AnimationName, LoadModel |
+| Model Loading | 7 | Load, Unload, LoadStaticMesh, LoadSkeletalMesh, HasSkeleton, AnimationCount, AnimationName |
 | Texture | 2 | Load, Unload |
 | DebugRenderer | 4 | DrawGrid, DrawAxis, SetEnabled, RenderFrame |
-| Other | 3 | GetLightComponent (stub), AddChild, GetChild, GetParent |
 
 ## Sample Projects
 
@@ -230,7 +229,7 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Category | Count |
 |----------|-------|
 | Engine source files (.h + .cpp) | 149 |
-| Engine total lines | ~32,194 |
+| Engine total lines | ~38,015 |
 | Editor C# files | 14 |
 | Editor XAML files | 9 |
 | Editor C# lines | ~3,455 |
