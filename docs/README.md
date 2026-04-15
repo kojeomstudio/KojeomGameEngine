@@ -9,7 +9,7 @@ docs/
 ├── README.md                        # 이 파일
 ├── EngineArchitecture.md            # 엔진 아키텍처 전체 개요
 ├── assets/                          # 에셋 시스템 문서
-│   └── AssetSystem.md              # 정적/스켈레탈 메시, 애니메이션, 모델 로더
+│   └── AssetSystem.md              # 정적/스켈레탈 메시, 애니메이션, 모델 로더, 액터 컴포넌트
 ├── audio/                           # 오디오 시스템 문서
 │   └── AudioSystem.md              # XAudio2 오디오, 3D 사운드
 ├── debugui/                         # 디버그 UI 문서
@@ -66,7 +66,7 @@ KojeomGameEngine은 11개 모듈로 구성된 모듈형 게임 엔진입니다:
 | Module | Files | Lines | Description |
 |--------|------:|------:|-------------|
 | Graphics | 73 | 23,508 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 20 서브시스템) |
-| Assets | 18 | 5,233 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 애니메이션 상태 머신, 모델 로더 (FBX/OBJ/GLTF), KLightComponent |
+| Assets | 18 | 5,233 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 애니메이션 상태 머신, 모델 로더 (FBX/OBJ/GLTF), 액터 컴포넌트 (StaticMesh, SkeletalMesh, Light) |
 | UI | 27 | 2,598 | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
 | Physics | 6 | 1,138 | 리지드바디, 충돌 감지, Raycast |
 | Serialization | 4 | 1,174 | 바이너리/JSON 아카이브 |
@@ -83,7 +83,7 @@ KojeomGameEngine은 11개 모듈로 구성된 모듈형 게임 엔진입니다:
 | Component | Files | Lines | Description |
 |-----------|------:|------:|-------------|
 | EngineInterop | 2 | 1,294 | C++ DLL (flat C API, 107 exported functions) for C# P/Invoke |
-| KojeomEditor | 23 | 4,185 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Renderer Settings, Content Browser (14 C# + 9 XAML) |
+| KojeomEditor | 23 | 4,185 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Renderer Settings, Content Browser (14 C# + 9 XAML, Styles 포함) |
 
 ### Samples
 

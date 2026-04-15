@@ -37,7 +37,7 @@ Engine/
 ├── Audio/          # XAudio2 기반 오디오, 3D 사운드
 ├── Physics/        # 리지드바디, 충돌 감지, 물리 월드
 ├── Scene/          # Actor-Component 시스템, 씬 관리
-├── Assets/         # 정적/스켈레탈 메시, 애니메이션, 모델 로더(Assimp)
+├── Assets/         # 정적/스켈레탈 메시, 애니메이션, 모델 로더(Assimp), 액터 컴포넌트(StaticMesh, SkeletalMesh, Light)
 ├── Serialization/  # 바이너리/JSON 아카이브
 ├── UI/             # 캔버스 기반 UI 시스템
 ├── DebugUI/        # ImGui 디버그 오버레이

@@ -182,7 +182,7 @@ Engine/
 ├── Audio/          # XAudio2 audio, 3D sound
 ├── Physics/        # Rigid body, collision detection
 ├── Scene/          # Actor-Component system, scene management
-├── Assets/         # Mesh, skeletal mesh, animation, model loader (Assimp)
+├── Assets/         # Mesh, skeletal mesh, animation, model loader (Assimp), actor components (StaticMesh, SkeletalMesh, Light)
 ├── Serialization/  # Binary and JSON archives
 ├── UI/             # Canvas-based UI system
 ├── DebugUI/        # ImGui debug overlay

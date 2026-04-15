@@ -79,7 +79,7 @@ KojeomEngine/
 │   ├── Audio/                  # 오디오 시스템 (XAudio2)
 │   ├── Physics/                # 물리 엔진
 │   ├── Scene/                  # Actor-Component 시스템
-│   ├── Assets/                 # 메시, 스켈레톤, 애니메이션, 모델 로더
+│   ├── Assets/                 # 메시, 스켈레톤, 애니메이션, 모델 로더, 액터 컴포넌트(StaticMesh, SkeletalMesh, Light)
 │   ├── Serialization/          # 바이너리/JSON 직렬화
 │   ├── UI/                     # 캔버스 기반 UI 시스템
 │   ├── DebugUI/                # ImGui 디버그 UI

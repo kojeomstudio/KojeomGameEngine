@@ -51,7 +51,7 @@ Engine/
 ├── Audio/              # XAudio2-based audio, 3D sound, volume channels
 ├── Physics/            # Rigid body, physics world, collision detection, raycast
 ├── Scene/              # Actor-Component system, scene management, parent-child hierarchy
-├── Assets/             # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks)
+├── Assets/             # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components (StaticMeshComponent, SkeletalMeshComponent, LightComponent)
 ├── Serialization/      # Binary archive, JSON archive (custom DOM parser)
 ├── UI/                 # Canvas-based UI system (element, panel, button, text, image, slider, checkbox, layouts, font)
 ├── DebugUI/            # ImGui-based debug overlay with panel registration
