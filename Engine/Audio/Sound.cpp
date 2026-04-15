@@ -1,4 +1,5 @@
 #include "Sound.h"
+#include "../Utils/Common.h"
 #include "../Utils/Logger.h"
 #include <fstream>
 #include <cstring>
@@ -90,6 +91,12 @@ KSound::~KSound()
 
 bool KSound::LoadFromWavFile(const std::wstring& FilePath)
 {
+    if (PathUtils::ContainsTraversal(FilePath))
+    {
+        LOG_ERROR("Sound: path contains traversal patterns");
+        return false;
+    }
+
     std::ifstream File(FilePath, std::ios::binary);
     if (!File.is_open())
     {

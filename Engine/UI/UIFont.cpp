@@ -58,6 +58,12 @@ HRESULT KUIFont::Initialize(ID3D11Device* Device, const std::wstring& FontPath)
 
 HRESULT KUIFont::LoadFontFile(const std::wstring& FontPath)
 {
+    if (PathUtils::ContainsTraversal(FontPath))
+    {
+        LOG_ERROR("Font: path contains traversal patterns");
+        return E_INVALIDARG;
+    }
+
     std::ifstream file(FontPath);
     if (!file.is_open())
     {
@@ -109,7 +115,8 @@ HRESULT KUIFont::LoadFontFile(const std::wstring& FontPath)
             {
                 if (token.find("size=") == 0)
                 {
-                    FontSize = std::stof(token.substr(5));
+                    try { FontSize = std::stof(token.substr(5)); }
+                    catch (...) { FontSize = 24.0f; }
                 }
             }
         }
@@ -119,13 +126,25 @@ HRESULT KUIFont::LoadFontFile(const std::wstring& FontPath)
             while (iss >> token)
             {
                 if (token.find("lineHeight=") == 0)
-                    LineHeight = std::stof(token.substr(11));
+                {
+                    try { LineHeight = std::stof(token.substr(11)); }
+                    catch (...) { LineHeight = 30.0f; }
+                }
                 else if (token.find("base=") == 0)
-                    Base = std::stof(token.substr(5));
+                {
+                    try { Base = std::stof(token.substr(5)); }
+                    catch (...) { Base = 20.0f; }
+                }
                 else if (token.find("scaleW=") == 0)
-                    TextureWidth = std::stof(token.substr(7));
+                {
+                    try { TextureWidth = std::stof(token.substr(7)); }
+                    catch (...) { TextureWidth = 256.0f; }
+                }
                 else if (token.find("scaleH=") == 0)
-                    TextureHeight = std::stof(token.substr(7));
+                {
+                    try { TextureHeight = std::stof(token.substr(7)); }
+                    catch (...) { TextureHeight = 256.0f; }
+                }
             }
         }
         else if (type == "page")
@@ -159,7 +178,9 @@ HRESULT KUIFont::LoadFontFile(const std::wstring& FontPath)
                 if (eq != std::string::npos)
                 {
                     std::string key = token.substr(0, eq);
-                    float value = std::stof(token.substr(eq + 1));
+                    float value = 0.0f;
+                    try { value = std::stof(token.substr(eq + 1)); }
+                    catch (...) { continue; }
 
                     if (key == "id") ch.Character = (wchar_t)value;
                     else if (key == "x") ch.X = value;

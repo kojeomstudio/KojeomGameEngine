@@ -601,7 +601,19 @@ HRESULT KModelLoader::LoadGLTFFallback(const std::wstring& Path, FLoadedModel* O
             LOG_ERROR("Failed to open GLTF file: " + StringUtils::WideToMultiByte(Path));
             return E_FAIL;
         }
-        
+
+        static constexpr uint32 MaxGLTFFileSize = 256 * 1024 * 1024;
+        file.seekg(0, std::ios::end);
+        auto gltfFileSize = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        if (gltfFileSize > 0 && static_cast<uint32>(gltfFileSize) > MaxGLTFFileSize)
+        {
+            LOG_ERROR("GLTF file too large: " + std::to_string(static_cast<uint32>(gltfFileSize)));
+            file.close();
+            return E_FAIL;
+        }
+
         std::string jsonContent((std::istreambuf_iterator<char>(file)),
                                  std::istreambuf_iterator<char>());
         file.close();
@@ -1117,6 +1129,18 @@ HRESULT KModelLoader::LoadFBXFallback(const std::wstring& Path, FLoadedModel* Ou
     if (!file.is_open())
     {
         LOG_ERROR("Failed to open FBX file: " + StringUtils::WideToMultiByte(Path));
+        return E_FAIL;
+    }
+
+    static constexpr uint32 MaxFBXFallbackSize = 256 * 1024 * 1024;
+    file.seekg(0, std::ios::end);
+    auto fbxFileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    if (fbxFileSize > 0 && static_cast<uint32>(fbxFileSize) > MaxFBXFallbackSize)
+    {
+        LOG_ERROR("FBX file too large for fallback parser: " + std::to_string(static_cast<uint32>(fbxFileSize)));
+        file.close();
         return E_FAIL;
     }
 

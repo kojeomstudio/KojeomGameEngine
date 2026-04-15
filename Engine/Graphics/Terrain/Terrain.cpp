@@ -16,6 +16,12 @@ HRESULT KHeightMap::LoadFromRawFile(const std::wstring& Path, UINT32 InWidth, UI
         return E_INVALIDARG;
     }
 
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("HeightMap: path contains traversal patterns");
+        return E_INVALIDARG;
+    }
+
     std::ifstream file(Path, std::ios::binary);
     if (!file.is_open())
     {

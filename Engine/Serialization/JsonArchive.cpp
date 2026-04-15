@@ -38,6 +38,12 @@ bool KJsonArchive::LoadFromFile(const std::wstring& Path)
 
 bool KJsonArchive::SaveToFile(const std::wstring& Path)
 {
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("JSON archive: path contains traversal patterns");
+        return false;
+    }
+
     std::ofstream file(Path);
     if (!file.is_open())
     {
