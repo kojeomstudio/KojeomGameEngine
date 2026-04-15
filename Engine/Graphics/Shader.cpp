@@ -5,6 +5,12 @@
 HRESULT KShader::LoadFromFile(ID3D11Device* Device, const std::wstring& Filename, 
                             const std::string& EntryPoint, EShaderType InType)
 {
+    if (PathUtils::ContainsTraversal(Filename))
+    {
+        LOG_ERROR("Shader path rejected (unsafe path): " + StringUtils::WideToMultiByte(Filename));
+        return E_INVALIDARG;
+    }
+
     Type = InType;
 
     DWORD ShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;

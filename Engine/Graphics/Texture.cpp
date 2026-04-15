@@ -5,6 +5,12 @@
 
 HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filename)
 {
+    if (PathUtils::ContainsTraversal(Filename))
+    {
+        LOG_ERROR("Texture path rejected (unsafe path): " + StringUtils::WideToMultiByte(Filename));
+        return E_INVALIDARG;
+    }
+
     IWICImagingFactory* wicFactory = nullptr;
     HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&wicFactory));

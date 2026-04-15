@@ -79,6 +79,8 @@ extern "C"
     ENGINEAPI HRESULT Engine_Initialize(void* engine, HWND hwnd, int width, int height)
     {
         if (!engine) return E_INVALIDARG;
+        if (!hwnd) return E_INVALIDARG;
+        if (width <= 0 || height <= 0) return E_INVALIDARG;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         
         HINSTANCE hInst = reinterpret_cast<HINSTANCE>(GetWindowLongPtr(hwnd, GWLP_HINSTANCE));
@@ -94,6 +96,8 @@ extern "C"
     ENGINEAPI HRESULT Engine_InitializeEmbedded(void* engine, HWND hwnd, int width, int height)
     {
         if (!engine) return E_INVALIDARG;
+        if (!hwnd) return E_INVALIDARG;
+        if (width <= 0 || height <= 0) return E_INVALIDARG;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         
         HRESULT hr = wrapper->Engine->InitializeWithExternalHwnd(hwnd, width, height);

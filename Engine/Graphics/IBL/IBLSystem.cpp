@@ -204,6 +204,12 @@ HRESULT KIBLSystem::LoadEnvironmentMap(const std::wstring& HDRPath)
         return E_FAIL;
     }
 
+    if (PathUtils::ContainsTraversal(HDRPath))
+    {
+        LOG_ERROR("IBL environment map path rejected (unsafe path): " + StringUtils::WideToMultiByte(HDRPath));
+        return E_INVALIDARG;
+    }
+
     EnvironmentHDRTexture = std::make_shared<KTexture>();
     HRESULT hr = EnvironmentHDRTexture->LoadFromFile(GraphicsDevice->GetDevice(), HDRPath);
     if (FAILED(hr))
