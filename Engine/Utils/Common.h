@@ -97,6 +97,15 @@ namespace PathUtils
             return true;
         }
 
+        if (normalized.size() >= 3 && normalized[1] == L':' && normalized[2] == L'\\')
+        {
+            wchar_t drive = towupper(normalized[0]);
+            if (drive >= L'A' && drive <= L'Z')
+            {
+                return true;
+            }
+        }
+
         return false;
     }
 
