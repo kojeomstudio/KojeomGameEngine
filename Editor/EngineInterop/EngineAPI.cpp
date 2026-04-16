@@ -126,6 +126,7 @@ extern "C"
     ENGINEAPI void Engine_Resize(void* engine, int width, int height)
     {
         if (!engine) return;
+        if (width <= 0 || height <= 0) return;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         wrapper->Engine->OnResize(width, height);
     }
@@ -792,6 +793,7 @@ extern "C"
     ENGINEAPI void Camera_SetFOV(void* camera, float fovY)
     {
         if (!camera) return;
+        if (fovY <= 0.0f || fovY >= 3.14159265f) return;
         KCamera* kcam = static_cast<KCamera*>(camera);
         kcam->SetPerspective(fovY, kcam->GetAspectRatio(), kcam->GetNearZ(), kcam->GetFarZ());
     }
@@ -991,7 +993,9 @@ extern "C"
     {
         if (!engine || !path) return;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-        auto* textureMgr = wrapper->Engine->GetRenderer()->GetTextureManager();
+        auto* renderer = wrapper->Engine->GetRenderer();
+        if (!renderer) return;
+        auto* textureMgr = renderer->GetTextureManager();
         if (textureMgr)
         {
             std::wstring wpath(path);

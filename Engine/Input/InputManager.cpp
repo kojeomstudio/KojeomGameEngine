@@ -54,8 +54,11 @@ HRESULT KInputManager::Initialize(HWND InWindowHandle)
         LOG_WARNING("Failed to enable raw input, using standard mouse input");
     }
 
-    GetCursorPos(reinterpret_cast<POINT*>(&MouseState.X));
-    ScreenToClient(WindowHandle, reinterpret_cast<POINT*>(&MouseState.X));
+    POINT cursorPos;
+    GetCursorPos(&cursorPos);
+    ScreenToClient(WindowHandle, &cursorPos);
+    MouseState.X = cursorPos.x;
+    MouseState.Y = cursorPos.y;
 
     bIsInitialized = true;
     LOG_INFO("Input manager initialized");
