@@ -6,6 +6,14 @@ KojeomGameEngine 프로젝트에서 작업 시 반드시 준수해야 할 규칙
 
 C++17 / DirectX 11 기반 게임 엔진입니다. WPF 기반 에디터(Editor/KojeomEditor)를 포함하며, C#/C++ 인터페이스는 Editor/EngineInterop DLL을 통해 이루어집니다.
 
+## Solution Structure
+
+- **Solution:** `KojeomEngine.sln` (Visual Studio 2022, C++17, x64)
+- **Core Engine:** `Engine/` (Static Library, .lib)
+- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop, 83 exported functions)
+- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, 84 DllImport declarations)
+- **Samples:** `samples/` (15 sample projects: AnimationStateMachine, BasicRendering, DebugRendering, Gameplay, Lighting, LOD, Particles, PBR, Physics, PostProcessing, SkeletalMesh, Sky, Terrain, UI, Water)
+
 ## Naming Conventions
 
 | Type | Convention | Example |
@@ -16,6 +24,7 @@ C++17 / DirectX 11 기반 게임 엔진입니다. WPF 기반 에디터(Editor/Ko
 | Functions | PascalCase | `Initialize()`, `BeginFrame()` |
 | Variables | camelCase | `graphicsDevice`, `currentCamera` |
 | Member booleans | `b` prefix | `bInFrame`, `bInitialized` |
+| Constants | ALL_CAPS in namespace | `EngineConstants::DEFAULT_FOV`, `EngineConstants::DEFAULT_WINDOW_WIDTH` |
 | Parameters | `In` prefix | `InGraphicsDevice`, `InMesh` |
 | Type Aliases | PascalCase | `ActorPtr`, `ComPtr<T>` |
 | Template Params | PascalCase | `T`, `FuncType` |
@@ -44,10 +53,10 @@ Engine/
 └── Utils/          # Common.h, Logger.h, Math.h
 
 Editor/
-├── EngineInterop/  # C API DLL (extern "C" P/Invoke)
-└── KojeomEditor/   # C# WPF 에디터 (.NET 8.0)
+├── EngineInterop/  # C API DLL (extern "C" P/Invoke, 83 functions)
+└── KojeomEditor/   # C# WPF 에디터 (.NET 8.0, 84 DllImport)
 
-samples/            # 16개 샘플 프로젝트
+samples/            # 15개 샘플 프로젝트
 ```
 
 ## Shader Architecture
@@ -69,7 +78,9 @@ samples/            # 16개 샘플 프로젝트
     - `KEngine::GetSubsystem<T>()`으로 싱글톤 `GetInstance()` 대신 접근 가능
   - `KPhysicsWorld`는 `KPhysicsSubsystem`이 소유하는 일반 클래스 (싱글톤 아님)
   - `ESubsystemState` enum: `Uninitialized`, `Initialized`, `Running`, `Shutdown`
-- **C#/C++ Interop**: `EngineInterop.dll` flat C API (107 functions) -> C# P/Invoke
+- **C#/C++ Interop**: `EngineInterop.dll` flat C API (83 functions) -> C# P/Invoke (84 DllImport)
+- **Subsystem Interface**: `ISubsystem` (Engine/Core/Subsystem.h), `KSubsystemRegistry` (same file)
+  - 등록된 서브시스템: `KAudioSubsystem`, `KPhysicsSubsystem`
 
 ## Git Commit Format
 
@@ -91,6 +102,7 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 6. 컴파일러 경고를 무시하지 말 것
 7. 서드파티 라이브러리 코드(`Engine/third_party/`)를 수정하지 말 것
 8. 변경 사항은 문서(docs/)에 반영할 것
+9. `Engine/Utils/Common.h`의 타입 별칭(`uint8`, `uint32`, `int32` 등)을 `<cstdint>` 대신 사용할 것
 
 ## C# Editor Code Style
 
@@ -116,7 +128,7 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 - 기존 API 파괴적 변경 없이 사용처 업데이트 누락
 - 승인 없는 새로운 의존성 추가
 - `.hlsl` 셰이더 파일 생성 (모든 셰이더는 인라인 C++ 문자열 리터럴로 정의하고 `KShader::CompileFromString()`으로 런타임 컴파일해야 함)
-- `EngineAPI.h`/`EngineAPI.cpp`에 새 C API 함수 추가 시 `Editor/KojeomEditor/Services/EngineInterop.cs`에 해당 C# `DllImport` 선언 누락 (현재 107개 C API 함수 모두 C# 바인딩이 완료되어 있음)
+- `EngineAPI.h`/`EngineAPI.cpp`에 새 C API 함수 추가 시 `Editor/KojeomEditor/Services/EngineInterop.cs`에 해당 C# `DllImport` 선언 누락 (현재 83개 C API 함수, 84개 C# DllImport)
 
 ## Build Verification
 

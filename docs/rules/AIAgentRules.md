@@ -10,51 +10,91 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 
 - **Solution:** `KojeomEngine.sln` (Visual Studio 2022, C++17, x64)
 - **Core Engine:** `Engine/` (Static Library, .lib)
-- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop, 1,294 lines)
-- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, 4,185 lines)
-- **Samples:** `samples/` (16 sample projects: BasicRendering, Lighting, PBR, PostProcessing, Terrain, Water, Sky, Particles, SkeletalMesh, Gameplay, Physics, UI, UILayout, AnimationStateMachine, LOD, DebugRendering)
+- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop)
+- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0)
+- **Samples:** `samples/` (15 sample projects: AnimationStateMachine, BasicRendering, DebugRendering, Gameplay, Lighting, LOD, Particles, PBR, Physics, PostProcessing, SkeletalMesh, Sky, Terrain, UI, Water)
 
 ## Engine Module Structure
 
 ```
 Engine/
 ├── Core/               # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
+│   ├── Engine.h/cpp            # Main engine singleton
+│   └── Subsystem.h             # ISubsystem interface, KSubsystemRegistry
 ├── Graphics/           # Rendering pipeline and all visual subsystems
-│   ├── GraphicsDevice.h/cpp      # DirectX 11 device, swap chain, render targets
-│   ├── Renderer.h/cpp            # Central rendering orchestrator
-│   ├── Camera.h/cpp              # Perspective/orthographic camera
-│   ├── Shader.h/cpp              # HLSL shader compilation and management
-│   ├── Mesh.h/cpp                # Mesh with vertex/index/constant buffers
-│   ├── Material.h/cpp            # PBR material (7 texture slots, presets)
-│   ├── Texture.h/cpp             # Texture loading and manager
-│   ├── Light.h                   # Directional, Point, Spot light structures
-│   ├── Shadow/                   # Shadow maps, cascaded shadow maps
-│   ├── Deferred/                 # G-Buffer, deferred renderer
-│   ├── PostProcess/              # HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects
-│   ├── SSAO/                     # Screen-space ambient occlusion
-│   ├── SSR/                      # Screen-space reflections
-│   ├── TAA/                      # Temporal anti-aliasing
-│   ├── SSGI/                     # Screen-space global illumination
-│   ├── Sky/                      # Procedural atmospheric sky rendering
-│   ├── Volumetric/               # Volumetric fog
-│   ├── Water/                    # Water rendering with reflection/refraction
-│   ├── Terrain/                  # Terrain rendering with LOD, height map, splat-map texturing
-│   ├── Culling/                  # Frustum culling, GPU occlusion culling
-│   ├── CommandBuffer/            # Deferred command-based rendering with sort keys
-│   ├── Instanced/                # GPU instanced rendering
-│   ├── IBL/                      # Image-based lighting (irradiance, prefiltered env, BRDF LUT)
-│   ├── LOD/                      # LOD generation (quadric error metrics) and runtime system
-│   ├── Particle/                 # GPU-accelerated particle system emitter
-│   ├── Performance/              # GPU timer, frame stats
-│   └── Debug/                    # Debug renderer
+│   ├── GraphicsDevice.h/cpp    # DirectX 11 device, swap chain, render targets
+│   ├── Renderer.h/cpp          # Central rendering orchestrator
+│   ├── Camera.h/cpp            # Perspective/orthographic camera
+│   ├── Shader.h/cpp            # HLSL shader compilation and management
+│   ├── Mesh.h/cpp              # Mesh with vertex/index/constant buffers
+│   ├── Material.h/cpp          # PBR material (7 texture slots, presets)
+│   ├── Texture.h/cpp           # Texture loading and manager
+│   ├── Light.h                 # Directional, Point, Spot light structures
+│   ├── Shadow/                 # Shadow maps, cascaded shadow maps
+│   ├── Deferred/               # G-Buffer, deferred renderer
+│   ├── PostProcess/            # HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects
+│   ├── SSAO/                   # Screen-space ambient occlusion
+│   ├── SSR/                    # Screen-space reflections
+│   ├── TAA/                    # Temporal anti-aliasing
+│   ├── SSGI/                   # Screen-space global illumination
+│   ├── Sky/                    # Procedural atmospheric sky rendering
+│   ├── Volumetric/             # Volumetric fog
+│   ├── Water/                  # Water rendering with reflection/refraction
+│   ├── Terrain/                # Terrain rendering with LOD, height map, splat-map texturing
+│   ├── Culling/                # Frustum culling, GPU occlusion culling
+│   ├── CommandBuffer/          # Deferred command-based rendering with sort keys
+│   ├── Instanced/              # GPU instanced rendering
+│   ├── IBL/                    # Image-based lighting (irradiance, prefiltered env, BRDF LUT)
+│   ├── LOD/                    # LOD generation (quadric error metrics) and runtime system
+│   ├── Particle/               # GPU-accelerated particle system emitter
+│   ├── Performance/            # GPU timer, frame stats
+│   └── Debug/                  # Debug renderer
 ├── Input/              # Keyboard, mouse, raw input, action mapping, input callbacks
+│   ├── InputManager.h/cpp      # Global input manager singleton
+│   └── InputTypes.h            # Key codes, mouse buttons, input types
 ├── Audio/              # XAudio2-based audio, 3D sound, volume channels
+│   ├── AudioManager.h/cpp      # Global audio manager singleton
+│   ├── AudioSubsystem.h        # ISubsystem adapter wrapping AudioManager
+│   ├── AudioTypes.h            # Audio type definitions
+│   ├── Sound.h/cpp             # Sound resource
 ├── Physics/            # Rigid body, physics world, collision detection, raycast
+│   ├── PhysicsWorld.h/cpp      # Physics simulation world
+│   ├── PhysicsSubsystem.h      # ISubsystem adapter for physics
+│   ├── PhysicsTypes.h          # Physics type definitions
+│   ├── RigidBody.h/cpp         # Rigid body component
 ├── Scene/              # Actor-Component system, scene management, parent-child hierarchy
-├── Assets/             # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components (StaticMeshComponent, SkeletalMeshComponent, LightComponent)
+│   ├── Actor.h/cpp             # KActor - entity with components
+│   └── SceneManager.h/cpp      # KScene - scene management
+├── Assets/             # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components
+│   ├── StaticMesh.h/cpp        # Static mesh with LOD support
+│   ├── SkeletalMeshComponent.h/cpp # Skeletal mesh actor component
+│   ├── StaticMeshComponent.h/cpp  # Static mesh actor component
+│   ├── LightComponent.h/cpp    # Light actor component
+│   ├── Skeleton.h/cpp          # Skeleton hierarchy
+│   ├── Animation.h/cpp         # Animation clip
+│   ├── AnimationInstance.h/cpp # Runtime animation state
+│   ├── AnimationStateMachine.h/cpp # Animation state machine
+│   └── ModelLoader.h/cpp       # Model loading (Assimp + fallbacks)
 ├── Serialization/      # Binary archive, JSON archive (custom DOM parser)
+│   ├── BinaryArchive.h/cpp     # KBinaryArchive
+│   └── JsonArchive.h/cpp       # KJsonArchive with custom DOM parser
 ├── UI/                 # Canvas-based UI system (element, panel, button, text, image, slider, checkbox, layouts, font)
+│   ├── UICanvas.h/cpp          # Root canvas container
+│   ├── UIElement.h/cpp         # Base UI element
+│   ├── UIPanel.h/cpp           # Container panel
+│   ├── UIButton.h/cpp          # Button element
+│   ├── UIText.h/cpp            # Text element
+│   ├── UIImage.h/cpp           # Image element
+│   ├── UISlider.h/cpp          # Slider element
+│   ├── UICheckbox.h/cpp        # Checkbox element
+│   ├── UIFont.h/cpp            # Font rendering
+│   ├── UILayout.h/cpp          # Base layout
+│   ├── UIHorizontalLayout.h/cpp # Horizontal layout
+│   ├── UIVerticalLayout.h/cpp  # Vertical layout
+│   ├── UIGridLayout.h/cpp      # Grid layout
+│   └── UITypes.h               # UI type definitions
 ├── DebugUI/            # ImGui-based debug overlay with panel registration
+│   └── DebugUI.h/cpp           # KDebugUI singleton
 └── Utils/              # Common.h, Logger.h, Math.h
 ```
 
@@ -63,10 +103,10 @@ Engine/
 ```
 Editor/
 ├── EngineInterop/      # C++ DLL exposing flat C API (extern "C") for P/Invoke
-│   ├── EngineAPI.h     # 107 exported functions for engine operations
+│   ├── EngineAPI.h     # 83 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
 └── KojeomEditor/       # C# WPF editor (.NET 8.0)
-    ├── Services/       # EngineInterop P/Invoke wrapper (3,455 lines, 107 DllImport), UndoRedoService
+    ├── Services/       # EngineInterop P/Invoke wrapper (84 DllImport), UndoRedoService
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel
     └── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser
 ```
@@ -83,7 +123,7 @@ Editor/
 | Functions/Methods | PascalCase | `Initialize()`, `BeginFrame()`, `CreateCubeMesh()` |
 | Variables | camelCase with descriptive names | `graphicsDevice`, `currentCamera` |
 | Member Variables | camelCase with 'b' prefix for booleans | `bInFrame`, `bDebugLayerEnabled` |
-| Constants | PascalCase in namespace | `Colors::CornflowerBlue`, `EngineConstants::DefaultFOV` |
+| Constants | ALL_CAPS in namespace | `EngineConstants::DEFAULT_FOV`, `EngineConstants::DEFAULT_WINDOW_WIDTH` |
 | Namespaces | PascalCase | `KojeomEngine::KDebugUI` |
 | Parameters | camelCase with 'In' prefix | `InGraphicsDevice`, `InMesh`, `InName` |
 | Type Aliases | PascalCase | `ActorPtr`, `ComponentPtr`, `ComPtr<T>` |
@@ -93,7 +133,7 @@ Editor/
 
 - Header files use `#pragma once`
 - Include order: `#include "../Utils/Common.h"` first, then project headers, then external headers (D3D11, DirectXMath), then standard library
-- Use custom type aliases from `Engine/Utils/Common.h` (`uint8`, `uint32`, `int32`, etc.) instead of `<cstdint>` types directly
+- Use custom type aliases from `Engine/Utils/Common.h` (`uint8`, `uint16`, `uint32`, `uint64`, `int8`, `int16`, `int32`, `int64`) instead of `<cstdint>` types directly
 - Source files paired: `ClassName.h` / `ClassName.cpp`
 
 ### Header File Structure
@@ -181,16 +221,16 @@ The engine uses a two-class shader system:
 
 ### Subsystem Interface
 - `ISubsystem` -- base interface for all engine modules (Initialize, Tick, Shutdown)
-- `KSubsystemRegistry` -- owns and manages subsystems with type-based registration and ordered lifecycle
+- `KSubsystemRegistry` -- owns and manages subsystems with type-based registration and ordered lifecycle (defined in `Engine/Core/Subsystem.h`)
 - Registered subsystems: `KAudioSubsystem`, `KPhysicsSubsystem`
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes 107 flat C functions (`extern "C"`, `__declspec(dllexport)`)
-- C# consumes via P/Invoke (`DllImport`, 107 DllImport declarations in `EngineInterop.cs`)
+- `EngineInterop.dll` exposes 83 flat C functions (`extern "C"`, `__declspec(dllexport)`)
+- C# consumes via P/Invoke (`DllImport`, 84 DllImport declarations in `EngineInterop.cs`)
 - Internal `FEngineWrapper` class manages engine instance, model loader, and debug renderer
 - String returns use `thread_local std::string` buffers
 - Preprocessor: `ENGINEAPI_EXPORTS` controls dllexport/dllimport
-- API groups: Engine lifecycle (7), Scene management (5), Actor management (17), Components (7), Camera (9), Renderer settings (12), Lighting (14), Material/PBR (8), Static mesh (3), Skeletal/Animation (7), Model loading (4), Model info (3), Scene queries (4), Texture (2), DebugRenderer (4)
+- API groups: Engine lifecycle (7), Engine getters (2), Scene management (8), Actor management (16), Component access (6), Camera (9), Renderer settings (12), Lighting (9), Material/PBR (8), Static mesh (3), Model loading (7), Texture (2), Skeletal/Animation (7), DebugRenderer (4)
 
 ### Serialization
 - Binary archive (`KBinaryArchive`) with `<<`/`>>` operators for all engine types
@@ -273,4 +313,4 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 6. **Do not** change the build configuration without updating documentation
 7. **Do not** add new dependencies without explicit approval
 8. **Do not** create `.hlsl` shader files. All shaders must be defined as inline C++ string literals and compiled at runtime via `KShader::CompileFromString()`.
-9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. All 107 C API functions currently have C# bindings.
+9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. Currently 83 C API functions with 84 C# DllImport declarations.
