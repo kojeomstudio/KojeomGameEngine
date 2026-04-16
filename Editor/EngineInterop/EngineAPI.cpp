@@ -147,6 +147,7 @@ extern "C"
     ENGINEAPI void* Scene_Create(void* sceneMgr, const char* name)
     {
         if (!sceneMgr || !name) return nullptr;
+        if (strlen(name) > 256) return nullptr;
         KSceneManager* mgr = static_cast<KSceneManager*>(sceneMgr);
         auto scene = mgr->CreateScene(std::string(name));
         if (!scene) return nullptr;
@@ -209,6 +210,7 @@ extern "C"
     ENGINEAPI void* Actor_Create(void* scene, const char* name)
     {
         if (!scene || !name) return nullptr;
+        if (strlen(name) > 256) return nullptr;
         KScene* kscene = static_cast<KScene*>(scene);
         return kscene->CreateActor(std::string(name)).get();
     }
@@ -285,6 +287,7 @@ extern "C"
     ENGINEAPI void Actor_SetName(void* actor, const char* name)
     {
         if (!actor || !name) return;
+        if (strlen(name) > 256) return;
         KActor* kactor = static_cast<KActor*>(actor);
         kactor->SetName(std::string(name));
     }
@@ -355,6 +358,7 @@ extern "C"
     ENGINEAPI void Renderer_SetRenderPath(void* renderer, int path)
     {
         if (!renderer) return;
+        if (path < 0 || path > 1) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
         krenderer->SetRenderPath(static_cast<ERenderPath>(path));
     }
@@ -546,6 +550,7 @@ extern "C"
     ENGINEAPI void* Actor_AddComponent(void* actor, int componentType)
     {
         if (!actor) return nullptr;
+        if (componentType < 0 || componentType > 5) return nullptr;
         KActor* kactor = static_cast<KActor*>(actor);
         ComponentPtr newComp = CreateComponentByType(static_cast<EComponentType>(componentType));
         if (!newComp)

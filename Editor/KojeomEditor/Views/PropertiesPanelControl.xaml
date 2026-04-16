@@ -189,6 +189,26 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+
+                                <TextBlock Text="Scene Lighting" FontWeight="Bold" FontSize="12" Margin="0,16,0,8"/>
+                                <StackPanel Background="#3C3C3C" Margin="0,2">
+                                    <StackPanel Margin="4">
+                                        <TextBlock Text="Directional Light" Foreground="#CCC" FontSize="10" Margin="0,2,0,4"/>
+                                        <TextBlock Text="Color (RGB):" Foreground="#999" FontSize="10" Margin="0,4,0,2"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Text="{Binding DataContext.Light.ColorR, RelativeSource={RelativeSource AncestorType=ScrollViewer}, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,2,0" Padding="2"/>
+                                            <TextBox Grid.Column="1" Text="{Binding DataContext.Light.ColorG, RelativeSource={RelativeSource AncestorType=ScrollViewer}, UpdateSourceTrigger=PropertyChanged}" Margin="2,0" Padding="2"/>
+                                            <TextBox Grid.Column="2" Text="{Binding DataContext.Light.ColorB, RelativeSource={RelativeSource AncestorType=ScrollViewer}, UpdateSourceTrigger=PropertyChanged}" Margin="2,0,0,0" Padding="2"/>
+                                        </Grid>
+                                        <TextBlock Text="Intensity:" Foreground="#999" FontSize="10" Margin="0,4,0,2"/>
+                                        <Slider Value="{Binding DataContext.Light.Intensity, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" Minimum="0" Maximum="10" SmallChange="0.1" LargeChange="1" Margin="0,2,0,4"/>
+                                    </StackPanel>
+                                </StackPanel>
                             </StackPanel>
                         </DataTemplate>
                     </ContentControl.Resources>

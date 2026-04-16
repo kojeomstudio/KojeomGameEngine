@@ -525,6 +525,16 @@ public partial class ViewportControl : UserControl
         if (actorPtr != IntPtr.Zero)
         {
             _engine.SetActorPosition(actorPtr, spawnX, spawnY, spawnZ);
+            
+            string lowerExt = assetExt.ToLower();
+            if (lowerExt is ".fbx" or ".obj" or ".gltf" or ".glb" or ".dae" or ".3ds")
+            {
+                var componentPtr = _engine.AddComponent(actorPtr, NativeComponentType.StaticMesh);
+                if (componentPtr != IntPtr.Zero)
+                {
+                    _engine.SetMesh(componentPtr, assetPath);
+                }
+            }
         }
         
         var newActor = new ActorViewModel

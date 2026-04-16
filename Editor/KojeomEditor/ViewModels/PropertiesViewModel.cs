@@ -8,6 +8,7 @@ public class PropertiesViewModel : ViewModelBase
     private ActorViewModel? _selectedActor;
     private EngineInterop? _engine;
     private MaterialViewModel _material = new();
+    private LightComponentViewModel _light = new();
     private IntPtr _currentMaterialPtr = IntPtr.Zero;
     private bool _syncingFromEngine;
 
@@ -20,6 +21,7 @@ public class PropertiesViewModel : ViewModelBase
             OnPropertyChanged(nameof(SelectedActor));
             OnPropertyChanged(nameof(HasSelection));
             SyncMaterialFromEngine();
+            SyncLightFromEngine();
         }
     }
 
@@ -33,9 +35,12 @@ public class PropertiesViewModel : ViewModelBase
 
     public MaterialViewModel Material => _material;
 
+    public LightComponentViewModel Light => _light;
+
     public PropertiesViewModel()
     {
         _material.PropertyChanged += OnMaterialPropertyChanged;
+        _light.PropertyChanged += OnLightPropertyChanged;
     }
 
     public void SetSelectedActor(ActorViewModel? actor)
@@ -122,6 +127,58 @@ public class PropertiesViewModel : ViewModelBase
                 break;
             case nameof(MaterialViewModel.AO):
                 _engine.SetMaterialAO(_currentMaterialPtr, _material.AO);
+                break;
+        }
+    }
+
+    private void SyncLightFromEngine()
+    {
+        _light.PropertyChanged -= OnLightPropertyChanged;
+
+        if (_engine == null || !_engine.IsInitialized)
+        {
+            ResetLightDefaults();
+            _light.PropertyChanged += OnLightPropertyChanged;
+            return;
+        }
+
+        _syncingFromEngine = true;
+        var (dirX, dirY, dirZ, colR, colG, colB, colA, ambR, ambG, ambB, ambA) = _engine.GetDirectionalLight();
+        _light.ColorR = colR;
+        _light.ColorG = colG;
+        _light.ColorB = colB;
+        _light.Intensity = _engine.GetDirectionalLightIntensity();
+        _syncingFromEngine = false;
+
+        _light.PropertyChanged += OnLightPropertyChanged;
+    }
+
+    private void ResetLightDefaults()
+    {
+        _syncingFromEngine = true;
+        _light.LightType = 0;
+        _light.Intensity = 1.0f;
+        _light.ColorR = 1.0f;
+        _light.ColorG = 1.0f;
+        _light.ColorB = 1.0f;
+        _light.Range = 10.0f;
+        _syncingFromEngine = false;
+    }
+
+    private void OnLightPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_syncingFromEngine) return;
+        if (_engine == null || !_engine.IsInitialized) return;
+
+        switch (e.PropertyName)
+        {
+            case nameof(LightComponentViewModel.Intensity):
+                _engine.SetDirectionalLightIntensity(_light.Intensity);
+                break;
+            case nameof(LightComponentViewModel.ColorR):
+            case nameof(LightComponentViewModel.ColorG):
+            case nameof(LightComponentViewModel.ColorB):
+                _engine.SetDirectionalLightColor(_light.ColorR, _light.ColorG, _light.ColorB, 1.0f);
                 break;
         }
     }

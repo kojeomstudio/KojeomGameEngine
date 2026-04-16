@@ -263,7 +263,6 @@ private:
 
     void UpdateCollectibles(float deltaTime)
     {
-        m_time += deltaTime;
     }
 
     void CheckCollisions()

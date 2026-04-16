@@ -290,8 +290,9 @@ MainWindow.xaml (DataContext = MainViewModel)
 MainViewModel
   ├── SceneViewModel          → ObservableCollection<ActorViewModel> Actors
   │     └── ActorViewModel    → Position/Rotation/Scale properties (notify engine on change)
-  └── PropertiesViewModel     → SelectedActor, MaterialViewModel
-        └── MaterialViewModel → Albedo, Metallic, Roughness, AO (sync to engine)
+  └── PropertiesViewModel     → SelectedActor, MaterialViewModel, LightComponentViewModel
+        ├── MaterialViewModel → Albedo, Metallic, Roughness, AO (sync to engine)
+        └── LightComponentViewModel → Color, Intensity (sync to renderer)
 ```
 
 **ViewModel hierarchy:**
@@ -300,7 +301,7 @@ MainViewModel
 |-----------|----------|----------------|
 | `MainViewModel` | `ViewModels/MainViewModel.cs` | Root VM, holds SceneViewModel + PropertiesViewModel, engine reference, transform mode |
 | `SceneViewModel` | `ViewModels/SceneViewModel.cs` | Scene CRUD, actor collection, syncs property changes to native engine |
-| `PropertiesViewModel` | `ViewModels/PropertiesViewModel.cs` | Selection forwarding, material sync between engine and MaterialViewModel |
+| `PropertiesViewModel` | `ViewModels/PropertiesViewModel.cs` | Selection forwarding, material sync, light sync between engine and VMs |
 | `ActorViewModel` | `ViewModels/SceneViewModel.cs` | Per-actor state: transform, visibility, name, components, native pointer |
 | `ComponentViewModel` | `ViewModels/ComponentViewModel.cs` | Base + specialized component VMs (StaticMesh, Light, Camera) |
 | `MaterialViewModel` | `ViewModels/ComponentViewModel.cs` | PBR material properties with PropertyChanged → engine sync |
@@ -412,7 +413,7 @@ Left-click in the viewport performs ray-based object picking:
 
 **Drag-drop from Content Browser:**
 
-The viewport accepts drops with `AssetPath` data. When an asset is dropped, it spawns a new actor at a computed world position in front of the camera.
+The viewport accepts drops with `AssetPath` data. When a 3D model asset (`.fbx`, `.obj`, `.gltf`, `.glb`, `.dae`, `.3ds`) is dropped, it spawns a new actor with a `StaticMeshComponent` and loads the model at a computed world position in front of the camera. Other asset types spawn a bare actor.
 
 **Resize handling:**
 
@@ -467,6 +468,7 @@ Displays properties of the currently selected actor using **pure XAML data bindi
 - **Transform section:** Position (X/Y/Z), Rotation (X/Y/Z), Scale (X/Y/Z) with color-coded labels (red X, green Y, blue Z)
 - **General section:** Name (editable TextBox), Visibility (CheckBox)
 - **Components section:** Expandable list of `ComponentViewModel` items, each with a typed `DataTemplate`
+- **Scene Lighting section:** Global directional light color (RGB) and intensity with real-time sync to the renderer
 
 **Typed DataTemplate pattern** for component inspectors:
 

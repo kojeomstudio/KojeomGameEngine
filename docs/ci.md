@@ -11,27 +11,28 @@ The project uses GitHub Actions for continuous integration. The pipeline is defi
 
 ## Jobs
 
-### 1. Build C++ (`build-cpp`)
+### 1. Build Engine + Interop (`build-engine`)
 
 - **Runner:** `windows-latest`
 - **Strategy:** Debug + Release configurations
 - **Steps:**
   1. Checkout repository
   2. Setup MSBuild
-  3. Build entire solution (`KojeomEngine.sln`)
-  4. Upload artifacts (Engine.lib, EngineInterop.dll, .pdb files)
+  3. Build Engine and EngineInterop targets only (`/t:Engine;EngineInterop`)
+  4. Upload artifacts (Engine.lib, EngineInterop.dll)
 
 ### 2. Build Samples (`build-samples`)
 
 - **Runner:** `windows-latest`
-- **Depends on:** `build-cpp` (downloads artifacts)
+- **Depends on:** `build-engine` (downloads artifacts)
 - **Strategy:** 16 samples x 2 configurations = 32 combinations
 - **Samples:** BasicRendering, Lighting, PBR, PostProcessing, DebugRendering, Terrain, Water, Sky, Particles, SkeletalMesh, AnimationStateMachine, Gameplay, Physics, UI, Layout, LOD
+- **Build method:** Each sample is built directly via its `.vcxproj` file (not through the solution), so downloaded artifacts are used instead of rebuilding the engine
 
 ### 3. Build C# Editor (`build-csharp`)
 
 - **Runner:** `windows-latest`
-- **Depends on:** `build-cpp` (downloads artifacts)
+- **Depends on:** `build-engine` (downloads artifacts)
 - **Strategy:** Debug + Release configurations
 - **Steps:** .NET 8.0 SDK setup, restore, build
 
@@ -43,6 +44,7 @@ The project uses GitHub Actions for continuous integration. The pipeline is defi
 
 ## Adding New Samples
 
-1. Add the sample project to `KojeomEngine.sln`
-2. Add the sample name to the `build-samples` job matrix in `.github/workflows/build.yml`
-3. Verify the sample builds locally: `msbuild KojeomEngine.sln /p:Configuration=Debug /p:Platform=x64 /t:YourSampleName`
+1. Create the sample project (`.vcxproj`) under `samples/`
+2. Add the sample project to `KojeomEngine.sln`
+3. Add the sample name and vcxproj path to the `build-samples` job matrix `include` section in `.github/workflows/build.yml`
+4. Verify the sample builds locally: `msbuild KojeomEngine.sln /p:Configuration=Debug /p:Platform=x64 /t:YourSampleName`
