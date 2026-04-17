@@ -1,5 +1,6 @@
 #include "SceneManager.h"
 #include "../Utils/Logger.h"
+#include "../Utils/Common.h"
 
 HRESULT KSceneManager::Initialize()
 {
@@ -33,6 +34,12 @@ std::shared_ptr<KScene> KSceneManager::CreateScene(const std::string& Name)
 
 std::shared_ptr<KScene> KSceneManager::LoadScene(const std::wstring& Path)
 {
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("Scene path rejected (unsafe path): " + StringUtils::WideToMultiByte(Path));
+        return nullptr;
+    }
+
     auto scene = std::make_shared<KScene>();
 
     HRESULT hr = scene->Load(Path);
@@ -70,6 +77,12 @@ HRESULT KSceneManager::SaveScene(const std::wstring& Path, std::shared_ptr<KScen
     if (!Scene)
     {
         LOG_ERROR("Cannot save null scene");
+        return E_INVALIDARG;
+    }
+
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("Scene save path rejected (unsafe path): " + StringUtils::WideToMultiByte(Path));
         return E_INVALIDARG;
     }
 

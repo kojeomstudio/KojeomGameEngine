@@ -1225,6 +1225,7 @@ ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path)
     ENGINEAPI void Material_SetTexture(void* component, int textureSlot, const wchar_t* texturePath)
     {
         if (!component || !texturePath) return;
+        if (PathUtils::ContainsTraversal(std::wstring(texturePath))) return;
         KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
         KMaterial* material = smc->GetMaterial();
         if (!material) return;

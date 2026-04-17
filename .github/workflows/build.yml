@@ -117,12 +117,6 @@ jobs:
           name: engine-interop-${{ matrix.configuration }}
           path: .
 
-      - name: Copy native DLL for C# editor
-        run: |
-          if not exist "Editor\EngineInterop\bin\x64\${{ matrix.configuration }}" mkdir "Editor\EngineInterop\bin\x64\${{ matrix.configuration }}"
-          copy /Y "EngineInterop.dll" "Editor\EngineInterop\bin\x64\${{ matrix.configuration }}\EngineInterop.dll"
-        shell: cmd
-
       - name: Restore Dependencies
         run: dotnet restore Editor/KojeomEditor/KojeomEditor.csproj
         shell: cmd
