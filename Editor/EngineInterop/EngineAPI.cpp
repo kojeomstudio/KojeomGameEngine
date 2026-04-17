@@ -1078,19 +1078,47 @@ ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path)
 
         if (parentActor == childActor) return false;
 
-        bool childFound = false;
+        KActor* ancestor = parentActor;
+        while (ancestor->GetParent())
+        {
+            if (ancestor->GetParent() == childActor)
+            {
+                LOG_WARNING("Actor_AddChild: cycle detected in hierarchy");
+                return false;
+            }
+            ancestor = ancestor->GetParent();
+        }
+
         const auto& children = parentActor->GetChildren();
         for (const auto& c : children)
         {
             if (c.get() == childActor)
             {
-                childFound = true;
-                break;
+                return true;
             }
         }
-        if (childFound) return true;
 
-        LOG_WARNING("Actor_AddChild: child actor ownership cannot be verified. Use Actor_Create within the same scene hierarchy.");
+        if (childActor->GetParent())
+        {
+            childActor->GetParent()->RemoveChild(childActor);
+        }
+
+        if (!g_EngineWrapper || !g_EngineWrapper->Engine) return false;
+        auto sceneSharedPtr = g_EngineWrapper->Engine->GetSceneManager().GetActiveScene();
+        if (!sceneSharedPtr) return false;
+        KScene* scene = sceneSharedPtr.get();
+
+        const auto& actors = scene->GetActors();
+        for (const auto& actor : actors)
+        {
+            if (actor.get() == childActor)
+            {
+                parentActor->AddChild(actor);
+                return true;
+            }
+        }
+
+        LOG_WARNING("Actor_AddChild: child actor not found in active scene");
         return false;
     }
 
@@ -1160,5 +1188,59 @@ ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path)
         wrapper->DebugRenderer->BeginFrame();
         wrapper->DebugRenderer->Render(device->GetContext(), camera);
         wrapper->DebugRenderer->EndFrame(deltaTime);
+    }
+
+    ENGINEAPI void Renderer_SetCascadedShadowsEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* r = static_cast<KRenderer*>(renderer);
+        r->SetCascadedShadowsEnabled(enabled);
+    }
+
+    ENGINEAPI bool Renderer_IsCascadedShadowsEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsCascadedShadowsEnabled();
+    }
+
+    ENGINEAPI void Renderer_SetIBLEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        KRenderer* r = static_cast<KRenderer*>(renderer);
+        r->SetIBLEnabled(enabled);
+    }
+
+    ENGINEAPI bool Renderer_IsIBLEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsIBLEnabled();
+    }
+
+    ENGINEAPI HRESULT Renderer_LoadEnvironmentMap(void* renderer, const wchar_t* hdrPath)
+    {
+        if (!renderer || !hdrPath) return E_INVALIDARG;
+        return static_cast<KRenderer*>(renderer)->LoadEnvironmentMap(std::wstring(hdrPath));
+    }
+
+    ENGINEAPI void Material_SetTexture(void* component, int textureSlot, const wchar_t* texturePath)
+    {
+        if (!component || !texturePath) return;
+        KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
+        KMaterial* material = smc->GetMaterial();
+        if (!material) return;
+
+        KRenderer* renderer = g_EngineWrapper && g_EngineWrapper->Engine ? g_EngineWrapper->Engine->GetRenderer() : nullptr;
+        if (!renderer) return;
+
+        KGraphicsDevice* graphicsDevice = g_EngineWrapper->Engine->GetGraphicsDevice();
+        if (!graphicsDevice) return;
+
+        auto* textureMgr = renderer->GetTextureManager();
+        if (!textureMgr) return;
+
+        std::shared_ptr<KTexture> texture = textureMgr->LoadTexture(graphicsDevice->GetDevice(), std::wstring(texturePath));
+        if (!texture) return;
+
+        material->SetTexture(static_cast<EMaterialTextureSlot>(textureSlot), texture);
     }
 }

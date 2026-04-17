@@ -157,4 +157,11 @@ extern "C"
     ENGINEAPI void DebugRenderer_DrawAxis(void* engine, float originX, float originY, float originZ, float length);
     ENGINEAPI void DebugRenderer_SetEnabled(void* engine, bool enabled);
     ENGINEAPI void DebugRenderer_RenderFrame(void* engine, float deltaTime);
+
+    ENGINEAPI void Renderer_SetCascadedShadowsEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsCascadedShadowsEnabled(void* renderer);
+    ENGINEAPI void Renderer_SetIBLEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsIBLEnabled(void* renderer);
+    ENGINEAPI HRESULT Renderer_LoadEnvironmentMap(void* renderer, const wchar_t* hdrPath);
+    ENGINEAPI void Material_SetTexture(void* component, int textureSlot, const wchar_t* texturePath);
 }

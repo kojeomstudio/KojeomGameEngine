@@ -8,6 +8,37 @@ public partial class RendererSettingsControl : UserControl
 {
     public EngineInterop? Engine { get; set; }
 
+    public event Action<bool>? ShowGridChanged;
+    public event Action<bool>? ShowAxisChanged;
+
+    private bool _showGrid = true;
+    public bool ShowGrid
+    {
+        get => _showGrid;
+        private set
+        {
+            if (_showGrid != value)
+            {
+                _showGrid = value;
+                ShowGridChanged?.Invoke(value);
+            }
+        }
+    }
+
+    private bool _showAxis = true;
+    public bool ShowAxis
+    {
+        get => _showAxis;
+        private set
+        {
+            if (_showAxis != value)
+            {
+                _showAxis = value;
+                ShowAxisChanged?.Invoke(value);
+            }
+        }
+    }
+
     public RendererSettingsControl()
     {
         InitializeComponent();
@@ -74,19 +105,19 @@ public partial class RendererSettingsControl : UserControl
 
     private void OnShowGridChanged(object sender, RoutedEventArgs e)
     {
-        if (Engine != null)
+        ShowGrid = CheckBoxShowGrid.IsChecked == true;
+        if (Engine != null && ShowGrid)
         {
-            bool show = CheckBoxShowGrid.IsChecked == true;
-            if (show) Engine.DebugRendererDrawGrid(0, 0, 0, 40.0f, 2.0f, 10);
+            Engine.DebugRendererDrawGrid(0, 0, 0, 40.0f, 2.0f, 10);
         }
     }
 
     private void OnShowAxisChanged(object sender, RoutedEventArgs e)
     {
-        if (Engine != null)
+        ShowAxis = CheckBoxShowAxis.IsChecked == true;
+        if (Engine != null && ShowAxis)
         {
-            bool show = CheckBoxShowAxis.IsChecked == true;
-            if (show) Engine.DebugRendererDrawAxis(0, 0.01f, 0, 2.0f);
+            Engine.DebugRendererDrawAxis(0, 0.01f, 0, 2.0f);
         }
     }
 }

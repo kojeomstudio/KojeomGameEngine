@@ -21,8 +21,8 @@
         </Border>
 
         <StackPanel Grid.Row="1" Margin="8,8,8,0" Orientation="Horizontal">
-            <ComboBox Width="150" SelectedIndex="0">
-                <ComboBoxItem Content="Default Material"/>
+            <ComboBox x:Name="MaterialPresetComboBox" Width="150" SelectedIndex="0" SelectionChanged="OnMaterialPresetSelectionChanged">
+                <ComboBoxItem Content="Default"/>
                 <ComboBoxItem Content="Metal"/>
                 <ComboBoxItem Content="Plastic"/>
                 <ComboBoxItem Content="Rubber"/>
@@ -30,8 +30,8 @@
                 <ComboBoxItem Content="Silver"/>
                 <ComboBoxItem Content="Copper"/>
             </ComboBox>
-            <Button Content="New" Margin="8,0,0,0" Padding="8,2"/>
-            <Button Content="Save" Margin="4,0,0,0" Padding="8,2"/>
+            <Button Content="New" Margin="8,0,0,0" Padding="8,2" Click="OnNewMaterial"/>
+            <Button Content="Save" Margin="4,0,0,0" Padding="8,2" Click="OnSaveMaterial"/>
         </StackPanel>
 
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">

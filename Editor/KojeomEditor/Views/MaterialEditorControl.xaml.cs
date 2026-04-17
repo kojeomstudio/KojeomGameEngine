@@ -80,73 +80,127 @@ public partial class MaterialEditorControl : UserControl
             MaterialViewModel.AOTexturePath = path;
     }
 
-    private void OnPresetDefault(object sender, RoutedEventArgs e)
+    private void ApplyPreset(string presetName)
     {
         if (MaterialViewModel == null) return;
-        MaterialViewModel.AlbedoR = 0.8f;
-        MaterialViewModel.AlbedoG = 0.8f;
-        MaterialViewModel.AlbedoB = 0.8f;
+        switch (presetName)
+        {
+            case "Metal":
+                MaterialViewModel.AlbedoR = 0.95f;
+                MaterialViewModel.AlbedoG = 0.95f;
+                MaterialViewModel.AlbedoB = 0.95f;
+                MaterialViewModel.Metallic = 1.0f;
+                MaterialViewModel.Roughness = 0.2f;
+                break;
+            case "Plastic":
+                MaterialViewModel.AlbedoR = 0.5f;
+                MaterialViewModel.AlbedoG = 0.5f;
+                MaterialViewModel.AlbedoB = 0.5f;
+                MaterialViewModel.Metallic = 0.0f;
+                MaterialViewModel.Roughness = 0.4f;
+                break;
+            case "Rubber":
+                MaterialViewModel.AlbedoR = 0.2f;
+                MaterialViewModel.AlbedoG = 0.2f;
+                MaterialViewModel.AlbedoB = 0.2f;
+                MaterialViewModel.Metallic = 0.0f;
+                MaterialViewModel.Roughness = 0.9f;
+                break;
+            case "Gold":
+                MaterialViewModel.AlbedoR = 1.0f;
+                MaterialViewModel.AlbedoG = 0.765557f;
+                MaterialViewModel.AlbedoB = 0.336057f;
+                MaterialViewModel.Metallic = 1.0f;
+                MaterialViewModel.Roughness = 0.3f;
+                break;
+            case "Silver":
+                MaterialViewModel.AlbedoR = 0.971519f;
+                MaterialViewModel.AlbedoG = 0.959915f;
+                MaterialViewModel.AlbedoB = 0.915324f;
+                MaterialViewModel.Metallic = 1.0f;
+                MaterialViewModel.Roughness = 0.3f;
+                break;
+            case "Copper":
+                MaterialViewModel.AlbedoR = 0.955008f;
+                MaterialViewModel.AlbedoG = 0.637427f;
+                MaterialViewModel.AlbedoB = 0.538163f;
+                MaterialViewModel.Metallic = 1.0f;
+                MaterialViewModel.Roughness = 0.35f;
+                break;
+            default:
+                MaterialViewModel.AlbedoR = 0.8f;
+                MaterialViewModel.AlbedoG = 0.8f;
+                MaterialViewModel.AlbedoB = 0.8f;
+                MaterialViewModel.Metallic = 0.0f;
+                MaterialViewModel.Roughness = 0.5f;
+                break;
+        }
+    }
+
+    private void OnMaterialPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (MaterialPresetComboBox.SelectedItem is ComboBoxItem selectedItem)
+        {
+            ApplyPreset(selectedItem.Content.ToString() ?? "Default");
+        }
+    }
+
+    private void OnNewMaterial(object sender, RoutedEventArgs e)
+    {
+        if (MaterialViewModel == null) return;
+        MaterialViewModel.Name = "New Material";
+        MaterialViewModel.AlbedoR = 1.0f;
+        MaterialViewModel.AlbedoG = 1.0f;
+        MaterialViewModel.AlbedoB = 1.0f;
+        MaterialViewModel.AlbedoA = 1.0f;
         MaterialViewModel.Metallic = 0.0f;
         MaterialViewModel.Roughness = 0.5f;
+        MaterialViewModel.AO = 1.0f;
+        MaterialViewModel.EmissiveIntensity = 0.0f;
+        MaterialViewModel.AlbedoTexturePath = string.Empty;
+        MaterialViewModel.NormalTexturePath = string.Empty;
+        MaterialViewModel.MetallicTexturePath = string.Empty;
+        MaterialViewModel.RoughnessTexturePath = string.Empty;
+        MaterialViewModel.AOTexturePath = string.Empty;
+    }
+
+    private void OnSaveMaterial(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Material saving is not yet supported.", "Not Implemented", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void OnPresetDefault(object sender, RoutedEventArgs e)
+    {
+        ApplyPreset("Default");
     }
 
     private void OnPresetMetal(object sender, RoutedEventArgs e)
     {
-        if (MaterialViewModel == null) return;
-        MaterialViewModel.AlbedoR = 0.95f;
-        MaterialViewModel.AlbedoG = 0.95f;
-        MaterialViewModel.AlbedoB = 0.95f;
-        MaterialViewModel.Metallic = 1.0f;
-        MaterialViewModel.Roughness = 0.2f;
+        ApplyPreset("Metal");
     }
 
     private void OnPresetPlastic(object sender, RoutedEventArgs e)
     {
-        if (MaterialViewModel == null) return;
-        MaterialViewModel.AlbedoR = 0.5f;
-        MaterialViewModel.AlbedoG = 0.5f;
-        MaterialViewModel.AlbedoB = 0.5f;
-        MaterialViewModel.Metallic = 0.0f;
-        MaterialViewModel.Roughness = 0.4f;
+        ApplyPreset("Plastic");
     }
 
     private void OnPresetRubber(object sender, RoutedEventArgs e)
     {
-        if (MaterialViewModel == null) return;
-        MaterialViewModel.AlbedoR = 0.2f;
-        MaterialViewModel.AlbedoG = 0.2f;
-        MaterialViewModel.AlbedoB = 0.2f;
-        MaterialViewModel.Metallic = 0.0f;
-        MaterialViewModel.Roughness = 0.9f;
+        ApplyPreset("Rubber");
     }
 
     private void OnPresetGold(object sender, RoutedEventArgs e)
     {
-        if (MaterialViewModel == null) return;
-        MaterialViewModel.AlbedoR = 1.0f;
-        MaterialViewModel.AlbedoG = 0.765557f;
-        MaterialViewModel.AlbedoB = 0.336057f;
-        MaterialViewModel.Metallic = 1.0f;
-        MaterialViewModel.Roughness = 0.3f;
+        ApplyPreset("Gold");
     }
 
     private void OnPresetSilver(object sender, RoutedEventArgs e)
     {
-        if (MaterialViewModel == null) return;
-        MaterialViewModel.AlbedoR = 0.971519f;
-        MaterialViewModel.AlbedoG = 0.959915f;
-        MaterialViewModel.AlbedoB = 0.915324f;
-        MaterialViewModel.Metallic = 1.0f;
-        MaterialViewModel.Roughness = 0.3f;
+        ApplyPreset("Silver");
     }
 
     private void OnPresetCopper(object sender, RoutedEventArgs e)
     {
-        if (MaterialViewModel == null) return;
-        MaterialViewModel.AlbedoR = 0.955008f;
-        MaterialViewModel.AlbedoG = 0.637427f;
-        MaterialViewModel.AlbedoB = 0.538163f;
-        MaterialViewModel.Metallic = 1.0f;
-        MaterialViewModel.Roughness = 0.35f;
+        ApplyPreset("Copper");
     }
 }

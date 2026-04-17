@@ -97,6 +97,12 @@ bool KSound::LoadFromWavFile(const std::wstring& FilePath)
         return false;
     }
 
+    if (!PathUtils::IsPathSafe(FilePath, L"."))
+    {
+        LOG_WARNING("Sound: path is outside allowed directory");
+        return false;
+    }
+
     std::ifstream File(FilePath, std::ios::binary);
     if (!File.is_open())
     {

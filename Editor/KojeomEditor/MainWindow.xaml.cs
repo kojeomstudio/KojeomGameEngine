@@ -34,6 +34,8 @@ public partial class MainWindow : Window
         MaterialEditor.MaterialViewModel = _viewModel.PropertiesViewModel.Material;
 
         RendererSettings.Engine = _engine;
+        RendererSettings.ShowGridChanged += show => Viewport.ShowGrid = show;
+        RendererSettings.ShowAxisChanged += show => Viewport.ShowAxis = show;
 
         Loaded += OnWindowLoaded;
         Closed += OnWindowClosed;

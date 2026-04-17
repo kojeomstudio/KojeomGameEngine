@@ -89,6 +89,7 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: engine-interop-${{ matrix.configuration }}
+          path: .
 
       - name: Build ${{ matrix.sample }}
         run: msbuild "${{ matrix.path }}" /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /v:minimal
@@ -114,6 +115,13 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: engine-interop-${{ matrix.configuration }}
+          path: .
+
+      - name: Copy native DLL for C# editor
+        run: |
+          if not exist "Editor\EngineInterop\bin\x64\${{ matrix.configuration }}" mkdir "Editor\EngineInterop\bin\x64\${{ matrix.configuration }}"
+          copy /Y "EngineInterop.dll" "Editor\EngineInterop\bin\x64\${{ matrix.configuration }}\EngineInterop.dll"
+        shell: cmd
 
       - name: Restore Dependencies
         run: dotnet restore Editor/KojeomEditor/KojeomEditor.csproj

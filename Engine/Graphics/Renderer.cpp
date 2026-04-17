@@ -1,4 +1,6 @@
 #include "Renderer.h"
+#include "Shadow/CascadedShadowRenderer.h"
+#include "IBL/IBLSystem.h"
 #include "../Assets/SkeletalMeshComponent.h"
 
 HRESULT KRenderer::Initialize(KGraphicsDevice* InGraphicsDevice)
@@ -410,6 +412,8 @@ void KRenderer::Cleanup()
     LOG_INFO("Cleaning up Renderer...");
 
     SkySystem.Cleanup();
+    IBLSystem.Cleanup();
+    CascadedShadowRenderer.Cleanup();
     SSAO.Cleanup();
     SSR.Cleanup();
     TAA.Cleanup();
@@ -765,6 +769,31 @@ HRESULT KRenderer::InitializeDefaultResources()
     {
         bVolumetricFogEnabled = false;
         LOG_INFO("Volumetric Fog initialized successfully");
+    }
+
+    FCascadedShadowConfig CascadeConfig;
+    CascadeConfig.CascadeCount = 4;
+    CascadeConfig.CascadeResolution = 1024;
+    hr = CascadedShadowRenderer.Initialize(Device, CascadeConfig);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Cascaded shadow renderer initialization failed");
+    }
+    else
+    {
+        bCascadedShadowsEnabled = false;
+        LOG_INFO("Cascaded shadow renderer initialized successfully");
+    }
+
+    hr = IBLSystem.Initialize(GraphicsDevice);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("IBL system initialization failed");
+    }
+    else
+    {
+        bIBLEnabled = false;
+        LOG_INFO("IBL system initialized successfully");
     }
 
     LOG_INFO("Default resources initialized successfully");
@@ -1516,4 +1545,58 @@ void KRenderer::OnResize(UINT32 NewWidth, UINT32 NewHeight)
     {
         LensEffects.Resize(Device, NewWidth, NewHeight);
     }
+}
+
+void KRenderer::SetCascadedShadowsEnabled(bool bEnabled)
+{
+    if (bEnabled && !CascadedShadowRenderer.IsInitialized())
+    {
+        LOG_WARNING("Cannot enable cascaded shadows: system not initialized");
+        return;
+    }
+    bCascadedShadowsEnabled = bEnabled;
+}
+
+void KRenderer::BeginCascadedShadowPass()
+{
+    if (!bCascadedShadowsEnabled || !CascadedShadowRenderer.IsInitialized() || !CurrentCamera)
+    {
+        return;
+    }
+    CascadedShadowRenderer.BeginShadowPass(GraphicsDevice->GetContext(), DirectionalLight, CurrentCamera);
+    CascadedShadowRenderer.ClearShadowCasters();
+}
+
+void KRenderer::EndCascadedShadowPass()
+{
+    if (!bCascadedShadowsEnabled || !CascadedShadowRenderer.IsInitialized())
+    {
+        return;
+    }
+    CascadedShadowRenderer.EndShadowPass(GraphicsDevice->GetContext());
+}
+
+void KRenderer::SetIBLEnabled(bool bEnabled)
+{
+    if (bEnabled && !IBLSystem.IsInitialized())
+    {
+        LOG_WARNING("Cannot enable IBL: system not initialized");
+        return;
+    }
+    bIBLEnabled = bEnabled;
+}
+
+HRESULT KRenderer::LoadEnvironmentMap(const std::wstring& HDRPath)
+{
+    if (!IBLSystem.IsInitialized())
+    {
+        LOG_WARNING("Cannot load environment map: IBL system not initialized");
+        return E_FAIL;
+    }
+    HRESULT hr = IBLSystem.LoadEnvironmentMap(HDRPath);
+    if (SUCCEEDED(hr))
+    {
+        hr = IBLSystem.GenerateIBLTextures();
+    }
+    return hr;
 }

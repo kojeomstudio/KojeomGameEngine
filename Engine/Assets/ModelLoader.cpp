@@ -54,6 +54,12 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModel(const std::wstring& Path, 
         return nullptr;
     }
 
+    if (!PathUtils::IsPathSafe(Path, L"."))
+    {
+        LOG_WARNING("Model loader: path is outside allowed directory");
+        return nullptr;
+    }
+
     if (IsModelLoaded(Path))
     {
         return GetLoadedModel(Path);
@@ -121,6 +127,12 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& P
     if (PathUtils::ContainsTraversal(Path))
     {
         LOG_ERROR("Model: async load path contains traversal");
+        return nullptr;
+    }
+
+    if (!PathUtils::IsPathSafe(Path, L"."))
+    {
+        LOG_WARNING("Model: async load path is outside allowed directory");
         return nullptr;
     }
 

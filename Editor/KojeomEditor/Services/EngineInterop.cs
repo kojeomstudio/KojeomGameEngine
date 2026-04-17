@@ -1060,6 +1060,26 @@ public class EngineInterop : IDisposable
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr Model_LoadAndGetStaticMesh(IntPtr engine, [MarshalAs(UnmanagedType.LPWStr)] string path);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetCascadedShadowsEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsCascadedShadowsEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetIBLEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsIBLEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Renderer_LoadEnvironmentMap(IntPtr renderer, [MarshalAs(UnmanagedType.LPWStr)] string hdrPath);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Material_SetTexture(IntPtr component, int textureSlot, [MarshalAs(UnmanagedType.LPWStr)] string texturePath);
+
     #endregion
 
     public void SetActorName(IntPtr actor, string name)

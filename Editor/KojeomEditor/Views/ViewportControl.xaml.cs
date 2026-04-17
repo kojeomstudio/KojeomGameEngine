@@ -19,6 +19,20 @@ public partial class ViewportControl : UserControl
     private Stopwatch? _stopwatch;
     private bool _isRendering;
     private double _lastTime;
+    private bool _showGrid = true;
+    private bool _showAxis = true;
+
+    public bool ShowGrid
+    {
+        get => _showGrid;
+        set => _showGrid = value;
+    }
+
+    public bool ShowAxis
+    {
+        get => _showAxis;
+        set => _showAxis = value;
+    }
 
     private bool _isRightMouseDown;
     private Point _lastMousePosition;
@@ -235,8 +249,8 @@ public partial class ViewportControl : UserControl
             {
                 _engine.Tick(deltaTime);
             }
-            _engine.DebugRendererDrawGrid(0, 0, 0, 40.0f, 2.0f, 10);
-            _engine.DebugRendererDrawAxis(0, 0.01f, 0, 2.0f);
+            if (_showGrid) _engine.DebugRendererDrawGrid(0, 0, 0, 40.0f, 2.0f, 10);
+            if (_showAxis) _engine.DebugRendererDrawAxis(0, 0.01f, 0, 2.0f);
             _engine.Render();
             _engine.DebugRendererRenderFrame(deltaTime);
         }

@@ -10,6 +10,7 @@
 #include "Light.h"
 #include "Material.h"
 #include "Shadow/ShadowRenderer.h"
+#include "Shadow/CascadedShadowRenderer.h"
 #include "Deferred/DeferredRenderer.h"
 #include "PostProcess/PostProcessor.h"
 #include "Culling/Frustum.h"
@@ -27,6 +28,7 @@
 #include "PostProcess/LensEffects.h"
 #include "../DebugUI/DebugUI.h"
 #include "Sky/SkySystem.h"
+#include "IBL/IBLSystem.h"
 
 enum class ERenderPath
 {
@@ -217,6 +219,17 @@ public:
     KSkySystem* GetSkySystem() { return &SkySystem; }
     void RenderSky();
 
+    void SetCascadedShadowsEnabled(bool bEnabled);
+    bool IsCascadedShadowsEnabled() const { return bCascadedShadowsEnabled && CascadedShadowRenderer.IsInitialized(); }
+    KCascadedShadowRenderer* GetCascadedShadowRenderer() { return &CascadedShadowRenderer; }
+    void BeginCascadedShadowPass();
+    void EndCascadedShadowPass();
+
+    void SetIBLEnabled(bool bEnabled);
+    bool IsIBLEnabled() const { return bIBLEnabled && IBLSystem.IsInitialized(); }
+    KIBLSystem* GetIBLSystem() { return &IBLSystem; }
+    HRESULT LoadEnvironmentMap(const std::wstring& HDRPath);
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -297,4 +310,8 @@ private:
     
     KojeomEngine::KDebugUI DebugUI;
     KSkySystem SkySystem;
+    KCascadedShadowRenderer CascadedShadowRenderer;
+    KIBLSystem IBLSystem;
+    bool bCascadedShadowsEnabled = false;
+    bool bIBLEnabled = false;
 };

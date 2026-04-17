@@ -11,6 +11,12 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
         return E_INVALIDARG;
     }
 
+    if (!PathUtils::IsPathSafe(Filename, L"."))
+    {
+        LOG_WARNING("Texture path is outside allowed directory: " + StringUtils::WideToMultiByte(Filename));
+        return E_INVALIDARG;
+    }
+
     ComPtr<IWICImagingFactory> wicFactory;
     HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&wicFactory));
