@@ -95,6 +95,7 @@ public partial class ViewportControl : UserControl
     }
 
     public event EventHandler<ActorViewModel?>? ActorSelected;
+    public event EventHandler? EngineInitialized;
 
     public ViewportControl()
     {
@@ -175,9 +176,13 @@ public partial class ViewportControl : UserControl
 
                 if (_childHwnd != IntPtr.Zero)
                 {
-                    _engine.InitializeEmbedded(_childHwnd, width, height);
-                    _engine.DebugRendererSetEnabled(true);
-                    StartRendering();
+                    bool initResult = _engine.InitializeEmbedded(_childHwnd, width, height);
+                    if (initResult)
+                    {
+                        _engine.DebugRendererSetEnabled(true);
+                        StartRendering();
+                        EngineInitialized?.Invoke(this, EventArgs.Empty);
+                    }
                 }
             }
         };

@@ -29,6 +29,7 @@ public partial class MainWindow : Window
 
         _viewModel.SceneViewModel.PropertyChanged += SceneViewModel_PropertyChanged;
         Viewport.ActorSelected += Viewport_ActorSelected;
+        Viewport.EngineInitialized += Viewport_EngineInitialized;
 
         MaterialEditor.MaterialViewModel = _viewModel.PropertiesViewModel.Material;
 
@@ -74,6 +75,11 @@ public partial class MainWindow : Window
     {
         _viewModel.SceneViewModel.SelectedActor = actor;
         _viewModel.PropertiesViewModel.SetSelectedActor(actor);
+    }
+
+    private void Viewport_EngineInitialized(object? sender, EventArgs e)
+    {
+        _viewModel.SceneViewModel.CreateNewScene();
     }
 
     private void UpdateStatusBarStats(object? sender, EventArgs e)
