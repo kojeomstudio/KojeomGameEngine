@@ -69,15 +69,15 @@ using ComPtr = Microsoft::WRL::ComPtr<T>;
 ### Safety Macros
 
 ```cpp
-#define SAFE_RELEASE(p)    if(p) { p->Release(); p = nullptr; }
-#define SAFE_DELETE(p)     if(p) { delete p; p = nullptr; }
-#define SAFE_DELETE_ARRAY(p) if(p) { delete[] p; p = nullptr; }
+#define SAFE_RELEASE(p)    do { if((p)) { (p)->Release(); (p) = nullptr; } } while(0)
+#define SAFE_DELETE(p)     do { if((p)) { delete (p); (p) = nullptr; } } while(0)
+#define SAFE_DELETE_ARRAY(p) do { if((p)) { delete[] (p); (p) = nullptr; } } while(0)
 ```
 
 ### Error Handling Macros
 
 ```cpp
-#define CHECK_HRESULT(hr)  if(FAILED(hr)) return hr;
+#define CHECK_HRESULT(hr)  do { if(FAILED(hr)) return (hr); } while(0)
 #define LOG_ERROR(msg)     KLogger::Error(msg)
 #define LOG_INFO(msg)      KLogger::Info(msg)
 #define LOG_WARNING(msg)   KLogger::Warning(msg)
@@ -92,9 +92,7 @@ class KEngine;
 class KGraphicsDevice;
 class KRenderer;
 class KCamera;
-class KScene;
-class KSceneManager;
-class KInputManager;
+class KLogger;
 ```
 
 ---

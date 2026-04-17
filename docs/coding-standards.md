@@ -10,7 +10,7 @@
 | 함수/메서드 | 파스칼 케이스 | - | `Initialize()`, `BeginFrame()`, `CreateCubeMesh()` |
 | 지역 변수 | 카멜 케이스 | - | `graphicsDevice`, `currentTime`, `exitCode` |
 | 멤버 변수 | 카멜 케이스 | `b` (bool) | `GraphicsDevice`, `bIsRunning`, `bInFrame` |
-| 상수 | 파스칼 케이스 | - | `EngineConstants::DefaultFOV`, `Colors::CornflowerBlue` |
+| 상수 | ALL_CAPS | - | `EngineConstants::DEFAULT_FOV`, `EngineConstants::DEFAULT_WINDOW_WIDTH` |
 | 네임스페이스 | 파스칼 케이스 | - | `KojeomEngine::KDebugUI`, `EKeyCode`, `EMouseButton` |
 | 타입 별칭 | 파스칼 케이스 | - | `ActorPtr`, `ComponentPtr`, `ComPtr<T>` |
 | 템플릿 파라미터 | 파스칼 케이스 | - | `T`, `FuncType` |

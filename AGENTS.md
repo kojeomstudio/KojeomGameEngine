@@ -51,7 +51,7 @@ No linter or formatter is configured. No `.clang-format`, `.clang-tidy`, or `.ed
 | Functions/Methods | PascalCase | `Initialize()`, `BeginFrame()`, `CreateCubeMesh()` |
 | Local variables | camelCase | `graphicsDevice`, `currentTime`, `exitCode` |
 | Member variables | camelCase, `b` prefix for booleans | `GraphicsDevice`, `bIsRunning`, `bInFrame` |
-| Constants | PascalCase inside namespace | `EngineConstants::DefaultFOV`, `Colors::CornflowerBlue` |
+| Constants | ALL_CAPS inside namespace | `EngineConstants::DEFAULT_FOV`, `EngineConstants::DEFAULT_WINDOW_WIDTH` |
 | Namespaces | PascalCase | `KojeomEngine::KDebugUI` |
 | Type aliases | PascalCase | `ActorPtr`, `ComponentPtr`, `ComPtr<T>` |
 | Parameters | camelCase, `In` prefix for inputs | `InGraphicsDevice`, `InMesh`, `InName` |
@@ -160,7 +160,6 @@ Engine/
 ├── Core/           # KEngine - window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
 ├── Graphics/       # Device, renderer, camera, shader, mesh, material, texture, light
 │   ├── CommandBuffer/# Deferred command-based rendering
-│   ├── Debug/      # Debug renderer
 │   ├── Shadow/     # Shadow maps, cascaded shadow maps
 │   ├── Deferred/   # G-Buffer, deferred renderer
 │   ├── PostProcess/# HDR, lens effects (bloom), FXAA, color grading, auto exposure, DOF, motion blur

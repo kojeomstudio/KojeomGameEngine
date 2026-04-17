@@ -19,7 +19,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 73 | 23,508 | Full rendering pipeline (20 sub-systems) |
+| Graphics | `Engine/Graphics/` | 71 | 22,526 | Full rendering pipeline (19 sub-systems) |
 | Assets | `Engine/Assets/` | 18 | 5,233 | Static/skeletal mesh, skeleton, animation, state machine, model loader, light component |
 | UI | `Engine/UI/` | 27 | 2,598 | Canvas-based UI system |
 | Physics | `Engine/Physics/` | 6 | 1,138 | Rigid body, collision detection, raycast |
@@ -30,7 +30,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | Scene | `Engine/Scene/` | 4 | 796 | Actor-Component system, scene management |
 | DebugUI | `Engine/DebugUI/` | 2 | 264 | ImGui debug overlay |
 | Utils | `Engine/Utils/` | 3 | 346 | Common.h, Logger.h, Math.h |
-| **Total** | | **149** | **38,015** | |
+| **Total** | | **147** | **37,033** | |
 
 ## Graphics Sub-Systems
 
@@ -41,7 +41,6 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | Shadow | `Graphics/Shadow/` | 8 | 1,338 | Shadow maps, cascaded shadow maps |
 | Deferred | `Graphics/Deferred/` | 4 | 1,465 | G-Buffer, deferred renderer |
 | IBL | `Graphics/IBL/` | 2 | 1,093 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
-| Debug | `Graphics/Debug/` | 2 | 982 | Debug wireframe/shape rendering |
 | LOD | `Graphics/LOD/` | 4 | 904 | LOD generation and system |
 | SSAO | `Graphics/SSAO/` | 2 | 795 | Screen-space ambient occlusion |
 | Terrain | `Graphics/Terrain/` | 2 | 873 | Terrain rendering with splat-map texturing |
@@ -228,14 +227,14 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 
 | Category | Count |
 |----------|-------|
-| Engine source files (.h + .cpp) | 149 |
-| Engine total lines | ~38,015 |
+| Engine source files (.h + .cpp) | 147 |
+| Engine total lines | ~37,033 |
 | Editor C# files | 14 |
 | Editor XAML files | 9 |
 | Editor C# lines | ~3,455 |
 | Editor XAML lines | ~730 |
 | Sample projects | 16 |
 | Engine modules | 11 |
-| Graphics sub-systems | 20 |
+| Graphics sub-systems | 19 |
 | EngineInterop API functions | 107 |
 | Total solution projects | 18 |

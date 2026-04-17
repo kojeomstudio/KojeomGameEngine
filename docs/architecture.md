@@ -69,7 +69,6 @@ DirectX 11 기반의 렌더링 시스템으로, 가장 큰 모듈입니다.
 | `Particle/` | 파티클 시스템 (빌보드, 텍스처 아틀라스) |
 | `Performance/` | GPU 타이머, 프레임 통계 |
 | `CommandBuffer/` | 디퍼드 커맨드 버퍼 (정렬, 컬링) |
-| `Debug/` | 디버그 렌더러 |
 
 ### Input (`Engine/Input/`)
 
