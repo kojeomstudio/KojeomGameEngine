@@ -518,6 +518,11 @@ HRESULT KModelLoader::LoadOBJFallback(const std::wstring& Path, FLoadedModel* Ou
                 }
 
                 vertices.push_back(vertex);
+                if (vertices.size() >= MAX_OBJ_VERTICES)
+                {
+                    LOG_WARNING("OBJ vertex count limit reached: " + std::to_string(MAX_OBJ_VERTICES));
+                    break;
+                }
                 faceIndices.push_back(static_cast<uint32>(vertices.size() - 1));
             }
             
@@ -613,9 +618,9 @@ HRESULT KModelLoader::LoadGLTFFallback(const std::wstring& Path, FLoadedModel* O
         auto gltfFileSize = file.tellg();
         file.seekg(0, std::ios::beg);
 
-        if (gltfFileSize > 0 && static_cast<uint32>(gltfFileSize) > MaxGLTFFileSize)
+        if (gltfFileSize > 0 && static_cast<int64>(gltfFileSize) > MaxGLTFFileSize)
         {
-            LOG_ERROR("GLTF file too large: " + std::to_string(static_cast<uint32>(gltfFileSize)));
+            LOG_ERROR("GLTF file too large: " + std::to_string(static_cast<int64>(gltfFileSize)));
             file.close();
             return E_FAIL;
         }
@@ -1143,9 +1148,9 @@ HRESULT KModelLoader::LoadFBXFallback(const std::wstring& Path, FLoadedModel* Ou
     auto fbxFileSize = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    if (fbxFileSize > 0 && static_cast<uint32>(fbxFileSize) > MaxFBXFallbackSize)
+    if (fbxFileSize > 0 && static_cast<int64>(fbxFileSize) > MaxFBXFallbackSize)
     {
-        LOG_ERROR("FBX file too large for fallback parser: " + std::to_string(static_cast<uint32>(fbxFileSize)));
+        LOG_ERROR("FBX file too large for fallback parser: " + std::to_string(static_cast<int64>(fbxFileSize)));
         file.close();
         return E_FAIL;
     }

@@ -112,6 +112,7 @@ void KAudioManager::Shutdown()
         if (Voice.Callback)
         {
             delete Voice.Callback;
+            Voice.Callback = nullptr;
         }
     }
     ActiveVoices.clear();
@@ -364,6 +365,7 @@ void KAudioManager::StopSound(uint32_t VoiceId)
         if (It->second.Callback)
         {
             delete It->second.Callback;
+            It->second.Callback = nullptr;
         }
         ActiveVoices.erase(It);
     }
@@ -400,6 +402,7 @@ void KAudioManager::StopAllSounds()
         if (Pair.second.Callback)
         {
             delete Pair.second.Callback;
+            Pair.second.Callback = nullptr;
         }
     }
     ActiveVoices.clear();
