@@ -56,7 +56,8 @@ static bool ValidateWavHeader(const FWavHeader& Header)
 
 static void FillWaveFormat(std::unique_ptr<uint8_t[]>& WaveFormat, uint32_t Channels, uint32_t SampleRate, uint32_t ByteRate, uint32_t BlockAlign, uint32_t BitsPerSample)
 {
-    auto pFormat = std::make_unique<WAVEFORMATEX>();
+    WaveFormat = std::make_unique<uint8_t[]>(sizeof(WAVEFORMATEX));
+    WAVEFORMATEX* pFormat = reinterpret_cast<WAVEFORMATEX*>(WaveFormat.get());
     pFormat->wFormatTag = WAVE_FORMAT_PCM;
     pFormat->nChannels = static_cast<WORD>(Channels);
     pFormat->nSamplesPerSec = SampleRate;
@@ -64,7 +65,6 @@ static void FillWaveFormat(std::unique_ptr<uint8_t[]>& WaveFormat, uint32_t Chan
     pFormat->nBlockAlign = static_cast<WORD>(BlockAlign);
     pFormat->wBitsPerSample = static_cast<WORD>(BitsPerSample);
     pFormat->cbSize = 0;
-    WaveFormat.reset(reinterpret_cast<uint8_t*>(pFormat.release()));
 }
 
 KSound::KSound()
@@ -111,6 +111,12 @@ bool KSound::LoadFromWavFile(const std::wstring& FilePath)
     if (fileSize > static_cast<std::streamoff>(MaxAudioDataSize))
     {
         LOG_ERROR("WAV file too large: " + std::to_string(fileSize) + " bytes");
+        return false;
+    }
+
+    if (fileSize < static_cast<std::streamoff>(sizeof(FWavHeader)))
+    {
+        LOG_ERROR("WAV file too small: " + std::to_string(fileSize) + " bytes");
         return false;
     }
 

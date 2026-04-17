@@ -76,9 +76,40 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
         return hr;
     }
 
-    UINT stride = textureWidth * 4;
-    UINT imageSize = stride * textureHeight;
-    std::vector<BYTE> pixelData(imageSize);
+    if (textureWidth == 0 || textureHeight == 0)
+    {
+        converter->Release();
+        frame->Release();
+        decoder->Release();
+        wicFactory->Release();
+        return E_INVALIDARG;
+    }
+
+    constexpr UINT32 MaxTextureDimension = 16384;
+    if (textureWidth > MaxTextureDimension || textureHeight > MaxTextureDimension)
+    {
+        LOG_ERROR("Texture dimensions too large: " + std::to_string(textureWidth) + "x" + std::to_string(textureHeight));
+        converter->Release();
+        frame->Release();
+        decoder->Release();
+        wicFactory->Release();
+        return E_INVALIDARG;
+    }
+
+    size_t stride = static_cast<size_t>(textureWidth) * 4;
+    size_t imageSize = stride * static_cast<size_t>(textureHeight);
+
+    if (stride > static_cast<size_t>(UINT_MAX) || imageSize > static_cast<size_t>(UINT_MAX))
+    {
+        LOG_ERROR("Texture size overflow: stride=" + std::to_string(stride) + " imageSize=" + std::to_string(imageSize));
+        converter->Release();
+        frame->Release();
+        decoder->Release();
+        wicFactory->Release();
+        return E_INVALIDARG;
+    }
+
+    std::vector<BYTE> pixelData(static_cast<size_t>(imageSize));
 
     hr = converter->CopyPixels(nullptr, stride, imageSize, pixelData.data());
     if (FAILED(hr))

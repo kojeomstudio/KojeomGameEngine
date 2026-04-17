@@ -118,6 +118,12 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModel(const std::wstring& Path, 
 
 std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options)
 {
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("Model: async load path contains traversal");
+        return nullptr;
+    }
+
     if (IsModelLoaded(Path))
     {
         return LoadedModels[Path];

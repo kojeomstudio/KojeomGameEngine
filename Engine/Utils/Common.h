@@ -87,12 +87,29 @@ namespace PathUtils
             if (c == L'/') c = L'\\';
         }
 
-        if (normalized.find(L"..\\") != std::wstring::npos)
+        if (normalized.find(L"..\\") != std::wstring::npos ||
+            normalized.find(L"../") != std::wstring::npos)
+        {
+            return true;
+        }
+
+        if (normalized.size() >= 2 && normalized[normalized.size() - 1] == L'.' &&
+            normalized.size() >= 3 && normalized[normalized.size() - 2] == L'.')
         {
             return true;
         }
 
         if (normalized.size() >= 2 && normalized[0] == L'\\' && normalized[1] == L'\\')
+        {
+            return true;
+        }
+
+        if (normalized.size() >= 4 && normalized.substr(0, 4) == L"\\\\?\\")
+        {
+            return true;
+        }
+
+        if (normalized.find(L"::$") != std::wstring::npos)
         {
             return true;
         }

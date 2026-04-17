@@ -313,6 +313,8 @@ JsonObjectPtr KJsonArchive::ParseObject(const std::string& Str, size_t& Pos, int
     {
         SkipWhitespace(Str, Pos);
 
+        if (Pos >= Str.size()) break;
+
         if (Str[Pos] != '"')
         {
             break;
@@ -477,10 +479,14 @@ double KJsonArchive::ParseNumber(const std::string& Str, size_t& Pos) const
 {
     size_t start = Pos;
 
+    if (Pos >= Str.size()) return 0.0;
+
     if (Str[Pos] == '-')
     {
         ++Pos;
     }
+
+    if (Pos >= Str.size()) return 0.0;
 
     while (Pos < Str.size() && Str[Pos] >= '0' && Str[Pos] <= '9')
     {
@@ -521,12 +527,12 @@ double KJsonArchive::ParseNumber(const std::string& Str, size_t& Pos) const
 
 bool KJsonArchive::ParseBool(const std::string& Str, size_t& Pos) const
 {
-    if (Str.substr(Pos, 4) == "true")
+    if (Pos + 4 <= Str.size() && Str.substr(Pos, 4) == "true")
     {
         Pos += 4;
         return true;
     }
-    else if (Str.substr(Pos, 5) == "false")
+    else if (Pos + 5 <= Str.size() && Str.substr(Pos, 5) == "false")
     {
         Pos += 5;
         return false;

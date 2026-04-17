@@ -951,7 +951,8 @@ HRESULT KIBLSystem::ConvoluteToPrefiltered()
     for (uint32 mip = 0; mip < maxMipLevels; ++mip)
     {
         uint32 mipWidth = static_cast<uint32>(texSize * std::pow(0.5f, mip));
-        uint32 mipHeight = mipWidth;
+        uint32 mipHeight = std::max(1u, mipWidth);
+        mipWidth = std::max(1u, mipWidth);
 
         D3D11_VIEWPORT Viewport = {};
         Viewport.Width = static_cast<float>(mipWidth);

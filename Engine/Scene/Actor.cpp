@@ -155,6 +155,12 @@ void KActor::Deserialize(KBinaryArchive& Archive)
     uint32 NumComponents;
     Archive >> NumComponents;
 
+    if (NumComponents > 256)
+    {
+        LOG_ERROR("Actor::Deserialize: too many components: " + std::to_string(NumComponents));
+        NumComponents = 0;
+    }
+
     for (uint32 i = 0; i < NumComponents; ++i)
     {
         uint32 componentTypeID = 0;
@@ -166,10 +172,20 @@ void KActor::Deserialize(KBinaryArchive& Archive)
             component->Deserialize(Archive);
             AddComponent(component);
         }
+        else
+        {
+            LOG_WARNING("Actor::Deserialize: unknown component type: " + std::to_string(componentTypeID) + " - skipping");
+        }
     }
 
     uint32 NumChildren;
     Archive >> NumChildren;
+
+    if (NumChildren > 1024)
+    {
+        LOG_ERROR("Actor::Deserialize: too many children: " + std::to_string(NumChildren));
+        NumChildren = 0;
+    }
 
     for (uint32 i = 0; i < NumChildren; ++i)
     {
@@ -206,6 +222,13 @@ HRESULT KScene::Load(const std::wstring& Path)
 
     uint32 NumRootActors;
     Archive >> NumRootActors;
+
+    if (NumRootActors > 100000)
+    {
+        LOG_ERROR("Scene::Load: too many root actors: " + std::to_string(NumRootActors));
+        Archive.Close();
+        return E_FAIL;
+    }
 
     for (uint32 i = 0; i < NumRootActors; ++i)
     {

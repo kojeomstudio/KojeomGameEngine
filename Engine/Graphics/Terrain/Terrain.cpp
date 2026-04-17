@@ -297,8 +297,24 @@ HRESULT KTerrain::GenerateTerrainMesh()
     if (!HeightMap || !HeightMap->IsValid()) return E_FAIL;
 
     UINT32 resolution = Config.Resolution;
-    UINT32 vertexCount = resolution * resolution;
-    UINT32 indexCount = (resolution - 1) * (resolution - 1) * 6;
+
+    if (resolution == 0 || resolution > 8192)
+    {
+        LOG_ERROR("Terrain: invalid resolution: " + std::to_string(resolution));
+        return E_INVALIDARG;
+    }
+
+    UINT64 vertexCount64 = static_cast<UINT64>(resolution) * static_cast<UINT64>(resolution);
+    UINT64 indexCount64 = (static_cast<UINT64>(resolution) - 1) * (static_cast<UINT64>(resolution) - 1) * 6;
+
+    if (vertexCount64 > static_cast<UINT64>(UINT32_MAX) || indexCount64 > static_cast<UINT64>(UINT32_MAX))
+    {
+        LOG_ERROR("Terrain: resolution too large for vertex/index count");
+        return E_INVALIDARG;
+    }
+
+    UINT32 vertexCount = static_cast<UINT32>(vertexCount64);
+    UINT32 indexCount = static_cast<UINT32>(indexCount64);
 
     std::vector<FTerrainVertex> vertices(vertexCount);
     std::vector<UINT32> indices(indexCount);
