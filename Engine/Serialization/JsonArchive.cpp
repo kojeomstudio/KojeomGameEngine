@@ -284,7 +284,11 @@ JsonValuePtr KJsonArchive::ParseValue(const std::string& Str, size_t& Pos, int32
     }
     else if (c == 'n')
     {
-        Pos += 4;
+        if (Pos + 4 <= Str.size() && Str.compare(Pos, 4, "null") == 0)
+        {
+            Pos += 4;
+            return std::make_shared<KJsonNull>();
+        }
         return std::make_shared<KJsonNull>();
     }
     else if ((c >= '0' && c <= '9') || c == '-' || c == '+')

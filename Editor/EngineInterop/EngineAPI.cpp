@@ -158,6 +158,11 @@ extern "C"
     ENGINEAPI void* Scene_Load(void* sceneMgr, const wchar_t* path)
     {
         if (!sceneMgr || !path) return nullptr;
+        if (PathUtils::ContainsTraversal(std::wstring(path)))
+        {
+            LOG_ERROR("Scene path rejected (unsafe path)");
+            return nullptr;
+        }
         KSceneManager* mgr = static_cast<KSceneManager*>(sceneMgr);
         return mgr->LoadScene(std::wstring(path)).get();
     }
@@ -165,6 +170,11 @@ extern "C"
     ENGINEAPI HRESULT Scene_Save(void* sceneMgr, const wchar_t* path, void* scene)
     {
         if (!sceneMgr || !path || !scene) return E_INVALIDARG;
+        if (PathUtils::ContainsTraversal(std::wstring(path)))
+        {
+            LOG_ERROR("Scene path rejected (unsafe path)");
+            return E_INVALIDARG;
+        }
         KSceneManager* mgr = static_cast<KSceneManager*>(sceneMgr);
         KScene* rawScene = static_cast<KScene*>(scene);
 
@@ -808,6 +818,7 @@ extern "C"
     ENGINEAPI void Camera_SetNearFar(void* camera, float nearZ, float farZ)
     {
         if (!camera) return;
+        if (nearZ <= 0.0f || farZ <= 0.0f || nearZ >= farZ) return;
         KCamera* kcam = static_cast<KCamera*>(camera);
         kcam->SetPerspective(kcam->GetFovY(), kcam->GetAspectRatio(), nearZ, farZ);
     }

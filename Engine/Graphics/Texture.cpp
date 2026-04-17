@@ -11,7 +11,7 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
         return E_INVALIDARG;
     }
 
-    IWICImagingFactory* wicFactory = nullptr;
+    ComPtr<IWICImagingFactory> wicFactory;
     HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
         IID_PPV_ARGS(&wicFactory));
     if (FAILED(hr))
@@ -20,46 +20,36 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
         return hr;
     }
 
-    IWICBitmapDecoder* decoder = nullptr;
+    ComPtr<IWICBitmapDecoder> decoder;
     hr = wicFactory->CreateDecoderFromFilename(Filename.c_str(), nullptr, GENERIC_READ,
         WICDecodeMetadataCacheOnLoad, &decoder);
     if (FAILED(hr))
     {
         KLogger::HResultError(hr, "Failed to create WIC bitmap decoder: " + StringUtils::WideToMultiByte(Filename));
-        wicFactory->Release();
         return hr;
     }
 
-    IWICBitmapFrameDecode* frame = nullptr;
+    ComPtr<IWICBitmapFrameDecode> frame;
     hr = decoder->GetFrame(0, &frame);
     if (FAILED(hr))
     {
         KLogger::HResultError(hr, "Failed to get WIC bitmap frame");
-        decoder->Release();
-        wicFactory->Release();
         return hr;
     }
 
-    IWICFormatConverter* converter = nullptr;
+    ComPtr<IWICFormatConverter> converter;
     hr = wicFactory->CreateFormatConverter(&converter);
     if (FAILED(hr))
     {
         KLogger::HResultError(hr, "Failed to create WIC format converter");
-        frame->Release();
-        decoder->Release();
-        wicFactory->Release();
         return hr;
     }
 
-    hr = converter->Initialize(frame, GUID_WICPixelFormat32bppRGBA,
+    hr = converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
         WICBitmapDitherTypeNone, nullptr, 0.0f, WICBitmapPaletteTypeMedianCut);
     if (FAILED(hr))
     {
         KLogger::HResultError(hr, "Failed to initialize WIC format converter");
-        converter->Release();
-        frame->Release();
-        decoder->Release();
-        wicFactory->Release();
         return hr;
     }
 
@@ -69,19 +59,11 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
     if (FAILED(hr))
     {
         KLogger::HResultError(hr, "Failed to get WIC converted image size");
-        converter->Release();
-        frame->Release();
-        decoder->Release();
-        wicFactory->Release();
         return hr;
     }
 
     if (textureWidth == 0 || textureHeight == 0)
     {
-        converter->Release();
-        frame->Release();
-        decoder->Release();
-        wicFactory->Release();
         return E_INVALIDARG;
     }
 
@@ -89,10 +71,6 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
     if (textureWidth > MaxTextureDimension || textureHeight > MaxTextureDimension)
     {
         LOG_ERROR("Texture dimensions too large: " + std::to_string(textureWidth) + "x" + std::to_string(textureHeight));
-        converter->Release();
-        frame->Release();
-        decoder->Release();
-        wicFactory->Release();
         return E_INVALIDARG;
     }
 
@@ -102,10 +80,6 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
     if (stride > static_cast<size_t>(UINT_MAX) || imageSize > static_cast<size_t>(UINT_MAX))
     {
         LOG_ERROR("Texture size overflow: stride=" + std::to_string(stride) + " imageSize=" + std::to_string(imageSize));
-        converter->Release();
-        frame->Release();
-        decoder->Release();
-        wicFactory->Release();
         return E_INVALIDARG;
     }
 
@@ -115,10 +89,6 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
     if (FAILED(hr))
     {
         KLogger::HResultError(hr, "Failed to copy WIC pixel data");
-        converter->Release();
-        frame->Release();
-        decoder->Release();
-        wicFactory->Release();
         return hr;
     }
 
@@ -147,17 +117,8 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
     if (FAILED(hr))
     {
         KLogger::HResultError(hr, "Failed to create texture from file: " + StringUtils::WideToMultiByte(Filename));
-        converter->Release();
-        frame->Release();
-        decoder->Release();
-        wicFactory->Release();
         return hr;
     }
-
-    converter->Release();
-    frame->Release();
-    decoder->Release();
-    wicFactory->Release();
 
     hr = CreateShaderResourceView(Device);
     if (FAILED(hr))

@@ -1,4 +1,6 @@
 #include "CommandBuffer.h"
+
+#include <cstring>
 #include "../Culling/Frustum.h"
 #include <chrono>
 
@@ -140,7 +142,8 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
             XMStoreFloat3(&Translation, Command.WorldMatrix.r[3]);
             XMVECTOR Pos = XMVector3TransformCoord(XMLoadFloat3(&Translation), CurrentViewProjection);
             float Depth = XMVectorGetZ(Pos);
-            UINT32 DepthInt = *reinterpret_cast<UINT32*>(&Depth);
+            UINT32 DepthInt;
+            std::memcpy(&DepthInt, &Depth, sizeof(Depth));
             Key = DepthInt;
         }
         break;
@@ -162,7 +165,8 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
             XMStoreFloat3(&Translation, Command.WorldMatrix.r[3]);
             XMVECTOR Pos = XMVector3TransformCoord(XMLoadFloat3(&Translation), CurrentViewProjection);
             float Depth = XMVectorGetZ(Pos);
-            UINT32 DepthInt = *reinterpret_cast<UINT32*>(&Depth);
+            UINT32 DepthInt;
+            std::memcpy(&DepthInt, &Depth, sizeof(Depth));
             Key = ((MaterialId & 0xFFFF) << 48);
             Key |= (static_cast<UINT64>(DepthInt & 0xFFFFFFFF));
         }

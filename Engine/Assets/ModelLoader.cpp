@@ -1172,6 +1172,8 @@ HRESULT KModelLoader::LoadFBXFallback(const std::wstring& Path, FLoadedModel* Ou
 
 HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* OutModel, const FModelLoadOptions& Options)
 {
+    static constexpr size_t MaxFBXVertices = 5000000;
+    static constexpr size_t MaxFBXIndices = 15000000;
     std::vector<XMFLOAT3> positions;
     std::vector<XMFLOAT3> normals;
     std::vector<XMFLOAT2> texcoords;
@@ -1330,6 +1332,11 @@ HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* Ou
                     auto floats = extractFloatArray(vertPos);
                     for (size_t i = 0; i + 2 < floats.size(); i += 3)
                     {
+                        if (positions.size() >= MaxFBXVertices)
+                        {
+                            LOG_WARNING("FBX: Vertex limit reached (" + std::to_string(MaxFBXVertices) + ")");
+                            break;
+                        }
                         positions.push_back(XMFLOAT3(floats[i] * Options.Scale, floats[i+1] * Options.Scale, floats[i+2] * Options.Scale));
                     }
                 }
@@ -1403,6 +1410,11 @@ HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* Ou
                         }
                     }
                     indices = triangleIndices;
+                    if (indices.size() > MaxFBXIndices)
+                    {
+                        LOG_WARNING("FBX: Index limit reached, truncating to " + std::to_string(MaxFBXIndices));
+                        indices.resize(MaxFBXIndices);
+                    }
                 }
             }
             else if (modelType == "LimbNode" || modelType == "Root")
