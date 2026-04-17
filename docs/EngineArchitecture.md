@@ -55,6 +55,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | TAA | `Graphics/TAA/` | 2 | 591 | Temporal anti-aliasing |
 | Performance | `Graphics/Performance/` | 2 | 379 | GPU timer, frame stats |
 | Instanced | `Graphics/Instanced/` | 2 | 274 | GPU instanced rendering |
+| Debug | `Graphics/Debug/` | 2 | ~300 | Debug renderer (grid, axis, wireframe) |
 
 ## Key Design Patterns
 

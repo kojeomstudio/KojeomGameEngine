@@ -176,7 +176,8 @@ Engine/
 │   ├── IBL/        # Image-based lighting
 │   ├── LOD/        # LOD generation and system
 │   ├── Particle/   # Particle system
-│   └── Performance/# GPU timer, frame stats
+│   ├── Performance/# GPU timer, frame stats
+│   └── Debug/      # Debug renderer (grid, axis, wireframe)
 ├── Input/          # Keyboard, mouse, raw input, action mapping
 ├── Audio/          # XAudio2 audio, 3D sound
 ├── Physics/        # Rigid body, collision detection

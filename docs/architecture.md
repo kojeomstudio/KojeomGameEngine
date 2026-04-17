@@ -68,6 +68,7 @@ DirectX 11 기반의 렌더링 시스템으로, 가장 큰 모듈입니다.
 | `LOD/` | LOD 생성 및 LOD 시스템 (화면 커버리지 기반) |
 | `Particle/` | 파티클 시스템 (빌보드, 텍스처 아틀라스) |
 | `Performance/` | GPU 타이머, 프레임 통계 |
+| `Debug/` | 디버그 렌더러 (그리드, 축, 와이어프레임) |
 | `CommandBuffer/` | 디퍼드 커맨드 버퍼 (정렬, 컬링) |
 
 ### Input (`Engine/Input/`)
