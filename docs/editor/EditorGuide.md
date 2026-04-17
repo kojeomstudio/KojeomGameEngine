@@ -43,7 +43,7 @@ Editor/
     ├── MainWindow.xaml / MainWindow.xaml.cs   # Root window with menus, toolbar, status bar
     ├── KojeomEditor.csproj                   # .NET 8.0 project with native DLL copy target
     ├── Services/                             # Business logic and engine bridge
-     │   ├── EngineInterop.cs                  # P/Invoke wrapper (107 DllImport declarations)
+     │   ├── EngineInterop.cs                  # P/Invoke wrapper (113 DllImport declarations)
     │   └── UndoRedoService.cs                # Command-pattern undo/redo system
     ├── ViewModels/                           # MVVM ViewModels
     │   ├── MainViewModel.cs                  # Root VM, ViewModelBase, RelayCommand, ETransformMode
@@ -82,7 +82,7 @@ The editor communicates with the native C++ engine through a **flat C API** brid
 
 ```
  C# Editor (EngineInterop.cs)  ──P/Invoke──>  EngineInterop.dll (EngineAPI.cpp)  ──>  Engine C++ Core
-      107 DllImport declarations               extern "C" API (107 functions)        KEngine, KRenderer, etc.
+      113 DllImport declarations               extern "C" API (113 functions)        KEngine, KRenderer, etc.
 ```
 
 ### C++ Side (`Editor/EngineInterop/EngineAPI.h`)
@@ -95,9 +95,9 @@ All native functions are declared as `extern "C"` with `ENGINEAPI` export macro.
 | **Scene** | `Scene_Create`, `Scene_Load`, `Scene_Save`, `Scene_SetActive`, `Scene_GetActive`, `Scene_Raycast`, `Scene_GetActorCount`, `Scene_GetActorAt` | Scene management and queries |
 | **Actor** | `Actor_Create`, `Actor_Destroy`, `Actor_SetPosition`, `Actor_GetPosition`, `Actor_SetRotation`, `Actor_GetRotation`, `Actor_SetScale`, `Actor_GetScale`, `Actor_GetName`, `Actor_SetName`, `Actor_SetVisibility`, `Actor_IsVisible`, `Actor_AddChild`, `Actor_GetChildCount`, `Actor_GetChild`, `Actor_GetParent` | Actor transform, hierarchy, visibility |
 | **Camera** | `Camera_GetMain`, `Camera_SetPosition`, `Camera_GetPosition`, `Camera_SetRotation`, `Camera_GetViewMatrix`, `Camera_GetProjectionMatrix`, `Camera_SetFOV`, `Camera_GetFOV`, `Camera_SetNearFar`, `Camera_GetNearZ`, `Camera_GetFarZ` | Camera control and matrix queries |
-| **Renderer** | `Renderer_SetRenderPath`, `Renderer_SetDebugMode`, `Renderer_GetStats`, `Renderer_SetSSAOEnabled`, `Renderer_SetPostProcessEnabled`, `Renderer_SetShadowEnabled`, `Renderer_SetSkyEnabled`, `Renderer_SetTAAEnabled`, `Renderer_SetDebugUIEnabled`, `Renderer_SetSSREnabled`, `Renderer_SetVolumetricFogEnabled` | Rendering features and toggles |
+| **Renderer** | `Renderer_SetRenderPath`, `Renderer_SetDebugMode`, `Renderer_GetStats`, `Renderer_SetSSAOEnabled`, `Renderer_SetPostProcessEnabled`, `Renderer_SetShadowEnabled`, `Renderer_SetSkyEnabled`, `Renderer_SetTAAEnabled`, `Renderer_SetDebugUIEnabled`, `Renderer_SetSSREnabled`, `Renderer_SetVolumetricFogEnabled`, `Renderer_SetCascadedShadowsEnabled`, `Renderer_IsCascadedShadowsEnabled`, `Renderer_SetIBLEnabled`, `Renderer_IsIBLEnabled`, `Renderer_LoadEnvironmentMap` | Rendering features and toggles |
 | **Lighting** | `Renderer_SetDirectionalLight`, `Renderer_GetDirectionalLight`, `Renderer_SetDirectionalLightDirection`, `Renderer_SetDirectionalLightColor`, `Renderer_SetDirectionalLightAmbient`, `Renderer_SetDirectionalLightIntensity`, `Renderer_GetDirectionalLightIntensity`, `Renderer_AddPointLight`, `Renderer_GetPointLightCount`, `Renderer_GetPointLight`, `Renderer_ClearPointLights`, `Renderer_AddSpotLight`, `Renderer_ClearSpotLights`, `Renderer_SetShadowSceneBounds` | Directional, point, and spot lights |
-| **Material** | `Material_SetAlbedo`, `Material_GetAlbedo`, `Material_SetMetallic`, `Material_GetMetallic`, `Material_SetRoughness`, `Material_GetRoughness`, `Material_SetAO`, `Material_GetAO` | PBR material properties |
+| **Material** | `Material_SetAlbedo`, `Material_GetAlbedo`, `Material_SetMetallic`, `Material_GetMetallic`, `Material_SetRoughness`, `Material_GetRoughness`, `Material_SetAO`, `Material_GetAO`, `Material_SetTexture` | PBR material properties |
 | **Components** | `Actor_AddComponent`, `Actor_GetComponentCount`, `Actor_GetComponentName`, `Actor_GetComponentType`, `Actor_GetStaticMeshComponent`, `Actor_GetSkeletalMeshComponent`, `Actor_GetLightComponent`, `StaticMeshComponent_SetMesh`, `StaticMeshComponent_GetMaterial`, `StaticMeshComponent_CreateDefaultMesh` | Component management |
 | **Animation** | `SkeletalMeshComponent_PlayAnimation`, `SkeletalMeshComponent_StopAnimation`, `SkeletalMeshComponent_PauseAnimation`, `SkeletalMeshComponent_ResumeAnimation`, `SkeletalMeshComponent_GetAnimationCount`, `SkeletalMeshComponent_GetAnimationName`, `SkeletalMeshComponent_SetSkeletalMeshFromModel` | Skeletal animation playback |
 | **Model/Texture** | `Model_Load`, `Model_Unload`, `Model_LoadAndGetStaticMesh`, `Model_LoadAndGetSkeletalMesh`, `Model_HasSkeleton`, `Model_GetAnimationCount`, `Model_GetAnimationName`, `Texture_Load`, `Texture_Unload` | Asset loading |
@@ -105,7 +105,7 @@ All native functions are declared as `extern "C"` with `ENGINEAPI` export macro.
 
 ### C# Side (`Editor/KojeomEditor/Services/EngineInterop.cs`)
 
-The `EngineInterop` class wraps all 107 P/Invoke declarations with a managed API. It implements `IDisposable` for proper cleanup of the native engine instance. Every method guards against uninitialized state by checking `_isInitialized` and `_enginePtr`.
+The `EngineInterop` class wraps all 113 P/Invoke declarations with a managed API. It implements `IDisposable` for proper cleanup of the native engine instance. Every method guards against uninitialized state by checking `_isInitialized` and `_enginePtr`.
 
 **P/Invoke declaration pattern:**
 

@@ -589,6 +589,8 @@ public:
 | `Engine_Tick(void*, float)` | 엔진 Tick |
 | `Engine_Render(void*)` | 엔진 렌더 |
 | `Engine_Resize(void*, int, int)` | 리사이즈 |
+| `Engine_GetSceneManager(void*)` | 씬 매니저 가져오기 |
+| `Engine_GetRenderer(void*)` | 렌더러 가져오기 |
 
 ### 씬 관리
 
@@ -638,6 +640,11 @@ public:
 | `Renderer_SetDebugUIEnabled(void*, bool)` | 디버그 UI 토글 |
 | `Renderer_SetSSREnabled(void*, bool)` | SSR 토글 |
 | `Renderer_SetVolumetricFogEnabled(void*, bool)` | 볼류메트릭 포그 토글 |
+| `Renderer_SetCascadedShadowsEnabled(void*, bool)` | 캐스케이디드 섀도우 토글 |
+| `Renderer_IsCascadedShadowsEnabled(void*)` | 캐스케이디드 섀도우 상태 확인 |
+| `Renderer_SetIBLEnabled(void*, bool)` | IBL 토글 |
+| `Renderer_IsIBLEnabled(void*)` | IBL 상태 확인 |
+| `Renderer_LoadEnvironmentMap(void*, const wchar_t*)` | 환경맵 로드 |
 
 ### 조명
 
@@ -657,3 +664,9 @@ public:
 | `DebugRenderer_DrawAxis(void*, float, float, float, float)` | 좌표축 그리기 |
 | `DebugRenderer_SetEnabled(void*, bool)` | 디버그 렌더러 토글 |
 | `DebugRenderer_RenderFrame(void*, float)` | 디버그 렌더 프레임 |
+
+### 재질 텍스처
+
+| 함수 | 설명 |
+|------|------|
+| `Material_SetTexture(void*, int, const wchar_t*)` | 재질 텍스처 슬롯 설정 |

@@ -102,10 +102,10 @@ Engine/
 ```
 Editor/
 ├── EngineInterop/      # C++ DLL exposing flat C API (extern "C") for P/Invoke
-│   ├── EngineAPI.h     # 107 exported functions for engine operations
+│   ├── EngineAPI.h     # 113 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
 └── KojeomEditor/       # C# WPF editor (.NET 8.0)
-    ├── Services/       # EngineInterop P/Invoke wrapper (84 DllImport), UndoRedoService
+    ├── Services/       # EngineInterop P/Invoke wrapper (113 DllImport), UndoRedoService
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel
     └── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser
 ```
@@ -224,12 +224,12 @@ The engine uses a two-class shader system:
 - Registered subsystems: `KAudioSubsystem`, `KPhysicsSubsystem`
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes 107 flat C functions (`extern "C"`, `__declspec(dllexport)`)
-- C# consumes via P/Invoke (`DllImport`, 107 DllImport declarations in `EngineInterop.cs`)
+- `EngineInterop.dll` exposes 113 flat C functions (`extern "C"`, `__declspec(dllexport)`)
+- C# consumes via P/Invoke (`DllImport`, 113 DllImport declarations in `EngineInterop.cs`)
 - Internal `FEngineWrapper` class manages engine instance, model loader, and debug renderer
 - String returns use `thread_local std::string` buffers
 - Preprocessor: `ENGINEAPI_EXPORTS` controls dllexport/dllimport
-- API groups: Engine lifecycle & getters (9), Scene management (8), Actor management (23), Camera (11), Renderer settings (25), Material/PBR (8), Model loading (7), Texture (2), Static mesh component (3), Skeletal/Animation (7), DebugRenderer (4)
+- API groups: Engine lifecycle & getters (9), Scene management (8), Actor management (24), Camera (11), Renderer settings (25), Directional light (7), Point light (4), Spot light (2), Material/PBR (9), Model loading (7), Texture (2), Static mesh component (3), Skeletal/Animation (7), DebugRenderer (4)
 
 ### Serialization
 - Binary archive (`KBinaryArchive`) with `<<`/`>>` operators for all engine types
@@ -312,4 +312,4 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 6. **Do not** change the build configuration without updating documentation
 7. **Do not** add new dependencies without explicit approval
 8. **Do not** create `.hlsl` shader files. All shaders must be defined as inline C++ string literals and compiled at runtime via `KShader::CompileFromString()`.
-9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. Currently 107 C API functions with 107 C# DllImport declarations.
+9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. Currently 113 C API functions with 113 C# DllImport declarations.

@@ -81,7 +81,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 - `KPhysicsSubsystem` wraps `KPhysicsWorld` as an ISubsystem adapter
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes 107 flat C functions (`extern "C"`)
+- `EngineInterop.dll` exposes 113 flat C functions (`extern "C"`)
 - C# consumes via P/Invoke (`DllImport`, `CallingConvention.Cdecl`)
 - API groups: Engine lifecycle (7), Scene management (8), Actor management (20), Camera (10), Renderer settings (12), Lighting (11), Material (8), Components (13), Model loading (8), Texture (2)
 
@@ -120,7 +120,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 ```
 Editor/KojeomEditor/ (.NET 8.0, WPF)
 ├── Services/
-│   ├── EngineInterop.cs      # P/Invoke wrapper (3,455 lines, 107 DllImport declarations)
+│   ├── EngineInterop.cs      # P/Invoke wrapper (1,249 lines, 113 DllImport declarations)
 │   └── UndoRedoService.cs    # Undo/Redo system (276 lines, command pattern)
 ├── ViewModels/
 │   ├── MainViewModel.cs      # Main window VM, transform mode state
@@ -160,20 +160,19 @@ Editor/KojeomEditor/ (.NET 8.0, WPF)
 
 ## EngineInterop API
 
-### API Groups (107 exported functions)
+### API Groups (113 exported functions)
 
 | Group | Functions | Description |
 |-------|----------:|-------------|
-| Engine Lifecycle | 7 | Create, Destroy, Initialize, Tick, Render, Resize, InitializeEmbedded |
-| Subsystem Access | 2 | GetSceneManager, GetRenderer |
+| Engine Lifecycle | 9 | Create, Destroy, Initialize, Tick, Render, Resize, InitializeEmbedded, GetSceneManager, GetRenderer |
 | Scene Management | 8 | Create, Load, Save, SetActive, GetActive, Raycast, GetActorCount, GetActorAt |
-| Actor Management | 23 | Create, Destroy, Transform (Get/Set), Name, Components, Visibility, Hierarchy |
+| Actor Management | 24 | Create, Destroy, Transform (Get/Set), Name, Components, Visibility, Hierarchy |
 | Camera | 11 | GetMain, Transform, Matrices, FOV, Near/Far |
-| Renderer Settings | 12 | RenderPath, DebugMode, Stats, SSAO, PostProcess, Shadow, Sky, TAA, DebugUI, SSR, VolumetricFog, ShadowSceneBounds |
+| Renderer Settings | 25 | RenderPath, DebugMode, Stats, SSAO, PostProcess, Shadow, Sky, TAA, DebugUI, SSR, VolumetricFog, ShadowSceneBounds, CascadedShadows, IBL, LoadEnvironmentMap |
 | Directional Light | 7 | Set/Get properties, Direction, Color, Ambient, Intensity |
 | Point Light | 4 | Add, Clear, Count, Get |
 | Spot Light | 2 | Add, Clear |
-| Material | 8 | Set/Get Albedo, Metallic, Roughness, AO (connected to editor MaterialEditorControl) |
+| Material | 9 | Set/Get Albedo, Metallic, Roughness, AO, SetTexture |
 | StaticMesh Component | 3 | SetMesh, GetMaterial, CreateDefaultMesh |
 | SkeletalMesh Component | 7 | Play/Stop/Pause/Resume, AnimationCount, AnimationName, LoadModel |
 | Model Loading | 7 | Load, Unload, LoadStaticMesh, LoadSkeletalMesh, HasSkeleton, AnimationCount, AnimationName |
@@ -237,5 +236,5 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Sample projects | 16 |
 | Engine modules | 11 |
 | Graphics sub-systems | 19 |
-| EngineInterop API functions | 107 |
+| EngineInterop API functions | 113 |
 | Total solution projects | 18 |

@@ -12,7 +12,7 @@ docs/
 ├── getting-started.md               # 시작하기 가이드 (필수 조건, 빌드, 샘플 실행)
 ├── coding-standards.md              # 코딩 표준 (C++/C# 명명 규칙, 스타일, 에러 처리)
 ├── rendering-pipeline.md            # 렌더링 파이프라인 기술 문서 (Forward/Deferred, PBR, 후처리)
-├── api-reference.md                 # EngineInterop API 레퍼런스 (107개 C API 함수)
+├── api-reference.md                 # EngineInterop API 레퍼런스 (113개 C API 함수)
 ├── samples-guide.md                 # 샘플 프로젝트 가이드
 ├── ci.md                            # CI/CD 설정 (GitHub Actions)
 ├── assets/                          # 에셋 시스템 문서
@@ -50,7 +50,7 @@ docs/
 - [Getting Started](getting-started.md) - 시작하기 가이드 (필수 조건, 빌드 방법, 샘플 실행)
 - [Coding Standards](coding-standards.md) - 코딩 표준 (C++/C# 명명 규칙, 코드 스타일, 에러 처리)
 - [Rendering Pipeline](rendering-pipeline.md) - 렌더링 파이프라인 기술 문서 (Forward/Deferred, PBR, 후처리, 스크린 공간 효과)
-- [API Reference](api-reference.md) - EngineInterop API 레퍼런스 (107개 C API 함수)
+- [API Reference](api-reference.md) - EngineInterop API 레퍼런스 (113개 C API 함수)
 - [Samples Guide](samples-guide.md) - 샘플 프로젝트 가이드 (16개 샘플)
 - [CI/CD](ci.md) - CI/CD 설정 (GitHub Actions)
 - [DirectX 11 Renderer Documentation](renderer/DirectX11Renderer.md) - 렌더링 시스템 기술 문서
@@ -96,7 +96,7 @@ KojeomGameEngine은 11개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 | Component | Files | Lines | Description |
 |-----------|------:|------:|-------------|
-| EngineInterop | 2 | 1,294 | C++ DLL (flat C API, 107 exported functions) for C# P/Invoke |
+| EngineInterop | 2 | 1,294 | C++ DLL (flat C API, 113 exported functions) for C# P/Invoke |
 | KojeomEditor | 23 | 4,185 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Renderer Settings, Content Browser (14 C# + 9 XAML, Styles 포함) |
 
 ### Samples
