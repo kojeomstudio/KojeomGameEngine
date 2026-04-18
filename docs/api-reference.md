@@ -576,9 +576,9 @@ public:
 
 ## EngineInterop C API 레퍼런스
 
-`Editor/EngineInterop/EngineAPI.h`에 정의된 flat C API입니다. 모든 함수는 `extern "C"`로 노출되며, C#에서 P/Invoke로 호출됩니다.
+`Editor/EngineInterop/EngineAPI.h`에 정의된 flat C API입니다. 총 113개 함수가 `extern "C"`로 노출되며, C#에서 P/Invoke로 호출됩니다.
 
-### 엔진 관리
+### 엔진 관리 (9)
 
 | 함수 | 설명 |
 |------|------|
@@ -592,7 +592,7 @@ public:
 | `Engine_GetSceneManager(void*)` | 씬 매니저 가져오기 |
 | `Engine_GetRenderer(void*)` | 렌더러 가져오기 |
 
-### 씬 관리
+### 씬 관리 (8)
 
 | 함수 | 설명 |
 |------|------|
@@ -601,62 +601,158 @@ public:
 | `Scene_Save(void*, const wchar_t*, void*)` | 씬 저장 |
 | `Scene_SetActive(void*, void*)` | 액티브 씬 설정 |
 | `Scene_GetActive(void*)` | 액티브 씬 가져오기 |
+| `Scene_Raycast(void*, float, float, float, float, float, float, float*, float*, float*)` | 레이캐스트 |
+| `Scene_GetActorCount(void*)` | 씬 내 액터 수 가져오기 |
+| `Scene_GetActorAt(void*, int)` | 인덱스로 액터 가져오기 |
 
-### 액터 관리
+### 액터 관리 (23)
 
 | 함수 | 설명 |
 |------|------|
 | `Actor_Create(void*, const char*)` | 액터 생성 |
 | `Actor_Destroy(void*, void*)` | 액터 삭제 |
 | `Actor_SetPosition(void*, float, float, float)` | 위치 설정 |
-| `Actor_SetRotation(void*, float, float, float, float)` | 회전 설정 |
+| `Actor_SetRotation(void*, float, float, float, float)` | 회전(쿼터니언) 설정 |
 | `Actor_SetScale(void*, float, float, float)` | 스케일 설정 |
 | `Actor_GetPosition(void*, float*, float*, float*)` | 위치 가져오기 |
+| `Actor_GetRotation(void*, float*, float*, float*, float*)` | 회전(쿼터니언) 가져오기 |
+| `Actor_GetScale(void*, float*, float*, float*)` | 스케일 가져오기 |
+| `Actor_GetName(void*)` | 액터 이름 가져오기 |
+| `Actor_SetName(void*, const char*)` | 액터 이름 설정 |
 | `Actor_AddComponent(void*, int)` | 컴포넌트 추가 |
+| `Actor_GetStaticMeshComponent(void*)` | 스태틱 메시 컴포넌트 가져오기 |
+| `Actor_GetSkeletalMeshComponent(void*)` | 스켈레탈 메시 컴포넌트 가져오기 |
+| `Actor_GetLightComponent(void*)` | 라이트 컴포넌트 가져오기 |
+| `Actor_GetComponentCount(void*, int*)` | 컴포넌트 수 가져오기 |
+| `Actor_GetComponentName(void*, int)` | 컴포넌트 이름 가져오기 |
+| `Actor_GetComponentType(void*, int)` | 컴포넌트 타입 가져오기 |
 | `Actor_SetVisibility(void*, bool)` | 가시성 설정 |
+| `Actor_IsVisible(void*)` | 가시성 확인 |
 | `Actor_AddChild(void*, void*)` | 자식 액터 추가 |
+| `Actor_GetChildCount(void*)` | 자식 액터 수 가져오기 |
+| `Actor_GetChild(void*, int)` | 인덱스로 자식 액터 가져오기 |
+| `Actor_GetParent(void*)` | 부모 액터 가져오기 |
 
-### 카메라
+### 카메라 (11)
 
 | 함수 | 설명 |
 |------|------|
 | `Camera_GetMain(void*)` | 메인 카메라 가져오기 |
 | `Camera_SetPosition(void*, float, float, float)` | 카메라 위치 설정 |
+| `Camera_SetRotation(void*, float, float, float)` | 카메라 회전(pitch, yaw, roll) 설정 |
+| `Camera_GetPosition(void*, float*, float*, float*)` | 카메라 위치 가져오기 |
+| `Camera_GetViewMatrix(void*, float*)` | 뷰 매트릭스 가져오기 |
+| `Camera_GetProjectionMatrix(void*, float*)` | 프로젝션 매트릭스 가져오기 |
 | `Camera_SetFOV(void*, float)` | FOV 설정 |
+| `Camera_GetFOV(void*)` | FOV 가져오기 |
 | `Camera_SetNearFar(void*, float, float)` | 근/원거리 평면 설정 |
+| `Camera_GetNearZ(void*)` | 근거리 평면 가져오기 |
+| `Camera_GetFarZ(void*)` | 원거리 평면 가져오기 |
 
-### 렌더러
+### 렌더러 설정 (17)
 
 | 함수 | 설명 |
 |------|------|
 | `Renderer_SetRenderPath(void*, int)` | 렌더 패스 설정 (0=Forward, 1=Deferred) |
 | `Renderer_SetDebugMode(void*, bool)` | 디버그 모드 설정 |
 | `Renderer_GetStats(void*, int*, int*, float*)` | 렌더 통계 가져오기 |
-| `Renderer_SetShadowEnabled(void*, bool)` | 섀도우 토글 |
-| `Renderer_SetPostProcessEnabled(void*, bool)` | 후처리 토글 |
 | `Renderer_SetSSAOEnabled(void*, bool)` | SSAO 토글 |
-| `Renderer_SetTAAEnabled(void*, bool)` | TAA 토글 |
+| `Renderer_SetPostProcessEnabled(void*, bool)` | 후처리 토글 |
+| `Renderer_SetShadowEnabled(void*, bool)` | 섀도우 토글 |
 | `Renderer_SetSkyEnabled(void*, bool)` | 하늘 토글 |
+| `Renderer_SetTAAEnabled(void*, bool)` | TAA 토글 |
 | `Renderer_SetDebugUIEnabled(void*, bool)` | 디버그 UI 토글 |
 | `Renderer_SetSSREnabled(void*, bool)` | SSR 토글 |
 | `Renderer_SetVolumetricFogEnabled(void*, bool)` | 볼류메트릭 포그 토글 |
+| `Renderer_SetShadowSceneBounds(void*, float, float, float, float)` | 섀도우 씬 바운드 설정 |
 | `Renderer_SetCascadedShadowsEnabled(void*, bool)` | 캐스케이디드 섀도우 토글 |
 | `Renderer_IsCascadedShadowsEnabled(void*)` | 캐스케이디드 섀도우 상태 확인 |
 | `Renderer_SetIBLEnabled(void*, bool)` | IBL 토글 |
 | `Renderer_IsIBLEnabled(void*)` | IBL 상태 확인 |
 | `Renderer_LoadEnvironmentMap(void*, const wchar_t*)` | 환경맵 로드 |
 
-### 조명
+### 방향광 (7)
 
 | 함수 | 설명 |
 |------|------|
-| `Renderer_SetDirectionalLight(void*, ...)` | 방향광 설정 |
-| `Renderer_AddPointLight(void*, ...)` | 점광원 추가 |
-| `Renderer_AddSpotLight(void*, ...)` | 스포트라이트 추가 |
+| `Renderer_SetDirectionalLight(void*, float, float, float, float, float, float, float, float, float, float, float)` | 방향광 설정 (방향, 색상, 환경색) |
+| `Renderer_SetDirectionalLightDirection(void*, float, float, float)` | 방향광 방향 설정 |
+| `Renderer_SetDirectionalLightColor(void*, float, float, float, float)` | 방향광 색상 설정 |
+| `Renderer_SetDirectionalLightAmbient(void*, float, float, float, float)` | 방향광 환경색 설정 |
+| `Renderer_GetDirectionalLight(void*, float*, ...)` | 방향광 정보 가져오기 |
+| `Renderer_SetDirectionalLightIntensity(void*, float)` | 방향광 강도 설정 |
+| `Renderer_GetDirectionalLightIntensity(void*)` | 방향광 강도 가져오기 |
+
+### 점광원 (4)
+
+| 함수 | 설명 |
+|------|------|
+| `Renderer_AddPointLight(void*, float, float, float, float, float, float, float, float, float)` | 점광원 추가 |
 | `Renderer_ClearPointLights(void*)` | 점광원 초기화 |
+| `Renderer_GetPointLightCount(void*)` | 점광원 수 가져오기 |
+| `Renderer_GetPointLight(void*, int, float*, ...)` | 인덱스로 점광원 정보 가져오기 |
+
+### 스포트라이트 (2)
+
+| 함수 | 설명 |
+|------|------|
+| `Renderer_AddSpotLight(void*, float, float, float, float, float, float, float, float, float, float, float, float, float)` | 스포트라이트 추가 |
 | `Renderer_ClearSpotLights(void*)` | 스포트라이트 초기화 |
 
-### 디버그 렌더러
+### 재질 (9)
+
+| 함수 | 설명 |
+|------|------|
+| `Material_SetAlbedo(void*, float, float, float, float)` | 알베도 색상 설정 |
+| `Material_SetMetallic(void*, float)` | 메탈릭 값 설정 |
+| `Material_SetRoughness(void*, float)` | 거칠기 값 설정 |
+| `Material_SetAO(void*, float)` | 앰비언트 오클루전 값 설정 |
+| `Material_GetAlbedo(void*, float*, float*, float*, float*)` | 알베도 색상 가져오기 |
+| `Material_GetMetallic(void*)` | 메탈릭 값 가져오기 |
+| `Material_GetRoughness(void*)` | 거칠기 값 가져오기 |
+| `Material_GetAO(void*)` | AO 값 가져오기 |
+| `Material_SetTexture(void*, int, const wchar_t*)` | 재질 텍스처 슬롯 설정 |
+
+### 스태틱 메시 컴포넌트 (3)
+
+| 함수 | 설명 |
+|------|------|
+| `StaticMeshComponent_SetMesh(void*, const wchar_t*)` | 메시 설정 |
+| `StaticMeshComponent_GetMaterial(void*)` | 재질 가져오기 |
+| `StaticMeshComponent_CreateDefaultMesh(void*)` | 기본 메시 생성 |
+
+### 스켈레탈 메시 컴포넌트 (7)
+
+| 함수 | 설명 |
+|------|------|
+| `SkeletalMeshComponent_PlayAnimation(void*, const char*)` | 애니메이션 재생 |
+| `SkeletalMeshComponent_StopAnimation(void*)` | 애니메이션 정지 |
+| `SkeletalMeshComponent_PauseAnimation(void*)` | 애니메이션 일시정지 |
+| `SkeletalMeshComponent_ResumeAnimation(void*)` | 애니메이션 재개 |
+| `SkeletalMeshComponent_GetAnimationCount(void*)` | 애니메이션 수 가져오기 |
+| `SkeletalMeshComponent_GetAnimationName(void*, int)` | 애니메이션 이름 가져오기 |
+| `SkeletalMeshComponent_SetSkeletalMeshFromModel(void*, void*, const wchar_t*)` | 모델에서 스켈레탈 메시 로드 |
+
+### 모델 로딩 (7)
+
+| 함수 | 설명 |
+|------|------|
+| `Model_Load(void*, const wchar_t*)` | 모델 로드 |
+| `Model_Unload(void*, const wchar_t*)` | 모델 언로드 |
+| `Model_LoadAndGetStaticMesh(void*, const wchar_t*)` | 모델 로드 후 스태틱 메시 가져오기 |
+| `Model_LoadAndGetSkeletalMesh(void*, const wchar_t*)` | 모델 로드 후 스켈레탈 메시 가져오기 |
+| `Model_HasSkeleton(void*)` | 스켈레톤 포함 여부 확인 |
+| `Model_GetAnimationCount(void*)` | 애니메이션 수 가져오기 |
+| `Model_GetAnimationName(void*, int)` | 애니메이션 이름 가져오기 |
+
+### 텍스처 (2)
+
+| 함수 | 설명 |
+|------|------|
+| `Texture_Load(void*, const wchar_t*)` | 텍스처 로드 |
+| `Texture_Unload(void*, const wchar_t*)` | 텍스처 언로드 |
+
+### 디버그 렌더러 (4)
 
 | 함수 | 설명 |
 |------|------|
@@ -664,9 +760,3 @@ public:
 | `DebugRenderer_DrawAxis(void*, float, float, float, float)` | 좌표축 그리기 |
 | `DebugRenderer_SetEnabled(void*, bool)` | 디버그 렌더러 토글 |
 | `DebugRenderer_RenderFrame(void*, float)` | 디버그 렌더 프레임 |
-
-### 재질 텍스처
-
-| 함수 | 설명 |
-|------|------|
-| `Material_SetTexture(void*, int, const wchar_t*)` | 재질 텍스처 슬롯 설정 |
