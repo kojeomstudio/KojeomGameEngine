@@ -15,6 +15,7 @@ struct FShadowBuffer
     float DepthBias;
     UINT32 PCFKernelSize;
 };
+static_assert(sizeof(FShadowBuffer) % 16 == 0, "FShadowBuffer must be 16-byte aligned");
 
 struct FShadowCaster
 {
@@ -65,7 +66,6 @@ private:
     std::shared_ptr<KShaderProgram> ShadowShader;
     std::shared_ptr<KShaderProgram> SkinnedShadowShader;
     ComPtr<ID3D11Buffer> ShadowConstantBuffer;
-    ComPtr<ID3D11Buffer> SkinnedShadowTransformBuffer;
     std::vector<FShadowCaster> ShadowCasters;
 
     XMMATRIX LightViewProjection;

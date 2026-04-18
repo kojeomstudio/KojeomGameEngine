@@ -203,19 +203,19 @@ void KAnimationInstance::EvaluateAnimation()
 
     std::vector<uint32> sortedBones;
     sortedBones.reserve(boneCount);
-    std::vector<int32> parentCount(boneCount, 0);
+    std::vector<uint32> unprocessedParents(boneCount, 0);
     for (uint32 i = 0; i < boneCount; ++i)
     {
         const FBone* bone = Skeleton->GetBone(i);
         if (bone && bone->ParentIndex >= 0)
         {
-            parentCount[bone->ParentIndex]++;
+            unprocessedParents[i]++;
         }
     }
     std::vector<uint32> queue;
     for (uint32 i = 0; i < boneCount; ++i)
     {
-        if (parentCount[i] == 0)
+        if (unprocessedParents[i] == 0)
         {
             queue.push_back(i);
         }
@@ -231,8 +231,8 @@ void KAnimationInstance::EvaluateAnimation()
             const FBone* bone = Skeleton->GetBone(i);
             if (bone && bone->ParentIndex == static_cast<int32>(boneIdx))
             {
-                parentCount[i]--;
-                if (parentCount[i] == 0)
+                unprocessedParents[i]--;
+                if (unprocessedParents[i] == 0)
                 {
                     queue.push_back(i);
                 }

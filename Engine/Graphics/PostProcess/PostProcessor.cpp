@@ -105,6 +105,10 @@ void KPostProcessor::Cleanup()
     IntermediateRTV.Reset();
     IntermediateSRV.Reset();
 
+    Intermediate2Texture.Reset();
+    Intermediate2RTV.Reset();
+    Intermediate2SRV.Reset();
+
     BrightExtractShader.reset();
     BlurShader.reset();
     BloomCombineShader.reset();
@@ -113,6 +117,7 @@ void KPostProcessor::Cleanup()
     ColorGradingShader.reset();
 
     PostProcessConstantBuffer.Reset();
+    BlurConstantBuffer.Reset();
     PointSamplerState.Reset();
     LinearSamplerState.Reset();
     ColorGradingSamplerState.Reset();
@@ -268,6 +273,15 @@ HRESULT KPostProcessor::CreateIntermediateRenderTargets(ID3D11Device* InDevice)
     if (FAILED(hr)) return hr;
 
     hr = InDevice->CreateShaderResourceView(IntermediateTexture.Get(), nullptr, &IntermediateSRV);
+    if (FAILED(hr)) return hr;
+
+    hr = InDevice->CreateTexture2D(&texDesc, nullptr, &Intermediate2Texture);
+    if (FAILED(hr)) return hr;
+
+    hr = InDevice->CreateRenderTargetView(Intermediate2Texture.Get(), nullptr, &Intermediate2RTV);
+    if (FAILED(hr)) return hr;
+
+    hr = InDevice->CreateShaderResourceView(Intermediate2Texture.Get(), nullptr, &Intermediate2SRV);
     if (FAILED(hr)) return hr;
 
     return S_OK;
@@ -614,6 +628,21 @@ HRESULT KPostProcessor::CreateConstantBuffers(ID3D11Device* InDevice)
         return hr;
     }
 
+    struct FBlurBuffer
+    {
+        XMFLOAT2 BlurDirection;
+        XMFLOAT2 TexelSize;
+    };
+    static_assert(sizeof(FBlurBuffer) % 16 == 0, "FBlurBuffer must be 16-byte aligned");
+
+    bufferDesc.ByteWidth = sizeof(FBlurBuffer);
+    hr = InDevice->CreateBuffer(&bufferDesc, nullptr, &BlurConstantBuffer);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create blur constant buffer");
+        return hr;
+    }
+
     return S_OK;
 }
 
@@ -761,15 +790,6 @@ void KPostProcessor::BlurBloomTexture(ID3D11DeviceContext* Context)
     FBlurBuffer blurData;
     blurData.TexelSize = XMFLOAT2(1.0f / bloomWidth, 1.0f / bloomHeight);
 
-    ComPtr<ID3D11Buffer> blurBuffer;
-    D3D11_BUFFER_DESC bufferDesc = {};
-    bufferDesc.ByteWidth = sizeof(FBlurBuffer);
-    bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-    bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-    Device->CreateBuffer(&bufferDesc, nullptr, &blurBuffer);
-
     BlurShader->Bind(Context);
     Context->PSSetSamplers(0, 1, LinearSamplerState.GetAddressOf());
 
@@ -780,24 +800,24 @@ void KPostProcessor::BlurBloomTexture(ID3D11DeviceContext* Context)
 
         {
             D3D11_MAPPED_SUBRESOURCE mapped;
-            Context->Map(blurBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+            Context->Map(BlurConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
             blurData.BlurDirection = XMFLOAT2(1.0f, 0.0f);
             memcpy(mapped.pData, &blurData, sizeof(blurData));
-            Context->Unmap(blurBuffer.Get(), 0);
+            Context->Unmap(BlurConstantBuffer.Get(), 0);
         }
 
         SetRenderTarget(Context, outputRTV);
         ClearRenderTarget(Context, outputRTV, DefaultClearColor);
-        Context->PSSetConstantBuffers(1, 1, blurBuffer.GetAddressOf());
+        Context->PSSetConstantBuffers(1, 1, BlurConstantBuffer.GetAddressOf());
         Context->PSSetShaderResources(0, 1, &inputSRV);
         RenderFullscreenQuad(Context);
 
         {
             D3D11_MAPPED_SUBRESOURCE mapped;
-            Context->Map(blurBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+            Context->Map(BlurConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
             blurData.BlurDirection = XMFLOAT2(0.0f, 1.0f);
             memcpy(mapped.pData, &blurData, sizeof(blurData));
-            Context->Unmap(blurBuffer.Get(), 0);
+            Context->Unmap(BlurConstantBuffer.Get(), 0);
         }
 
         SetRenderTarget(Context, BloomBlurRTVs[0].Get());
@@ -829,12 +849,15 @@ void KPostProcessor::ApplyBloom(ID3D11DeviceContext* Context)
 
 void KPostProcessor::ApplyTonemapping(ID3D11DeviceContext* Context)
 {
-    SetRenderTarget(Context, IntermediateRTV.Get());
+    bool bHasColorGraded = Parameters.bColorGradingEnabled && ColorGradingLUTSRV;
+    ID3D11ShaderResourceView* inputSRV = bHasColorGraded ? Intermediate2SRV.Get() :
+        (Parameters.bBloomEnabled ? IntermediateSRV.Get() : HDRShaderResourceView.Get());
+    ID3D11RenderTargetView* outputRTV = bHasColorGraded ? IntermediateRTV.Get() : Intermediate2RTV.Get();
+
+    SetRenderTarget(Context, outputRTV);
 
     TonemapperShader->Bind(Context);
     Context->PSSetConstantBuffers(0, 1, PostProcessConstantBuffer.GetAddressOf());
-
-    ID3D11ShaderResourceView* inputSRV = Parameters.bBloomEnabled ? IntermediateSRV.Get() : HDRShaderResourceView.Get();
     Context->PSSetShaderResources(0, 1, &inputSRV);
     Context->PSSetSamplers(0, 1, PointSamplerState.GetAddressOf());
 
@@ -848,9 +871,12 @@ void KPostProcessor::ApplyFXAA(ID3D11DeviceContext* Context, ID3D11RenderTargetV
 {
     SetRenderTarget(Context, FinalTarget);
 
+    bool bHasColorGraded = Parameters.bColorGradingEnabled && ColorGradingLUTSRV;
+    ID3D11ShaderResourceView* inputSRV = bHasColorGraded ? IntermediateSRV.Get() : Intermediate2SRV.Get();
+
     FXAAShader->Bind(Context);
     Context->PSSetConstantBuffers(0, 1, PostProcessConstantBuffer.GetAddressOf());
-    Context->PSSetShaderResources(0, 1, IntermediateSRV.GetAddressOf());
+    Context->PSSetShaderResources(0, 1, &inputSRV);
     Context->PSSetSamplers(0, 1, PointSamplerState.GetAddressOf());
 
     RenderFullscreenQuad(Context);
@@ -1152,11 +1178,13 @@ void KPostProcessor::ApplyColorGrading(ID3D11DeviceContext* Context)
     if (!ColorGradingShader || !ColorGradingLUTSRV)
         return;
 
-    SetRenderTarget(Context, IntermediateRTV.Get());
+    SetRenderTarget(Context, Intermediate2RTV.Get());
 
     ColorGradingShader->Bind(Context);
     Context->PSSetConstantBuffers(0, 1, PostProcessConstantBuffer.GetAddressOf());
-    Context->PSSetShaderResources(0, 1, HDRShaderResourceView.GetAddressOf());
+
+    ID3D11ShaderResourceView* inputSRV = Parameters.bBloomEnabled ? IntermediateSRV.Get() : HDRShaderResourceView.Get();
+    Context->PSSetShaderResources(0, 1, &inputSRV);
     Context->PSSetShaderResources(1, 1, ColorGradingLUTSRV.GetAddressOf());
     Context->PSSetSamplers(0, 1, PointSamplerState.GetAddressOf());
     Context->PSSetSamplers(1, 1, ColorGradingSamplerState.GetAddressOf());

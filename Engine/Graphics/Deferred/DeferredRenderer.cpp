@@ -496,8 +496,24 @@ void KDeferredRenderer::RenderGeometry(ID3D11DeviceContext* Context)
             Context->PSSetShaderResources(0, 1, &NullSRV);
         }
 
-        RenderData.Mesh->Render(Context);
         Context->VSSetConstantBuffers(0, 1, TransformConstantBuffer.GetAddressOf());
+
+        UINT32 Stride = sizeof(FVertex);
+        UINT32 Offset = 0;
+        ID3D11Buffer* VB = RenderData.Mesh->GetVertexBuffer();
+        Context->IASetVertexBuffers(0, 1, &VB, &Stride, &Offset);
+
+        if (RenderData.Mesh->HasIndices())
+        {
+            Context->IASetIndexBuffer(RenderData.Mesh->GetIndexBuffer(), DXGI_FORMAT_R32_UINT, 0);
+            Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            Context->DrawIndexed(RenderData.Mesh->GetIndexCount(), 0, 0);
+        }
+        else
+        {
+            Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            Context->Draw(RenderData.Mesh->GetVertexCount(), 0);
+        }
     }
 }
 

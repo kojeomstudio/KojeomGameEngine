@@ -48,9 +48,7 @@ HRESULT KShadowRenderer::CreateShadowShader(ID3D11Device* Device)
     std::string vsCode = R"(
 cbuffer ShadowTransform : register(b0)
 {
-    matrix World;
-    matrix LightView;
-    matrix LightProjection;
+    matrix LightViewProjection;
 };
 
 struct VSInput
@@ -67,9 +65,7 @@ struct PSInput
 PSInput VS_Main(VSInput input)
 {
     PSInput output;
-    float4 worldPos = mul(float4(input.Position, 1.0f), World);
-    float4 viewPos = mul(worldPos, LightView);
-    float4 projPos = mul(viewPos, LightProjection);
+    float4 projPos = mul(float4(input.Position, 1.0f), LightViewProjection);
     output.Position = projPos;
     output.Depth = projPos.z / projPos.w;
     return output;
@@ -105,9 +101,7 @@ HRESULT KShadowRenderer::CreateSkinnedShadowShader(ID3D11Device* Device)
     std::string vsCode = R"(
 cbuffer ShadowTransform : register(b0)
 {
-    matrix World;
-    matrix LightView;
-    matrix LightProjection;
+    matrix LightViewProjection;
 };
 
 #define MAX_BONES 256
@@ -149,9 +143,7 @@ PSInput VS_Main(VSInput input)
     }
 
     float4 skinnedPos = mul(float4(input.Position, 1.0f), skinMatrix);
-    float4 worldPos = mul(skinnedPos, World);
-    float4 viewPos = mul(worldPos, LightView);
-    float4 projPos = mul(viewPos, LightProjection);
+    float4 projPos = mul(skinnedPos, LightViewProjection);
     output.Position = projPos;
     output.Depth = projPos.z / projPos.w;
     return output;
@@ -273,31 +265,22 @@ void KShadowRenderer::RenderShadowCasters(ID3D11DeviceContext* Context)
                 continue;
             }
 
-            if (!SkinnedShadowTransformBuffer)
-            {
-                ID3D11Device* device = nullptr;
-                Context->GetDevice(&device);
-                D3D11_BUFFER_DESC bd = {};
-                bd.Usage = D3D11_USAGE_DYNAMIC;
-                bd.ByteWidth = sizeof(FConstantBuffer);
-                bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-                bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                device->CreateBuffer(&bd, nullptr, &SkinnedShadowTransformBuffer);
-            }
-
+            XMMATRIX worldLightVP = XMMatrixTranspose(caster.WorldMatrix) * LightViewProjection;
             D3D11_MAPPED_SUBRESOURCE mapped;
-            HRESULT hr = Context->Map(SkinnedShadowTransformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+            HRESULT hr = Context->Map(ShadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
             if (SUCCEEDED(hr))
             {
-                FConstantBuffer* cb = static_cast<FConstantBuffer*>(mapped.pData);
-                cb->WorldMatrix = XMMatrixTranspose(caster.WorldMatrix);
-                cb->ViewMatrix = XMMatrixTranspose(LightViewProjection);
-                cb->ProjectionMatrix = XMMatrixIdentity();
-                Context->Unmap(SkinnedShadowTransformBuffer.Get(), 0);
+                FShadowBuffer* buffer = static_cast<FShadowBuffer*>(mapped.pData);
+                buffer->LightViewProjection = XMMatrixTranspose(worldLightVP);
+                buffer->ShadowMapSize = XMFLOAT2(static_cast<float>(ShadowMap.GetResolution()),
+                                                  static_cast<float>(ShadowMap.GetResolution()));
+                buffer->DepthBias = ShadowMap.GetConfig().DepthBias;
+                buffer->PCFKernelSize = ShadowMap.GetConfig().PCFKernelSize;
+                Context->Unmap(ShadowConstantBuffer.Get(), 0);
             }
 
             SkinnedShadowShader->Bind(Context);
-            Context->VSSetConstantBuffers(0, 1, SkinnedShadowTransformBuffer.GetAddressOf());
+            Context->VSSetConstantBuffers(0, 1, ShadowConstantBuffer.GetAddressOf());
             Context->VSSetConstantBuffers(5, 1, &caster.BoneMatrixBuffer);
 
             UINT32 stride = sizeof(FSkinnedVertex);
@@ -313,22 +296,37 @@ void KShadowRenderer::RenderShadowCasters(ID3D11DeviceContext* Context)
             Context->VSSetConstantBuffers(5, 1, &nullCB);
 
             ShadowShader->Bind(Context);
-            Context->VSSetConstantBuffers(0, 1, ShadowConstantBuffer.GetAddressOf());
         }
         else
         {
+            XMMATRIX worldLightVP = XMMatrixTranspose(caster.WorldMatrix) * LightViewProjection;
             D3D11_MAPPED_SUBRESOURCE mapped;
-            HRESULT hr = Context->Map(caster.Mesh->GetConstantBuffer(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+            HRESULT hr = Context->Map(ShadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
             if (SUCCEEDED(hr))
             {
-                FConstantBuffer* cb = static_cast<FConstantBuffer*>(mapped.pData);
-                cb->WorldMatrix = XMMatrixTranspose(caster.WorldMatrix);
-                cb->ViewMatrix = XMMatrixTranspose(LightViewProjection);
-                cb->ProjectionMatrix = XMMatrixIdentity();
-                Context->Unmap(caster.Mesh->GetConstantBuffer(), 0);
+                FShadowBuffer* buffer = static_cast<FShadowBuffer*>(mapped.pData);
+                buffer->LightViewProjection = XMMatrixTranspose(worldLightVP);
+                buffer->ShadowMapSize = XMFLOAT2(static_cast<float>(ShadowMap.GetResolution()),
+                                                  static_cast<float>(ShadowMap.GetResolution()));
+                buffer->DepthBias = ShadowMap.GetConfig().DepthBias;
+                buffer->PCFKernelSize = ShadowMap.GetConfig().PCFKernelSize;
+                Context->Unmap(ShadowConstantBuffer.Get(), 0);
             }
+            Context->VSSetConstantBuffers(0, 1, ShadowConstantBuffer.GetAddressOf());
 
-            caster.Mesh->Render(Context);
+            UINT32 stride = sizeof(FVertex);
+            UINT32 offset = 0;
+            ID3D11Buffer* vb = caster.Mesh->GetVertexBuffer();
+            Context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+            if (caster.Mesh->HasIndices())
+            {
+                Context->IASetIndexBuffer(caster.Mesh->GetIndexBuffer(), DXGI_FORMAT_R32_UINT, 0);
+                Context->DrawIndexed(caster.Mesh->GetIndexCount(), 0, 0);
+            }
+            else
+            {
+                Context->Draw(caster.Mesh->GetVertexCount(), 0);
+            }
         }
     }
 }
@@ -369,7 +367,6 @@ void KShadowRenderer::Cleanup()
     ShadowShader.reset();
     SkinnedShadowShader.reset();
     ShadowConstantBuffer.Reset();
-    SkinnedShadowTransformBuffer.Reset();
     ShadowCasters.clear();
     bInitialized = false;
 }

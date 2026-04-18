@@ -17,20 +17,21 @@ struct FPostProcessParams
     float BloomIntensity = 0.5f;
     float BloomBlurSigma = 2.0f;
     UINT32 BloomBlurIterations = 5;
-    bool bBloomEnabled = true;
-    bool bTonemappingEnabled = true;
-    bool bFXAAEnabled = true;
+    UINT32 bBloomEnabled = 1;
+    UINT32 bTonemappingEnabled = 1;
+    UINT32 bFXAAEnabled = 1;
     float FXAASpanMax = 8.0f;
     float FXAAReduceMin = 1.0f / 128.0f;
     float FXAAReduceMul = 1.0f / 8.0f;
     XMFLOAT2 Resolution;
-    bool bColorGradingEnabled = false;
+    UINT32 bColorGradingEnabled = 0;
     float ColorGradingIntensity = 1.0f;
     XMFLOAT3 ColorFilter;
-    float Padding[2];
     float Saturation = 1.0f;
     float Contrast = 1.0f;
+    float Padding[3] = {};
 };
+static_assert(sizeof(FPostProcessParams) % 16 == 0, "FPostProcessParams must be 16-byte aligned");
 
 class KPostProcessor
 {
@@ -57,10 +58,10 @@ public:
     void SetParameters(const FPostProcessParams& Params) { Parameters = Params; }
     const FPostProcessParams& GetParameters() const { return Parameters; }
 
-    void SetBloomEnabled(bool bEnabled) { Parameters.bBloomEnabled = bEnabled; }
-    void SetTonemappingEnabled(bool bEnabled) { Parameters.bTonemappingEnabled = bEnabled; }
-    void SetFXAAEnabled(bool bEnabled) { Parameters.bFXAAEnabled = bEnabled; }
-    void SetColorGradingEnabled(bool bEnabled) { Parameters.bColorGradingEnabled = bEnabled; }
+    void SetBloomEnabled(bool bEnabled) { Parameters.bBloomEnabled = bEnabled ? 1u : 0u; }
+    void SetTonemappingEnabled(bool bEnabled) { Parameters.bTonemappingEnabled = bEnabled ? 1u : 0u; }
+    void SetFXAAEnabled(bool bEnabled) { Parameters.bFXAAEnabled = bEnabled ? 1u : 0u; }
+    void SetColorGradingEnabled(bool bEnabled) { Parameters.bColorGradingEnabled = bEnabled ? 1u : 0u; }
     void SetColorGradingIntensity(float Intensity) { Parameters.ColorGradingIntensity = Intensity; }
     void SetColorFilter(const XMFLOAT3& Filter) { Parameters.ColorFilter = Filter; }
     void SetSaturation(float Sat) { Parameters.Saturation = Sat; }
@@ -120,6 +121,10 @@ private:
     ComPtr<ID3D11RenderTargetView> IntermediateRTV;
     ComPtr<ID3D11ShaderResourceView> IntermediateSRV;
 
+    ComPtr<ID3D11Texture2D> Intermediate2Texture;
+    ComPtr<ID3D11RenderTargetView> Intermediate2RTV;
+    ComPtr<ID3D11ShaderResourceView> Intermediate2SRV;
+
     std::shared_ptr<KShaderProgram> BrightExtractShader;
     std::shared_ptr<KShaderProgram> BlurShader;
     std::shared_ptr<KShaderProgram> BloomCombineShader;
@@ -128,6 +133,7 @@ private:
     std::shared_ptr<KShaderProgram> ColorGradingShader;
 
     ComPtr<ID3D11Buffer> PostProcessConstantBuffer;
+    ComPtr<ID3D11Buffer> BlurConstantBuffer;
 
     ComPtr<ID3D11SamplerState> PointSamplerState;
     ComPtr<ID3D11SamplerState> LinearSamplerState;

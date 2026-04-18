@@ -49,9 +49,16 @@ void KCamera::LookAt(const XMFLOAT3& Target, const XMFLOAT3& InUp)
     XMVECTOR TargetVec = XMLoadFloat3(&Target);
     XMVECTOR UpVec = XMLoadFloat3(&InUp);
 
-    // Calculate direction vectors
     XMVECTOR ForwardVec = XMVector3Normalize(XMVectorSubtract(TargetVec, PositionVec));
+    if (XMVector3Equal(ForwardVec, XMVectorZero()))
+    {
+        ForwardVec = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+    }
     XMVECTOR RightVec = XMVector3Normalize(XMVector3Cross(UpVec, ForwardVec));
+    if (XMVector3Equal(RightVec, XMVectorZero()))
+    {
+        RightVec = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+    }
     UpVec = XMVector3Cross(ForwardVec, RightVec);
 
     // Store direction vectors
