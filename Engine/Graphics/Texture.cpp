@@ -91,7 +91,7 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
 
     std::vector<BYTE> pixelData(static_cast<size_t>(imageSize));
 
-    hr = converter->CopyPixels(nullptr, stride, imageSize, pixelData.data());
+    hr = converter->CopyPixels(nullptr, static_cast<UINT>(stride), static_cast<UINT>(imageSize), pixelData.data());
     if (FAILED(hr))
     {
         KLogger::HResultError(hr, "Failed to copy WIC pixel data");
@@ -116,7 +116,7 @@ HRESULT KTexture::LoadFromFile(ID3D11Device* Device, const std::wstring& Filenam
 
     D3D11_SUBRESOURCE_DATA initData = {};
     initData.pSysMem = pixelData.data();
-    initData.SysMemPitch = stride;
+    initData.SysMemPitch = static_cast<UINT>(stride);
     initData.SysMemSlicePitch = 0;
 
     hr = Device->CreateTexture2D(&textureDesc, &initData, &Texture);
