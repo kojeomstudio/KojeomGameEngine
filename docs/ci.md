@@ -8,6 +8,7 @@ The project uses GitHub Actions for continuous integration. The pipeline is defi
 
 - **Push** to `main` branch
 - **Pull requests** targeting `main` branch
+- **Manual trigger** (`workflow_dispatch`)
 
 ## Jobs
 

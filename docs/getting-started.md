@@ -61,7 +61,7 @@ KojeomEngine/
 │   ├── Gameplay/              # 게임플레이
 │   └── LOD/                   # LOD 시스템
 ├── docs/                      # 문서
-└── lib/                       # 외부 라이브러리
+└── lib/                       # 엔진 빌드 출력 (Engine.lib)
 ```
 
 ## 빌드 방법

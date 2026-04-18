@@ -21,7 +21,7 @@ Engine/ (149 files, ~32,560 lines)
 ├── Core/ (3 files, ~935 lines)        # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
 │   ├── Engine.h/cpp                   # Main engine singleton
 │   └── Subsystem.h                    # ISubsystem interface, KSubsystemRegistry
-├── Graphics/ (73 files, ~20,021 lines) # Rendering pipeline and all visual subsystems (19 sub-systems)
+├── Graphics/ (73 files, ~20,021 lines) # Rendering pipeline and all visual subsystems (20 sub-systems)
 │   ├── GraphicsDevice.h/cpp           # DirectX 11 device, swap chain, render targets
 │   ├── Renderer.h/cpp                 # Central rendering orchestrator
 │   ├── Camera.h/cpp                   # Perspective/orthographic camera
@@ -185,7 +185,7 @@ All constant buffers must be 16-byte aligned. Use `static_assert` to validate si
 The engine uses a two-class shader system:
 - **`KShader`** — individual compiled shader (vertex or pixel), created via `KShader::CompileFromString()` from inline HLSL source strings
 - **`KShaderProgram`** — combined vertex + pixel shader pair with input layout and constant buffer reflection
-- **`EShaderType`** enum: `Vertex`, `Pixel`
+- **`EShaderType`** enum: `Vertex`, `Pixel`, `Geometry`, `Hull`, `Domain`, `Compute`
 - **IMPORTANT**: There are NO `.hlsl` shader files in the repository. All shaders are embedded as inline C++ string literals and compiled at runtime. When adding new shaders, define them as inline string literals, not as separate `.hlsl` files.
 
 ### Shader Register Conventions

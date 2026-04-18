@@ -2,7 +2,7 @@
 
 ## Summary
 
-C++17 / DirectX 11 game engine with WPF-based editor (C# / .NET 8.0). Modular architecture with 11 engine modules, 19 graphics sub-systems, and full editor integration via C#/C++ interop.
+C++17 / DirectX 11 game engine with WPF-based editor (C# / .NET 8.0). Modular architecture with 11 engine modules, 20 graphics sub-systems, and full editor integration via C#/C++ interop.
 
 ## Solution Structure
 
@@ -19,7 +19,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 73 | 20,021 | Full rendering pipeline (19 sub-systems) |
+| Graphics | `Engine/Graphics/` | 73 | 20,021 | Full rendering pipeline (20 sub-systems) |
 | Assets | `Engine/Assets/` | 18 | 4,600 | Static/skeletal mesh, skeleton, animation, state machine, model loader, light component |
 | UI | `Engine/UI/` | 27 | 2,208 | Canvas-based UI system |
 | Physics | `Engine/Physics/` | 6 | 937 | Rigid body, collision detection, raycast |
@@ -100,7 +100,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 ### Shader Architecture
 - Two-class system: `KShader` (individual compiled shader) and `KShaderProgram` (combined VS+PS program)
 - All shaders are compiled from **inline HLSL source strings** via `KShader::CompileFromString()` — there are NO `.hlsl` shader files in the repository
-- `EShaderType` enum: `Vertex`, `Pixel`
+- `EShaderType` enum: `Vertex`, `Pixel`, `Geometry`, `Hull`, `Domain`, `Compute`
 - `KShaderProgram` manages vertex + pixel shader pair, input layout, and constant buffer reflection
 
 ### Skeletal Mesh Shadow Casting
@@ -235,6 +235,6 @@ dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c Release
 | Editor XAML lines | ~749 |
 | Sample projects | 16 |
 | Engine modules | 11 |
-| Graphics sub-systems | 19 |
+| Graphics sub-systems | 20 |
 | EngineInterop API functions | 113 |
 | Total solution projects | 19 |
