@@ -497,21 +497,21 @@ public:
 | 클래스 | 설명 |
 |--------|------|
 | `KUIElement` | 베이스 위젯 (위치, 크기, 앵커, 히트 테스트) |
-| `UIButton` | 버튼 (클릭 콜백) |
-| `UIText` | 텍스트 표시 |
-| `UICheckbox` | 체크박스 |
-| `UISlider` | 슬라이더 |
-| `UIImage` | 이미지 표시 |
-| `UIPanel` | 패널 컨테이너 |
+| `KUIButton` | 버튼 (클릭 콜백) |
+| `KUIText` | 텍스트 표시 |
+| `KUICheckbox` | 체크박스 |
+| `KUISlider` | 슬라이더 |
+| `KUIImage` | 이미지 표시 |
+| `KUIPanel` | 패널 컨테이너 |
 
 ### 레이아웃
 
 | 클래스 | 설명 |
 |--------|------|
-| `UILayout` | 베이스 레이아웃 |
-| `UIGridLayout` | 그리드 레이아웃 |
-| `UIHorizontalLayout` | 수평 레이아웃 |
-| `UIVerticalLayout` | 수직 레이아웃 |
+| `KUILayout` | 베이스 레이아웃 |
+| `KUIGridLayout` | 그리드 레이아웃 |
+| `KUIHorizontalLayout` | 수평 레이아웃 |
+| `KUIVerticalLayout` | 수직 레이아웃 |
 
 ## Serialization API
 
