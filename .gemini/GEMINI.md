@@ -40,21 +40,21 @@ C++17 / DirectX 11 기반 게임 엔진입니다. WPF 기반 에디터(Editor/Ko
 
 ```
 Engine/
-├── Core/ (3 files, ~1,108 lines)        # KEngine - 윈도우, 메인 루프, 서브시스템 관리, ISubsystem 인터페이스, KSubsystemRegistry
-├── Graphics/ (73 files, ~23,654 lines) # 렌더링 파이프라인 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, FXAA, Color Grading, 등, 20 서브시스템)
-├── Input/ (3 files, ~777 lines)       # 키보드, 마우스, 액션 매핑
-├── Audio/ (6 files, ~1,093 lines)       # XAudio2 기반 오디오, 3D 사운드
-├── Physics/ (6 files, ~1,138 lines)     # 리지드바디, 충돌 감지, 물리 월드
-├── Scene/ (4 files, ~832 lines)       # Actor-Component 시스템, 씬 관리
-├── Assets/ (18 files, ~5,268 lines)   # 정적/스켈레탈 메시, 애니메이션, 모델 로더(Assimp), 액터 컴포넌트(StaticMesh, SkeletalMesh, Light)
-├── Serialization/ (4 files, ~1,184 lines) # 바이너리/JSON 아카이브
-├── UI/ (27 files, ~2,604 lines)       # 캔버스 기반 UI 시스템
-├── DebugUI/ (2 files, ~264 lines)     # ImGui 디버그 오버레이
-└── Utils/ (3 files, ~371 lines)       # Common.h, Logger.h, Math.h
+├── Core/ (3 files, ~935 lines)        # KEngine - 윈도우, 메인 루프, 서브시스템 관리, ISubsystem 인터페이스, KSubsystemRegistry
+├── Graphics/ (73 files, ~20,021 lines) # 렌더링 파이프라인 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, FXAA, Color Grading, 등, 20 서브시스템)
+├── Input/ (3 files, ~658 lines)       # 키보드, 마우스, 액션 매핑
+├── Audio/ (6 files, ~929 lines)       # XAudio2 기반 오디오, 3D 사운드
+├── Physics/ (6 files, ~937 lines)     # 리지드바디, 충돌 감지, 물리 월드
+├── Scene/ (4 files, ~690 lines)       # Actor-Component 시스템, 씬 관리
+├── Assets/ (18 files, ~4,600 lines)   # 정적/스켈레탈 메시, 애니메이션, 모델 로더(Assimp), 액터 컴포넌트(StaticMesh, SkeletalMesh, Light)
+├── Serialization/ (4 files, ~1,030 lines) # 바이너리/JSON 아카이브
+├── UI/ (27 files, ~2,208 lines)       # 캔버스 기반 UI 시스템
+├── DebugUI/ (2 files, ~241 lines)     # ImGui 디버그 오버레이
+└── Utils/ (3 files, ~311 lines)       # Common.h, Logger.h, Math.h
 
 Editor/
 ├── EngineInterop/ (2 files, ~1,247 lines) # C API DLL (extern "C" P/Invoke, 113 functions)
-└── KojeomEditor/ (23 files, ~5,107 lines) # C# WPF 에디터 (.NET 8.0, 113 DllImport)
+└── KojeomEditor/ (23 files, ~4,379 lines) # C# WPF 에디터 (.NET 8.0, 113 DllImport)
 
 samples/            # 16개 샘플 프로젝트 (15개 최상위 + 1개 중첩)
 ```

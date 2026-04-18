@@ -17,11 +17,11 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 ## Engine Module Structure
 
 ```
-Engine/ (149 files, ~38,293 lines)
-├── Core/ (3 files, ~1,108 lines)        # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
+Engine/ (149 files, ~32,560 lines)
+├── Core/ (3 files, ~935 lines)        # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
 │   ├── Engine.h/cpp                   # Main engine singleton
 │   └── Subsystem.h                    # ISubsystem interface, KSubsystemRegistry
-├── Graphics/ (73 files, ~23,654 lines) # Rendering pipeline and all visual subsystems (20 sub-systems)
+├── Graphics/ (73 files, ~20,021 lines) # Rendering pipeline and all visual subsystems (20 sub-systems)
 │   ├── GraphicsDevice.h/cpp           # DirectX 11 device, swap chain, render targets
 │   ├── Renderer.h/cpp                 # Central rendering orchestrator
 │   ├── Camera.h/cpp                   # Perspective/orthographic camera
@@ -35,8 +35,8 @@ Engine/ (149 files, ~38,293 lines)
 │   ├── PostProcess/ (10 files)        # HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects
 │   ├── SSAO/ (2 files)                # Screen-space ambient occlusion
 │   ├── SSR/ (2 files)                 # Screen-space reflections
-│   ├── TAA/ (2 files)                 # Temporal anti-aliasing
 │   ├── SSGI/ (2 files)                # Screen-space global illumination
+│   ├── TAA/ (2 files)                 # Temporal anti-aliasing
 │   ├── Sky/ (2 files)                 # Procedural atmospheric sky rendering
 │   ├── Volumetric/ (2 files)          # Volumetric fog
 │   ├── Water/ (2 files)               # Water rendering with reflection/refraction
@@ -49,23 +49,23 @@ Engine/ (149 files, ~38,293 lines)
 │   ├── Particle/ (2 files)            # GPU-accelerated particle system emitter
 │   ├── Performance/ (2 files)         # GPU timer, frame stats
 │   └── Debug/ (2 files)               # Debug renderer (grid, axis, wireframe)
-├── Input/ (3 files, ~777 lines)       # Keyboard, mouse, raw input, action mapping, input callbacks
+├── Input/ (3 files, ~658 lines)       # Keyboard, mouse, raw input, action mapping, input callbacks
 │   ├── InputManager.h/cpp             # Global input manager singleton
 │   └── InputTypes.h                   # Key codes, mouse buttons, input types
-├── Audio/ (6 files, ~1,093 lines)       # XAudio2-based audio, 3D sound, volume channels
+├── Audio/ (6 files, ~929 lines)       # XAudio2-based audio, 3D sound, volume channels
 │   ├── AudioManager.h/cpp             # Global audio manager singleton
 │   ├── AudioSubsystem.h               # ISubsystem adapter wrapping AudioManager
 │   ├── AudioTypes.h                   # Audio type definitions
 │   └── Sound.h/cpp                    # Sound resource
-├── Physics/ (6 files, ~1,138 lines)     # Rigid body, physics world, collision detection, raycast
+├── Physics/ (6 files, ~937 lines)     # Rigid body, physics world, collision detection, raycast
 │   ├── PhysicsWorld.h/cpp             # Physics simulation world
 │   ├── PhysicsSubsystem.h             # ISubsystem adapter for physics
 │   ├── PhysicsTypes.h                 # Physics type definitions
 │   └── RigidBody.h/cpp                # Rigid body component
-├── Scene/ (4 files, ~832 lines)       # Actor-Component system, scene management, parent-child hierarchy
+├── Scene/ (4 files, ~690 lines)       # Actor-Component system, scene management, parent-child hierarchy
 │   ├── Actor.h/cpp                    # KActor - entity with components
 │   └── SceneManager.h/cpp             # KScene - scene management
-├── Assets/ (18 files, ~5,268 lines)   # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components
+├── Assets/ (18 files, ~4,600 lines)   # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components
 │   ├── StaticMesh.h/cpp               # Static mesh with LOD support
 │   ├── SkeletalMeshComponent.h/cpp    # Skeletal mesh actor component
 │   ├── StaticMeshComponent.h/cpp      # Static mesh actor component
@@ -75,10 +75,10 @@ Engine/ (149 files, ~38,293 lines)
 │   ├── AnimationInstance.h/cpp        # Runtime animation state
 │   ├── AnimationStateMachine.h/cpp    # Animation state machine
 │   └── ModelLoader.h/cpp              # Model loading (Assimp + fallbacks)
-├── Serialization/ (4 files, ~1,184 lines) # Binary archive, JSON archive (custom DOM parser)
+├── Serialization/ (4 files, ~1,030 lines) # Binary archive, JSON archive (custom DOM parser)
 │   ├── BinaryArchive.h/cpp            # KBinaryArchive
 │   └── JsonArchive.h/cpp              # KJsonArchive with custom DOM parser
-├── UI/ (27 files, ~2,604 lines)       # Canvas-based UI system (element, panel, button, text, image, slider, checkbox, layouts, font)
+├── UI/ (27 files, ~2,208 lines)       # Canvas-based UI system (element, panel, button, text, image, slider, checkbox, layouts, font)
 │   ├── UICanvas.h/cpp                 # Root canvas container
 │   ├── UIElement.h/cpp                # Base UI element
 │   ├── UIPanel.h/cpp                  # Container panel
@@ -93,9 +93,9 @@ Engine/ (149 files, ~38,293 lines)
 │   ├── UIVerticalLayout.h/cpp         # Vertical layout
 │   ├── UIGridLayout.h/cpp             # Grid layout
 │   └── UITypes.h                      # UI type definitions
-├── DebugUI/ (2 files, ~264 lines)     # ImGui-based debug overlay with panel registration
+├── DebugUI/ (2 files, ~241 lines)     # ImGui-based debug overlay with panel registration
 │   └── DebugUI.h/cpp                  # KDebugUI singleton
-└── Utils/ (3 files, ~371 lines)       # Common.h, Logger.h, Math.h
+└── Utils/ (3 files, ~311 lines)       # Common.h, Logger.h, Math.h
 ```
 
 ## Editor Structure
@@ -105,10 +105,10 @@ Editor/
 ├── EngineInterop/ (2 files, ~1,247 lines) # C++ DLL exposing flat C API (extern "C") for P/Invoke
 │   ├── EngineAPI.h     # 113 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
-└── KojeomEditor/ (23 files, ~5,107 lines) # C# WPF editor (.NET 8.0)
-    ├── Services/       # EngineInterop P/Invoke wrapper (113 DllImport), UndoRedoService (14 C# files, ~4,298 lines)
-    ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel
-    ├── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser (9 XAML files, ~809 lines)
+└── KojeomEditor/ (23 files, ~4,379 lines) # C# WPF editor (.NET 8.0)
+    ├── Services/       # EngineInterop P/Invoke wrapper (113 DllImport), UndoRedoService (2 C# files, ~1,230 lines)
+    ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel (4 C# files, ~928 lines)
+    ├── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser (6 XAML + 6 code-behind, ~1,814 lines)
     └── Styles/         # CommonStyles.xaml
 ```
 
