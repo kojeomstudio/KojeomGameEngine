@@ -17,97 +17,99 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 ## Engine Module Structure
 
 ```
-Engine/
-├── Core/               # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
-│   ├── Engine.h/cpp            # Main engine singleton
-│   └── Subsystem.h             # ISubsystem interface, KSubsystemRegistry
-├── Graphics/           # Rendering pipeline and all visual subsystems
-│   ├── GraphicsDevice.h/cpp    # DirectX 11 device, swap chain, render targets
-│   ├── Renderer.h/cpp          # Central rendering orchestrator
-│   ├── Camera.h/cpp            # Perspective/orthographic camera
-│   ├── Shader.h/cpp            # HLSL shader compilation and management
-│   ├── Mesh.h/cpp              # Mesh with vertex/index/constant buffers
-│   ├── Material.h/cpp          # PBR material (7 texture slots, presets)
-│   ├── Texture.h/cpp           # Texture loading and manager
-│   ├── Light.h                 # Directional, Point, Spot light structures
-│   ├── Shadow/                 # Shadow maps, cascaded shadow maps
-│   ├── Deferred/               # G-Buffer, deferred renderer
-│   ├── PostProcess/            # HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects
-│   ├── SSAO/                   # Screen-space ambient occlusion
-│   ├── SSR/                    # Screen-space reflections
-│   ├── TAA/                    # Temporal anti-aliasing
-│   ├── SSGI/                   # Screen-space global illumination
-│   ├── Sky/                    # Procedural atmospheric sky rendering
-│   ├── Volumetric/             # Volumetric fog
-│   ├── Water/                  # Water rendering with reflection/refraction
-│   ├── Terrain/                # Terrain rendering with LOD, height map, splat-map texturing
-│   ├── Culling/                # Frustum culling, GPU occlusion culling
-│   ├── CommandBuffer/          # Deferred command-based rendering with sort keys
-│   ├── Instanced/              # GPU instanced rendering
-│   ├── IBL/                    # Image-based lighting (irradiance, prefiltered env, BRDF LUT)
-│   ├── LOD/                    # LOD generation (quadric error metrics) and runtime system
-│   ├── Particle/               # GPU-accelerated particle system emitter
-│   ├── Performance/            # GPU timer, frame stats
-├── Input/              # Keyboard, mouse, raw input, action mapping, input callbacks
-│   ├── InputManager.h/cpp      # Global input manager singleton
-│   └── InputTypes.h            # Key codes, mouse buttons, input types
-├── Audio/              # XAudio2-based audio, 3D sound, volume channels
-│   ├── AudioManager.h/cpp      # Global audio manager singleton
-│   ├── AudioSubsystem.h        # ISubsystem adapter wrapping AudioManager
-│   ├── AudioTypes.h            # Audio type definitions
-│   ├── Sound.h/cpp             # Sound resource
-├── Physics/            # Rigid body, physics world, collision detection, raycast
-│   ├── PhysicsWorld.h/cpp      # Physics simulation world
-│   ├── PhysicsSubsystem.h      # ISubsystem adapter for physics
-│   ├── PhysicsTypes.h          # Physics type definitions
-│   ├── RigidBody.h/cpp         # Rigid body component
-├── Scene/              # Actor-Component system, scene management, parent-child hierarchy
-│   ├── Actor.h/cpp             # KActor - entity with components
-│   └── SceneManager.h/cpp      # KScene - scene management
-├── Assets/             # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components
-│   ├── StaticMesh.h/cpp        # Static mesh with LOD support
-│   ├── SkeletalMeshComponent.h/cpp # Skeletal mesh actor component
-│   ├── StaticMeshComponent.h/cpp  # Static mesh actor component
-│   ├── LightComponent.h/cpp    # Light actor component
-│   ├── Skeleton.h/cpp          # Skeleton hierarchy
-│   ├── Animation.h/cpp         # Animation clip
-│   ├── AnimationInstance.h/cpp # Runtime animation state
-│   ├── AnimationStateMachine.h/cpp # Animation state machine
-│   └── ModelLoader.h/cpp       # Model loading (Assimp + fallbacks)
-├── Serialization/      # Binary archive, JSON archive (custom DOM parser)
-│   ├── BinaryArchive.h/cpp     # KBinaryArchive
-│   └── JsonArchive.h/cpp       # KJsonArchive with custom DOM parser
-├── UI/                 # Canvas-based UI system (element, panel, button, text, image, slider, checkbox, layouts, font)
-│   ├── UICanvas.h/cpp          # Root canvas container
-│   ├── UIElement.h/cpp         # Base UI element
-│   ├── UIPanel.h/cpp           # Container panel
-│   ├── UIButton.h/cpp          # Button element
-│   ├── UIText.h/cpp            # Text element
-│   ├── UIImage.h/cpp           # Image element
-│   ├── UISlider.h/cpp          # Slider element
-│   ├── UICheckbox.h/cpp        # Checkbox element
-│   ├── UIFont.h/cpp            # Font rendering
-│   ├── UILayout.h/cpp          # Base layout
-│   ├── UIHorizontalLayout.h/cpp # Horizontal layout
-│   ├── UIVerticalLayout.h/cpp  # Vertical layout
-│   ├── UIGridLayout.h/cpp      # Grid layout
-│   └── UITypes.h               # UI type definitions
-├── DebugUI/            # ImGui-based debug overlay with panel registration
-│   └── DebugUI.h/cpp           # KDebugUI singleton
-└── Utils/              # Common.h, Logger.h, Math.h
+Engine/ (149 files, ~32,560 lines)
+├── Core/ (3 files, ~935 lines)        # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
+│   ├── Engine.h/cpp                   # Main engine singleton
+│   └── Subsystem.h                    # ISubsystem interface, KSubsystemRegistry
+├── Graphics/ (73 files, ~20,021 lines) # Rendering pipeline and all visual subsystems (19 sub-systems)
+│   ├── GraphicsDevice.h/cpp           # DirectX 11 device, swap chain, render targets
+│   ├── Renderer.h/cpp                 # Central rendering orchestrator
+│   ├── Camera.h/cpp                   # Perspective/orthographic camera
+│   ├── Shader.h/cpp                   # HLSL shader compilation and management
+│   ├── Mesh.h/cpp                     # Mesh with vertex/index/constant buffers
+│   ├── Material.h/cpp                 # PBR material (7 texture slots, presets)
+│   ├── Texture.h/cpp                  # Texture loading and manager
+│   ├── Light.h                        # Directional, Point, Spot light structures
+│   ├── Shadow/ (8 files)              # Shadow maps, cascaded shadow maps
+│   ├── Deferred/ (4 files)            # G-Buffer, deferred renderer
+│   ├── PostProcess/ (10 files)        # HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects
+│   ├── SSAO/ (2 files)                # Screen-space ambient occlusion
+│   ├── SSR/ (2 files)                 # Screen-space reflections
+│   ├── TAA/ (2 files)                 # Temporal anti-aliasing
+│   ├── SSGI/ (2 files)                # Screen-space global illumination
+│   ├── Sky/ (2 files)                 # Procedural atmospheric sky rendering
+│   ├── Volumetric/ (2 files)          # Volumetric fog
+│   ├── Water/ (2 files)               # Water rendering with reflection/refraction
+│   ├── Terrain/ (2 files)             # Terrain rendering with LOD, height map, splat-map texturing
+│   ├── Culling/ (4 files)             # Frustum culling, GPU occlusion culling
+│   ├── CommandBuffer/ (2 files)       # Deferred command-based rendering with sort keys
+│   ├── Instanced/ (2 files)           # GPU instanced rendering
+│   ├── IBL/ (2 files)                 # Image-based lighting (irradiance, prefiltered env, BRDF LUT)
+│   ├── LOD/ (4 files)                 # LOD generation (quadric error metrics) and runtime system
+│   ├── Particle/ (2 files)            # GPU-accelerated particle system emitter
+│   ├── Performance/ (2 files)         # GPU timer, frame stats
+│   └── Debug/ (2 files)               # Debug renderer (grid, axis, wireframe)
+├── Input/ (3 files, ~658 lines)       # Keyboard, mouse, raw input, action mapping, input callbacks
+│   ├── InputManager.h/cpp             # Global input manager singleton
+│   └── InputTypes.h                   # Key codes, mouse buttons, input types
+├── Audio/ (6 files, ~929 lines)       # XAudio2-based audio, 3D sound, volume channels
+│   ├── AudioManager.h/cpp             # Global audio manager singleton
+│   ├── AudioSubsystem.h               # ISubsystem adapter wrapping AudioManager
+│   ├── AudioTypes.h                   # Audio type definitions
+│   └── Sound.h/cpp                    # Sound resource
+├── Physics/ (6 files, ~937 lines)     # Rigid body, physics world, collision detection, raycast
+│   ├── PhysicsWorld.h/cpp             # Physics simulation world
+│   ├── PhysicsSubsystem.h             # ISubsystem adapter for physics
+│   ├── PhysicsTypes.h                 # Physics type definitions
+│   └── RigidBody.h/cpp                # Rigid body component
+├── Scene/ (4 files, ~690 lines)       # Actor-Component system, scene management, parent-child hierarchy
+│   ├── Actor.h/cpp                    # KActor - entity with components
+│   └── SceneManager.h/cpp             # KScene - scene management
+├── Assets/ (18 files, ~4,600 lines)   # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components
+│   ├── StaticMesh.h/cpp               # Static mesh with LOD support
+│   ├── SkeletalMeshComponent.h/cpp    # Skeletal mesh actor component
+│   ├── StaticMeshComponent.h/cpp      # Static mesh actor component
+│   ├── LightComponent.h/cpp           # Light actor component
+│   ├── Skeleton.h/cpp                 # Skeleton hierarchy
+│   ├── Animation.h/cpp                # Animation clip
+│   ├── AnimationInstance.h/cpp        # Runtime animation state
+│   ├── AnimationStateMachine.h/cpp    # Animation state machine
+│   └── ModelLoader.h/cpp              # Model loading (Assimp + fallbacks)
+├── Serialization/ (4 files, ~1,030 lines) # Binary archive, JSON archive (custom DOM parser)
+│   ├── BinaryArchive.h/cpp            # KBinaryArchive
+│   └── JsonArchive.h/cpp              # KJsonArchive with custom DOM parser
+├── UI/ (27 files, ~2,208 lines)       # Canvas-based UI system (element, panel, button, text, image, slider, checkbox, layouts, font)
+│   ├── UICanvas.h/cpp                 # Root canvas container
+│   ├── UIElement.h/cpp                # Base UI element
+│   ├── UIPanel.h/cpp                  # Container panel
+│   ├── UIButton.h/cpp                 # Button element
+│   ├── UIText.h/cpp                   # Text element
+│   ├── UIImage.h/cpp                  # Image element
+│   ├── UISlider.h/cpp                 # Slider element
+│   ├── UICheckbox.h/cpp               # Checkbox element
+│   ├── UIFont.h/cpp                   # Font rendering
+│   ├── UILayout.h/cpp                 # Base layout
+│   ├── UIHorizontalLayout.h/cpp       # Horizontal layout
+│   ├── UIVerticalLayout.h/cpp         # Vertical layout
+│   ├── UIGridLayout.h/cpp             # Grid layout
+│   └── UITypes.h                      # UI type definitions
+├── DebugUI/ (2 files, ~241 lines)     # ImGui-based debug overlay with panel registration
+│   └── DebugUI.h/cpp                  # KDebugUI singleton
+└── Utils/ (3 files, ~311 lines)       # Common.h, Logger.h, Math.h
 ```
 
 ## Editor Structure
 
 ```
 Editor/
-├── EngineInterop/      # C++ DLL exposing flat C API (extern "C") for P/Invoke
+├── EngineInterop/ (2 files, ~1,247 lines) # C++ DLL exposing flat C API (extern "C") for P/Invoke
 │   ├── EngineAPI.h     # 113 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
-└── KojeomEditor/       # C# WPF editor (.NET 8.0)
-    ├── Services/       # EngineInterop P/Invoke wrapper (113 DllImport), UndoRedoService
+└── KojeomEditor/ (23 files, ~4,379 lines) # C# WPF editor (.NET 8.0)
+    ├── Services/       # EngineInterop P/Invoke wrapper (113 DllImport), UndoRedoService (14 C# files, ~3,630 lines)
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel
-    └── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser
+    ├── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser (9 XAML files, ~749 lines)
+    └── Styles/         # CommonStyles.xaml
 ```
 
 ## Code Style Guidelines
