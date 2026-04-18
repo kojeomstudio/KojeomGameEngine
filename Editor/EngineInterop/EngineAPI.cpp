@@ -1219,6 +1219,7 @@ ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path)
     ENGINEAPI HRESULT Renderer_LoadEnvironmentMap(void* renderer, const wchar_t* hdrPath)
     {
         if (!renderer || !hdrPath) return E_INVALIDARG;
+        if (PathUtils::ContainsTraversal(std::wstring(hdrPath))) return E_INVALIDARG;
         return static_cast<KRenderer*>(renderer)->LoadEnvironmentMap(std::wstring(hdrPath));
     }
 
