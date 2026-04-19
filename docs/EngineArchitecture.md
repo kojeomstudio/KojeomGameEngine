@@ -19,7 +19,7 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 
 | Module | Path | Files | Lines | Description |
 |--------|------|------:|------:|-------------|
-| Graphics | `Engine/Graphics/` | 73 | 20,021 | Full rendering pipeline (20 sub-systems) |
+| Graphics | `Engine/Graphics/` | 73 | 20,064 | Full rendering pipeline (20 sub-systems) |
 | Assets | `Engine/Assets/` | 18 | 4,600 | Static/skeletal mesh, skeleton, animation, state machine, model loader, light component |
 | UI | `Engine/UI/` | 27 | 2,208 | Canvas-based UI system |
 | Physics | `Engine/Physics/` | 6 | 937 | Rigid body, collision detection, raycast |
@@ -30,16 +30,16 @@ KojeomEngine.sln (Visual Studio 2022, MSVC v143, C++17, x64)
 | Scene | `Engine/Scene/` | 4 | 690 | Actor-Component system, scene management |
 | DebugUI | `Engine/DebugUI/` | 2 | 241 | ImGui debug overlay |
 | Utils | `Engine/Utils/` | 3 | 311 | Common.h, Logger.h, Math.h |
-| **Total** | | **149** | **32,560** | |
+| **Total** | | **149** | **32,603** | |
 
 ## Graphics Sub-Systems
 
 | Sub-System | Path | Files | Lines | Feature |
 |------------|------|------:|------:|---------|
-| Core | `Graphics/` (root) | 15 | 5,304 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
-| PostProcess | `Graphics/PostProcess/` | 10 | 2,964 | HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects |
-| Shadow | `Graphics/Shadow/` | 8 | 1,152 | Shadow maps, cascaded shadow maps |
-| Deferred | `Graphics/Deferred/` | 4 | 1,267 | G-Buffer, deferred renderer |
+| Core | `Graphics/` (root) | 15 | 5,308 | Renderer, Device, Shader, Mesh, Material, Texture, Camera, Light |
+| PostProcess | `Graphics/PostProcess/` | 10 | 2,991 | HDR, bloom, FXAA, color grading, auto exposure, DOF, motion blur, lens effects |
+| Shadow | `Graphics/Shadow/` | 8 | 1,150 | Shadow maps, cascaded shadow maps |
+| Deferred | `Graphics/Deferred/` | 4 | 1,281 | G-Buffer, deferred renderer |
 | IBL | `Graphics/IBL/` | 2 | 937 | Image-based lighting (irradiance, prefiltered env, BRDF LUT) |
 | Debug | `Graphics/Debug/` | 2 | 874 | Debug renderer (grid, axis, wireframe) |
 | LOD | `Graphics/LOD/` | 4 | 784 | LOD generation and system |

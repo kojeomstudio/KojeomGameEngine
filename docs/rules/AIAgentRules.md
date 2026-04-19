@@ -21,7 +21,7 @@ Engine/ (149 files, ~32,560 lines)
 ├── Core/ (3 files, ~935 lines)        # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
 │   ├── Engine.h/cpp                   # Main engine singleton
 │   └── Subsystem.h                    # ISubsystem interface, KSubsystemRegistry
-├── Graphics/ (73 files, ~20,021 lines) # Rendering pipeline and all visual subsystems (20 sub-systems)
+├── Graphics/ (73 files, ~20,064 lines) # Rendering pipeline and all visual subsystems (20 sub-systems)
 │   ├── GraphicsDevice.h/cpp           # DirectX 11 device, swap chain, render targets
 │   ├── Renderer.h/cpp                 # Central rendering orchestrator
 │   ├── Camera.h/cpp                   # Perspective/orthographic camera
