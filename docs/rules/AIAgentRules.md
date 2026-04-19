@@ -231,7 +231,7 @@ The engine uses a two-class shader system:
 - Internal `FEngineWrapper` class manages engine instance, model loader, and debug renderer
 - String returns use `thread_local std::string` buffers
 - Preprocessor: `ENGINEAPI_EXPORTS` controls dllexport/dllimport
-- API groups: Engine lifecycle & getters (9), Scene management (8), Actor management (24), Camera (11), Renderer settings (25), Directional light (7), Point light (4), Spot light (2), Material/PBR (9), Model loading (7), Texture (2), Static mesh component (3), Skeletal/Animation (7), DebugRenderer (4)
+- API groups: Engine lifecycle (9), Scene management (8), Actor management (23), Camera (11), Renderer settings (17), Directional light (7), Point light (4), Spot light (2), Material (9), StaticMesh component (3), SkeletalMesh component (7), Model loading (7), Texture (2), DebugRenderer (4)
 
 ### Serialization
 - Binary archive (`KBinaryArchive`) with `<<`/`>>` operators for all engine types
