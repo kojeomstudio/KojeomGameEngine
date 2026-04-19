@@ -17,11 +17,11 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 ## Engine Module Structure
 
 ```
-Engine/ (149 files, ~32,560 lines)
+Engine/ (145 files, ~32,560 lines)
 ├── Core/ (3 files, ~935 lines)        # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
 │   ├── Engine.h/cpp                   # Main engine singleton
 │   └── Subsystem.h                    # ISubsystem interface, KSubsystemRegistry
-├── Graphics/ (73 files, ~20,064 lines) # Rendering pipeline and all visual subsystems (20 sub-systems)
+├── Graphics/ (69 files, ~20,064 lines) # Rendering pipeline and all visual subsystems (19 subdirectories)
 │   ├── GraphicsDevice.h/cpp           # DirectX 11 device, swap chain, render targets
 │   ├── Renderer.h/cpp                 # Central rendering orchestrator
 │   ├── Camera.h/cpp                   # Perspective/orthographic camera
@@ -102,13 +102,13 @@ Engine/ (149 files, ~32,560 lines)
 
 ```
 Editor/
-├── EngineInterop/ (2 files, ~1,247 lines) # C++ DLL exposing flat C API (extern "C") for P/Invoke
+├── EngineInterop/ (2 files, ~1,249 lines) # C++ DLL exposing flat C API (extern "C") for P/Invoke
 │   ├── EngineAPI.h     # 113 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
-└── KojeomEditor/ (23 files, ~4,379 lines) # C# WPF editor (.NET 8.0)
+└── KojeomEditor/ (24 files, ~4,379 lines) # C# WPF editor (.NET 8.0)
     ├── Services/       # EngineInterop P/Invoke wrapper (113 DllImport), UndoRedoService (2 C# files, ~1,230 lines)
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel (4 C# files, ~928 lines)
-    ├── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser (6 XAML + 6 code-behind, ~1,814 lines)
+    ├── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser (6 XAML + 6 code-behind, ~1,784 lines)
     └── Styles/         # CommonStyles.xaml
 ```
 
