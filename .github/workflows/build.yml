@@ -54,37 +54,100 @@ jobs:
         include:
           - sample: BasicRenderingSample
             path: samples\BasicRendering\BasicRenderingSample.vcxproj
+            configuration: Debug
+          - sample: BasicRenderingSample
+            path: samples\BasicRendering\BasicRenderingSample.vcxproj
+            configuration: Release
           - sample: LightingSample
             path: samples\Lighting\LightingSample.vcxproj
+            configuration: Debug
+          - sample: LightingSample
+            path: samples\Lighting\LightingSample.vcxproj
+            configuration: Release
           - sample: PBRSample
             path: samples\PBR\PBRSample.vcxproj
+            configuration: Debug
+          - sample: PBRSample
+            path: samples\PBR\PBRSample.vcxproj
+            configuration: Release
           - sample: PostProcessingSample
             path: samples\PostProcessing\PostProcessingSample.vcxproj
+            configuration: Debug
+          - sample: PostProcessingSample
+            path: samples\PostProcessing\PostProcessingSample.vcxproj
+            configuration: Release
           - sample: DebugRenderingSample
             path: samples\DebugRendering\DebugRenderingSample.vcxproj
+            configuration: Debug
+          - sample: DebugRenderingSample
+            path: samples\DebugRendering\DebugRenderingSample.vcxproj
+            configuration: Release
           - sample: TerrainSample
             path: samples\Terrain\TerrainSample.vcxproj
+            configuration: Debug
+          - sample: TerrainSample
+            path: samples\Terrain\TerrainSample.vcxproj
+            configuration: Release
           - sample: WaterSample
             path: samples\Water\WaterSample.vcxproj
+            configuration: Debug
+          - sample: WaterSample
+            path: samples\Water\WaterSample.vcxproj
+            configuration: Release
           - sample: SkySample
             path: samples\Sky\SkySample.vcxproj
+            configuration: Debug
+          - sample: SkySample
+            path: samples\Sky\SkySample.vcxproj
+            configuration: Release
           - sample: ParticlesSample
             path: samples\Particles\ParticlesSample.vcxproj
+            configuration: Debug
+          - sample: ParticlesSample
+            path: samples\Particles\ParticlesSample.vcxproj
+            configuration: Release
           - sample: SkeletalMeshSample
             path: samples\SkeletalMesh\SkeletalMeshSample.vcxproj
+            configuration: Debug
+          - sample: SkeletalMeshSample
+            path: samples\SkeletalMesh\SkeletalMeshSample.vcxproj
+            configuration: Release
           - sample: AnimationStateMachineSample
             path: samples\AnimationStateMachine\AnimationStateMachineSample.vcxproj
+            configuration: Debug
+          - sample: AnimationStateMachineSample
+            path: samples\AnimationStateMachine\AnimationStateMachineSample.vcxproj
+            configuration: Release
           - sample: GameplaySample
             path: samples\Gameplay\GameplaySample.vcxproj
+            configuration: Debug
+          - sample: GameplaySample
+            path: samples\Gameplay\GameplaySample.vcxproj
+            configuration: Release
           - sample: PhysicsSample
             path: samples\Physics\PhysicsSample.vcxproj
+            configuration: Debug
+          - sample: PhysicsSample
+            path: samples\Physics\PhysicsSample.vcxproj
+            configuration: Release
           - sample: UISample
             path: samples\UI\UISample.vcxproj
+            configuration: Debug
+          - sample: UISample
+            path: samples\UI\UISample.vcxproj
+            configuration: Release
           - sample: LayoutSample
             path: samples\UI\Layout\LayoutSample.vcxproj
+            configuration: Debug
+          - sample: LayoutSample
+            path: samples\UI\Layout\LayoutSample.vcxproj
+            configuration: Release
           - sample: LODSample
             path: samples\LOD\LODSample.vcxproj
-        configuration: [Debug, Release]
+            configuration: Debug
+          - sample: LODSample
+            path: samples\LOD\LODSample.vcxproj
+            configuration: Release
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 

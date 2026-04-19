@@ -363,6 +363,7 @@ ENGINEAPI void* Model_Load(void* engine, const wchar_t* path)
     ENGINEAPI void Model_Unload(void* engine, const wchar_t* path)
     {
         if (!engine || !path) return;
+        if (PathUtils::ContainsTraversal(std::wstring(path))) return;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         wrapper->ModelLoader->UnloadModel(std::wstring(path));
     }
