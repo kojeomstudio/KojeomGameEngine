@@ -350,15 +350,15 @@ extern "C"
         XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(matrix), proj);
     }
 
-ENGINEAPI void* Model_Load(void* engine, const wchar_t* path)
-{
-    if (!engine || !path) return nullptr;
-    if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
-    FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-    auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
-    if (!model) return nullptr;
-    return model.get();
-}
+    ENGINEAPI void* Model_Load(void* engine, const wchar_t* path)
+    {
+        if (!engine || !path) return nullptr;
+        if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        if (!model) return nullptr;
+        return model.get();
+    }
 
     ENGINEAPI void Model_Unload(void* engine, const wchar_t* path)
     {
@@ -711,44 +711,44 @@ ENGINEAPI void* Model_Load(void* engine, const wchar_t* path)
         return kactor->IsVisible();
     }
 
-ENGINEAPI void* Model_LoadAndGetStaticMesh(void* engine, const wchar_t* path)
-{
-    if (!engine || !path) return nullptr;
-    if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
-    FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-    auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
-    if (model && model->StaticMesh)
+    ENGINEAPI void* Model_LoadAndGetStaticMesh(void* engine, const wchar_t* path)
     {
-        return model->StaticMesh.get();
+        if (!engine || !path) return nullptr;
+        if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        if (model && model->StaticMesh)
+        {
+            return model->StaticMesh.get();
+        }
+        return nullptr;
     }
-    return nullptr;
-}
 
-ENGINEAPI void* Model_LoadAndGetSkeletalMesh(void* engine, const wchar_t* path)
-{
-    if (!engine || !path) return nullptr;
-    if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
-    FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-    auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
-    if (model && model->SkeletalMesh)
+    ENGINEAPI void* Model_LoadAndGetSkeletalMesh(void* engine, const wchar_t* path)
     {
-        return model->SkeletalMesh.get();
+        if (!engine || !path) return nullptr;
+        if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        if (model && model->SkeletalMesh)
+        {
+            return model->SkeletalMesh.get();
+        }
+        return nullptr;
     }
-    return nullptr;
-}
 
-ENGINEAPI void SkeletalMeshComponent_SetSkeletalMeshFromModel(void* component, void* engine, const wchar_t* path)
-{
-    if (!component || !engine || !path) return;
-    if (PathUtils::ContainsTraversal(std::wstring(path))) return;
-    KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
-    FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-    auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
-    if (model && model->SkeletalMesh)
+    ENGINEAPI void SkeletalMeshComponent_SetSkeletalMeshFromModel(void* component, void* engine, const wchar_t* path)
     {
-        skmc->SetSkeletalMesh(model->SkeletalMesh);
+        if (!component || !engine || !path) return;
+        if (PathUtils::ContainsTraversal(std::wstring(path))) return;
+        KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        if (model && model->SkeletalMesh)
+        {
+            skmc->SetSkeletalMesh(model->SkeletalMesh);
+        }
     }
-}
 
     ENGINEAPI void Renderer_SetSSAOEnabled(void* renderer, bool enabled)
     {
@@ -991,11 +991,11 @@ ENGINEAPI void SkeletalMeshComponent_SetSkeletalMeshFromModel(void* component, v
         krenderer->SetShadowSceneBounds(XMFLOAT3(centerX, centerY, centerZ), radius);
     }
 
-ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path)
-{
-    if (!engine || !path) return nullptr;
-    if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
-    FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
+    ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path)
+    {
+        if (!engine || !path) return nullptr;
+        if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
+        FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         if (!wrapper->Engine) return nullptr;
         auto* renderer = wrapper->Engine->GetRenderer();
         if (!renderer) return nullptr;

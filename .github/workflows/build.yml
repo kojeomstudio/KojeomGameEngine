@@ -24,10 +24,19 @@ jobs:
       matrix:
         configuration: [Debug, Release]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce
+
+      - name: Cache Engine build
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf
+        with:
+          path: |
+            Engine/x64
+            Editor/EngineInterop/x64
+          key: engine-${{ matrix.configuration }}-${{ hashFiles('Engine/**/*.h', 'Engine/**/*.cpp', 'Engine/Engine.vcxproj', 'Editor/EngineInterop/**') }}
+          restore-keys: engine-${{ matrix.configuration }}-
 
       - name: Build Engine and EngineInterop
         run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /t:Engine;EngineInterop /v:minimal
@@ -44,112 +53,16 @@ jobs:
           retention-days: 7
 
   build-samples:
-    name: Build ${{ matrix.sample }} (${{ matrix.configuration }})
+    name: Build Samples (${{ matrix.configuration }})
     runs-on: windows-2022
     timeout-minutes: 30
     needs: build-engine
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - sample: BasicRenderingSample
-            path: samples\BasicRendering\BasicRenderingSample.vcxproj
-            configuration: Debug
-          - sample: BasicRenderingSample
-            path: samples\BasicRendering\BasicRenderingSample.vcxproj
-            configuration: Release
-          - sample: LightingSample
-            path: samples\Lighting\LightingSample.vcxproj
-            configuration: Debug
-          - sample: LightingSample
-            path: samples\Lighting\LightingSample.vcxproj
-            configuration: Release
-          - sample: PBRSample
-            path: samples\PBR\PBRSample.vcxproj
-            configuration: Debug
-          - sample: PBRSample
-            path: samples\PBR\PBRSample.vcxproj
-            configuration: Release
-          - sample: PostProcessingSample
-            path: samples\PostProcessing\PostProcessingSample.vcxproj
-            configuration: Debug
-          - sample: PostProcessingSample
-            path: samples\PostProcessing\PostProcessingSample.vcxproj
-            configuration: Release
-          - sample: DebugRenderingSample
-            path: samples\DebugRendering\DebugRenderingSample.vcxproj
-            configuration: Debug
-          - sample: DebugRenderingSample
-            path: samples\DebugRendering\DebugRenderingSample.vcxproj
-            configuration: Release
-          - sample: TerrainSample
-            path: samples\Terrain\TerrainSample.vcxproj
-            configuration: Debug
-          - sample: TerrainSample
-            path: samples\Terrain\TerrainSample.vcxproj
-            configuration: Release
-          - sample: WaterSample
-            path: samples\Water\WaterSample.vcxproj
-            configuration: Debug
-          - sample: WaterSample
-            path: samples\Water\WaterSample.vcxproj
-            configuration: Release
-          - sample: SkySample
-            path: samples\Sky\SkySample.vcxproj
-            configuration: Debug
-          - sample: SkySample
-            path: samples\Sky\SkySample.vcxproj
-            configuration: Release
-          - sample: ParticlesSample
-            path: samples\Particles\ParticlesSample.vcxproj
-            configuration: Debug
-          - sample: ParticlesSample
-            path: samples\Particles\ParticlesSample.vcxproj
-            configuration: Release
-          - sample: SkeletalMeshSample
-            path: samples\SkeletalMesh\SkeletalMeshSample.vcxproj
-            configuration: Debug
-          - sample: SkeletalMeshSample
-            path: samples\SkeletalMesh\SkeletalMeshSample.vcxproj
-            configuration: Release
-          - sample: AnimationStateMachineSample
-            path: samples\AnimationStateMachine\AnimationStateMachineSample.vcxproj
-            configuration: Debug
-          - sample: AnimationStateMachineSample
-            path: samples\AnimationStateMachine\AnimationStateMachineSample.vcxproj
-            configuration: Release
-          - sample: GameplaySample
-            path: samples\Gameplay\GameplaySample.vcxproj
-            configuration: Debug
-          - sample: GameplaySample
-            path: samples\Gameplay\GameplaySample.vcxproj
-            configuration: Release
-          - sample: PhysicsSample
-            path: samples\Physics\PhysicsSample.vcxproj
-            configuration: Debug
-          - sample: PhysicsSample
-            path: samples\Physics\PhysicsSample.vcxproj
-            configuration: Release
-          - sample: UISample
-            path: samples\UI\UISample.vcxproj
-            configuration: Debug
-          - sample: UISample
-            path: samples\UI\UISample.vcxproj
-            configuration: Release
-          - sample: LayoutSample
-            path: samples\UI\Layout\LayoutSample.vcxproj
-            configuration: Debug
-          - sample: LayoutSample
-            path: samples\UI\Layout\LayoutSample.vcxproj
-            configuration: Release
-          - sample: LODSample
-            path: samples\LOD\LODSample.vcxproj
-            configuration: Debug
-          - sample: LODSample
-            path: samples\LOD\LODSample.vcxproj
-            configuration: Release
+        configuration: [Debug, Release]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce
@@ -160,8 +73,9 @@ jobs:
           name: engine-interop-${{ matrix.configuration }}
           path: .
 
-      - name: Build ${{ matrix.sample }}
-        run: msbuild "${{ matrix.path }}" /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /v:minimal
+      - name: Build all samples
+        run: |
+          msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /t:BasicRenderingSample;LightingSample;PBRSample;PostProcessingSample;DebugRenderingSample;TerrainSample;WaterSample;SkySample;ParticlesSample;SkeletalMeshSample;AnimationStateMachineSample;GameplaySample;PhysicsSample;UISample;LayoutSample;LODSample /v:minimal
         shell: cmd
 
   build-csharp:
@@ -174,7 +88,7 @@ jobs:
       matrix:
         configuration: [Debug, Release]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
