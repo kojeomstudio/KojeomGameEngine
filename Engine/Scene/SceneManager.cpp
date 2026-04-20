@@ -34,7 +34,7 @@ std::shared_ptr<KScene> KSceneManager::CreateScene(const std::string& Name)
 
 std::shared_ptr<KScene> KSceneManager::LoadScene(const std::wstring& Path)
 {
-    if (PathUtils::ContainsTraversal(Path))
+    if (PathUtils::ContainsTraversal(Path) || !PathUtils::IsPathSafe(Path, L"."))
     {
         LOG_ERROR("Scene path rejected (unsafe path): " + StringUtils::WideToMultiByte(Path));
         return nullptr;
@@ -80,7 +80,7 @@ HRESULT KSceneManager::SaveScene(const std::wstring& Path, std::shared_ptr<KScen
         return E_INVALIDARG;
     }
 
-    if (PathUtils::ContainsTraversal(Path))
+    if (PathUtils::ContainsTraversal(Path) || !PathUtils::IsPathSafe(Path, L"."))
     {
         LOG_ERROR("Scene save path rejected (unsafe path): " + StringUtils::WideToMultiByte(Path));
         return E_INVALIDARG;

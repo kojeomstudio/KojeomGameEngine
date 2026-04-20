@@ -5,7 +5,7 @@
 
 bool KJsonArchive::LoadFromFile(const std::wstring& Path)
 {
-    if (PathUtils::ContainsTraversal(Path))
+    if (PathUtils::ContainsTraversal(Path) || !PathUtils::IsPathSafe(Path, L"."))
     {
         LOG_ERROR("JSON archive: path contains traversal patterns");
         return false;
@@ -38,7 +38,7 @@ bool KJsonArchive::LoadFromFile(const std::wstring& Path)
 
 bool KJsonArchive::SaveToFile(const std::wstring& Path)
 {
-    if (PathUtils::ContainsTraversal(Path))
+    if (PathUtils::ContainsTraversal(Path) || !PathUtils::IsPathSafe(Path, L"."))
     {
         LOG_ERROR("JSON archive: path contains traversal patterns");
         return false;

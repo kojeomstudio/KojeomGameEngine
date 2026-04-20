@@ -106,7 +106,7 @@ uint32 KBinaryArchive::ComputeChecksum() const
 
 bool KBinaryArchive::Open(const std::wstring& Path)
 {
-    if (PathUtils::ContainsTraversal(Path))
+    if (PathUtils::ContainsTraversal(Path) || !PathUtils::IsPathSafe(Path, L"."))
     {
         LOG_ERROR("Binary archive: path contains traversal patterns");
         return false;

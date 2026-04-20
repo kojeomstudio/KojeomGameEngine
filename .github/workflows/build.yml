@@ -35,6 +35,7 @@ jobs:
           path: |
             Engine/x64
             Editor/EngineInterop/x64
+            lib/x64
           key: engine-${{ matrix.configuration }}-${{ hashFiles('Engine/**/*.h', 'Engine/**/*.cpp', 'Engine/Engine.vcxproj', 'Editor/EngineInterop/**') }}
           restore-keys: engine-${{ matrix.configuration }}-
 

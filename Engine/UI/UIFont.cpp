@@ -58,7 +58,7 @@ HRESULT KUIFont::Initialize(ID3D11Device* Device, const std::wstring& FontPath)
 
 HRESULT KUIFont::LoadFontFile(const std::wstring& FontPath)
 {
-    if (PathUtils::ContainsTraversal(FontPath))
+    if (PathUtils::ContainsTraversal(FontPath) || !PathUtils::IsPathSafe(FontPath, L"."))
     {
         LOG_ERROR("Font: path contains traversal patterns");
         return E_INVALIDARG;
@@ -164,7 +164,7 @@ HRESULT KUIFont::LoadFontFile(const std::wstring& FontPath)
                     std::wstring baseDir = FontPath.substr(0, FontPath.find_last_of(L"\\/") + 1);
                     page.TexturePath = baseDir + std::wstring(filename.begin(), filename.end());
 
-                    if (PathUtils::ContainsTraversal(page.TexturePath))
+                    if (PathUtils::ContainsTraversal(page.TexturePath) || !PathUtils::IsPathSafe(page.TexturePath, L"."))
                     {
                         LOG_ERROR("Font: derived texture path contains traversal: " + StringUtils::WideToMultiByte(page.TexturePath));
                         page.TexturePath.clear();

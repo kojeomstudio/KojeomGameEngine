@@ -204,7 +204,7 @@ HRESULT KIBLSystem::LoadEnvironmentMap(const std::wstring& HDRPath)
         return E_FAIL;
     }
 
-    if (PathUtils::ContainsTraversal(HDRPath))
+    if (PathUtils::ContainsTraversal(HDRPath) || !PathUtils::IsPathSafe(HDRPath, L"."))
     {
         LOG_ERROR("IBL environment map path rejected (unsafe path): " + StringUtils::WideToMultiByte(HDRPath));
         return E_INVALIDARG;

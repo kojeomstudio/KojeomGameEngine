@@ -158,19 +158,21 @@ extern "C"
     ENGINEAPI void* Scene_Load(void* sceneMgr, const wchar_t* path)
     {
         if (!sceneMgr || !path) return nullptr;
-        if (PathUtils::ContainsTraversal(std::wstring(path)))
+        std::wstring wpath(path);
+        if (PathUtils::ContainsTraversal(wpath) || !PathUtils::IsPathSafe(wpath, L"."))
         {
             LOG_ERROR("Scene path rejected (unsafe path)");
             return nullptr;
         }
         KSceneManager* mgr = static_cast<KSceneManager*>(sceneMgr);
-        return mgr->LoadScene(std::wstring(path)).get();
+        return mgr->LoadScene(wpath).get();
     }
 
     ENGINEAPI HRESULT Scene_Save(void* sceneMgr, const wchar_t* path, void* scene)
     {
         if (!sceneMgr || !path || !scene) return E_INVALIDARG;
-        if (PathUtils::ContainsTraversal(std::wstring(path)))
+        std::wstring wpath2(path);
+        if (PathUtils::ContainsTraversal(wpath2) || !PathUtils::IsPathSafe(wpath2, L"."))
         {
             LOG_ERROR("Scene path rejected (unsafe path)");
             return E_INVALIDARG;
@@ -363,9 +365,10 @@ extern "C"
     ENGINEAPI void Model_Unload(void* engine, const wchar_t* path)
     {
         if (!engine || !path) return;
-        if (PathUtils::ContainsTraversal(std::wstring(path))) return;
+        std::wstring upath(path);
+        if (PathUtils::ContainsTraversal(upath) || !PathUtils::IsPathSafe(upath, L".")) return;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-        wrapper->ModelLoader->UnloadModel(std::wstring(path));
+        wrapper->ModelLoader->UnloadModel(upath);
     }
 
     ENGINEAPI void Renderer_SetRenderPath(void* renderer, int path)
@@ -602,8 +605,9 @@ extern "C"
         
         if (g_EngineWrapper && g_EngineWrapper->ModelLoader && meshPath && wcslen(meshPath) > 0)
         {
-            if (PathUtils::ContainsTraversal(std::wstring(meshPath))) return nullptr;
-            auto model = g_EngineWrapper->ModelLoader->LoadModel(std::wstring(meshPath));
+            std::wstring meshPathW(meshPath);
+            if (PathUtils::ContainsTraversal(meshPathW) || !PathUtils::IsPathSafe(meshPathW, L".")) return nullptr;
+            auto model = g_EngineWrapper->ModelLoader->LoadModel(meshPathW);
             if (model && model->StaticMesh)
             {
                 smc->SetStaticMesh(model->StaticMesh);
@@ -714,9 +718,10 @@ extern "C"
     ENGINEAPI void* Model_LoadAndGetStaticMesh(void* engine, const wchar_t* path)
     {
         if (!engine || !path) return nullptr;
-        if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
+        std::wstring smPath(path);
+        if (PathUtils::ContainsTraversal(smPath) || !PathUtils::IsPathSafe(smPath, L".")) return nullptr;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        auto model = wrapper->ModelLoader->LoadModel(smPath);
         if (model && model->StaticMesh)
         {
             return model->StaticMesh.get();
@@ -727,9 +732,10 @@ extern "C"
     ENGINEAPI void* Model_LoadAndGetSkeletalMesh(void* engine, const wchar_t* path)
     {
         if (!engine || !path) return nullptr;
-        if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
+        std::wstring skPath(path);
+        if (PathUtils::ContainsTraversal(skPath) || !PathUtils::IsPathSafe(skPath, L".")) return nullptr;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        auto model = wrapper->ModelLoader->LoadModel(skPath);
         if (model && model->SkeletalMesh)
         {
             return model->SkeletalMesh.get();
@@ -740,10 +746,11 @@ extern "C"
     ENGINEAPI void SkeletalMeshComponent_SetSkeletalMeshFromModel(void* component, void* engine, const wchar_t* path)
     {
         if (!component || !engine || !path) return;
-        if (PathUtils::ContainsTraversal(std::wstring(path))) return;
+        std::wstring smpPath(path);
+        if (PathUtils::ContainsTraversal(smpPath) || !PathUtils::IsPathSafe(smpPath, L".")) return;
         KSkeletalMeshComponent* skmc = static_cast<KSkeletalMeshComponent*>(component);
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        auto model = wrapper->ModelLoader->LoadModel(smpPath);
         if (model && model->SkeletalMesh)
         {
             skmc->SetSkeletalMesh(model->SkeletalMesh);
@@ -994,7 +1001,8 @@ extern "C"
     ENGINEAPI void* Texture_Load(void* engine, const wchar_t* path)
     {
         if (!engine || !path) return nullptr;
-        if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
+        std::wstring texPath(path);
+        if (PathUtils::ContainsTraversal(texPath) || !PathUtils::IsPathSafe(texPath, L".")) return nullptr;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         if (!wrapper->Engine) return nullptr;
         auto* renderer = wrapper->Engine->GetRenderer();
@@ -1003,7 +1011,7 @@ extern "C"
         if (!textureMgr) return nullptr;
         auto* graphicsDevice = wrapper->Engine->GetGraphicsDevice();
         if (!graphicsDevice) return nullptr;
-        auto texture = textureMgr->LoadTexture(graphicsDevice->GetDevice(), std::wstring(path));
+        auto texture = textureMgr->LoadTexture(graphicsDevice->GetDevice(), texPath);
         return texture ? texture.get() : nullptr;
     }
 
@@ -1220,14 +1228,16 @@ extern "C"
     ENGINEAPI HRESULT Renderer_LoadEnvironmentMap(void* renderer, const wchar_t* hdrPath)
     {
         if (!renderer || !hdrPath) return E_INVALIDARG;
-        if (PathUtils::ContainsTraversal(std::wstring(hdrPath))) return E_INVALIDARG;
-        return static_cast<KRenderer*>(renderer)->LoadEnvironmentMap(std::wstring(hdrPath));
+        std::wstring envPath(hdrPath);
+        if (PathUtils::ContainsTraversal(envPath) || !PathUtils::IsPathSafe(envPath, L".")) return E_INVALIDARG;
+        return static_cast<KRenderer*>(renderer)->LoadEnvironmentMap(envPath);
     }
 
     ENGINEAPI void Material_SetTexture(void* component, int textureSlot, const wchar_t* texturePath)
     {
         if (!component || !texturePath) return;
-        if (PathUtils::ContainsTraversal(std::wstring(texturePath))) return;
+        std::wstring matTexPath(texturePath);
+        if (PathUtils::ContainsTraversal(matTexPath) || !PathUtils::IsPathSafe(matTexPath, L".")) return;
         KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
         KMaterial* material = smc->GetMaterial();
         if (!material) return;
@@ -1241,7 +1251,7 @@ extern "C"
         auto* textureMgr = renderer->GetTextureManager();
         if (!textureMgr) return;
 
-        std::shared_ptr<KTexture> texture = textureMgr->LoadTexture(graphicsDevice->GetDevice(), std::wstring(texturePath));
+        std::shared_ptr<KTexture> texture = textureMgr->LoadTexture(graphicsDevice->GetDevice(), matTexPath);
         if (!texture) return;
 
         material->SetTexture(static_cast<EMaterialTextureSlot>(textureSlot), texture);
