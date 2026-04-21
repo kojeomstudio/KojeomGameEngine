@@ -14,7 +14,7 @@ The project uses GitHub Actions for continuous integration. The pipeline is defi
 
 ### 1. Build Engine + Interop (`build-engine`)
 
-- **Runner:** `windows-latest`
+- **Runner:** `windows-2022`
 - **Strategy:** Debug + Release configurations
 - **Steps:**
   1. Checkout repository
@@ -24,15 +24,15 @@ The project uses GitHub Actions for continuous integration. The pipeline is defi
 
 ### 2. Build Samples (`build-samples`)
 
-- **Runner:** `windows-latest`
+- **Runner:** `windows-2022`
 - **Depends on:** `build-engine` (downloads artifacts)
-- **Strategy:** 16 samples x 2 configurations = 32 combinations
+- **Strategy:** Debug + Release configurations, all 16 samples built in a single MSBuild invocation
 - **Samples:** BasicRendering, Lighting, PBR, PostProcessing, DebugRendering, Terrain, Water, Sky, Particles, SkeletalMesh, AnimationStateMachine, Gameplay, Physics, UI, Layout, LOD
-- **Build method:** Each sample is built directly via its `.vcxproj` file (not through the solution), so downloaded artifacts are used instead of rebuilding the engine
+- **Build method:** All samples are built via `msbuild KojeomEngine.sln` with explicit target list (`/t:BasicRenderingSample;LightingSample;...`), using downloaded Engine artifacts
 
 ### 3. Build C# Editor (`build-csharp`)
 
-- **Runner:** `windows-latest`
+- **Runner:** `windows-2022`
 - **Depends on:** `build-engine` (downloads artifacts)
 - **Strategy:** Debug + Release configurations
 - **Steps:** .NET 8.0 SDK setup, restore, build
