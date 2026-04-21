@@ -136,7 +136,16 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& P
         return nullptr;
     }
 
-    return LoadModel(Path, Options);
+    if (IsModelLoaded(Path))
+    {
+        return GetLoadedModel(Path);
+    }
+
+    auto future = std::async(std::launch::async, [this, Path, Options]() -> std::shared_ptr<FLoadedModel> {
+        return this->LoadModel(Path, Options);
+    });
+
+    return future.get();
 }
 
 bool KModelLoader::IsModelLoaded(const std::wstring& Path) const

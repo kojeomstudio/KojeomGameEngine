@@ -164,4 +164,6 @@ extern "C"
     ENGINEAPI bool Renderer_IsIBLEnabled(void* renderer);
     ENGINEAPI HRESULT Renderer_LoadEnvironmentMap(void* renderer, const wchar_t* hdrPath);
     ENGINEAPI void Material_SetTexture(void* component, int textureSlot, const wchar_t* texturePath);
+    ENGINEAPI void Renderer_SetSSGIEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsSSGIEnabled(void* renderer);
 }

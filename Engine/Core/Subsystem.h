@@ -144,7 +144,10 @@ public:
             auto it = SubsystemMap.find(key);
             if (it != SubsystemMap.end() && it->second->IsInitialized())
             {
-                it->second->State = ESubsystemState::Running;
+                if (it->second->State == ESubsystemState::Initialized)
+                {
+                    it->second->State = ESubsystemState::Running;
+                }
                 it->second->Tick(DeltaTime);
             }
         }

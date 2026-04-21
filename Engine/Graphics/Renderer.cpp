@@ -345,6 +345,10 @@ void KRenderer::AddPointLight(const FPointLight& Light)
     if (PointLights.size() < MAX_POINT_LIGHTS)
     {
         PointLights.push_back(Light);
+        if (CurrentRenderPath == ERenderPath::Deferred && DeferredRenderer.IsInitialized())
+        {
+            DeferredRenderer.AddPointLight(Light);
+        }
     }
     else
     {
@@ -363,6 +367,10 @@ void KRenderer::RemovePointLight(UINT32 Index)
 void KRenderer::ClearPointLights()
 {
     PointLights.clear();
+    if (CurrentRenderPath == ERenderPath::Deferred && DeferredRenderer.IsInitialized())
+    {
+        DeferredRenderer.ClearPointLights();
+    }
 }
 
 void KRenderer::SetPointLight(UINT32 Index, const FPointLight& Light)
@@ -378,6 +386,10 @@ void KRenderer::AddSpotLight(const FSpotLight& Light)
     if (SpotLights.size() < MAX_SPOT_LIGHTS)
     {
         SpotLights.push_back(Light);
+        if (CurrentRenderPath == ERenderPath::Deferred && DeferredRenderer.IsInitialized())
+        {
+            DeferredRenderer.AddSpotLight(Light);
+        }
     }
     else
     {
@@ -396,6 +408,10 @@ void KRenderer::RemoveSpotLight(UINT32 Index)
 void KRenderer::ClearSpotLights()
 {
     SpotLights.clear();
+    if (CurrentRenderPath == ERenderPath::Deferred && DeferredRenderer.IsInitialized())
+    {
+        DeferredRenderer.ClearSpotLights();
+    }
 }
 
 void KRenderer::SetSpotLight(UINT32 Index, const FSpotLight& Light)
@@ -410,6 +426,24 @@ void KRenderer::ClearAllLights()
 {
     ClearPointLights();
     ClearSpotLights();
+}
+
+void KRenderer::SyncLightsToDeferred()
+{
+    if (CurrentRenderPath == ERenderPath::Deferred && DeferredRenderer.IsInitialized())
+    {
+        DeferredRenderer.SetDirectionalLight(DirectionalLight);
+        DeferredRenderer.ClearPointLights();
+        for (const auto& Light : PointLights)
+        {
+            DeferredRenderer.AddPointLight(Light);
+        }
+        DeferredRenderer.ClearSpotLights();
+        for (const auto& Light : SpotLights)
+        {
+            DeferredRenderer.AddSpotLight(Light);
+        }
+    }
 }
 
 void KRenderer::Cleanup()

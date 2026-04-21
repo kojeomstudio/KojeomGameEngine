@@ -57,6 +57,7 @@ public partial class RendererSettingsControl : UserControl
         CheckBoxDebugUI.IsChecked = false;
         CheckBoxSSR.IsChecked = true;
         CheckBoxVolumetricFog.IsChecked = true;
+        CheckBoxSSGI.IsChecked = false;
         CheckBoxWireframe.IsChecked = false;
     }
 
@@ -108,6 +109,11 @@ public partial class RendererSettingsControl : UserControl
     private void OnVolumetricFogChanged(object sender, RoutedEventArgs e)
     {
         if (Engine != null) Engine.SetVolumetricFogEnabled(CheckBoxVolumetricFog.IsChecked == true);
+    }
+
+    private void OnSSGIChanged(object sender, RoutedEventArgs e)
+    {
+        if (Engine != null) Engine.SetSSGIEnabled(CheckBoxSSGI.IsChecked == true);
     }
 
     private void OnWireframeChanged(object sender, RoutedEventArgs e)

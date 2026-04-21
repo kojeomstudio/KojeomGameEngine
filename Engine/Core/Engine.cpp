@@ -207,6 +207,11 @@ int32 KEngine::Run()
 
 void KEngine::Shutdown()
 {
+    if (!bIsInitialized)
+    {
+        return;
+    }
+
     LOG_INFO("Engine shutdown starting...");
 
     bIsRunning = false;

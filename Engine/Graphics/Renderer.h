@@ -79,7 +79,7 @@ public:
     void RenderSkeletalMesh(class KSkeletalMesh* InMesh, const XMMATRIX& WorldMatrix,
                             ID3D11Buffer* BoneMatrixBuffer);
 
-    void SetDirectionalLight(const FDirectionalLight& Light) { DirectionalLight = Light; }
+    void SetDirectionalLight(const FDirectionalLight& Light) { DirectionalLight = Light; SyncLightsToDeferred(); }
     const FDirectionalLight& GetDirectionalLight() const { return DirectionalLight; }
     FDirectionalLight& GetDirectionalLightMutable() { return DirectionalLight; }
 
@@ -236,6 +236,7 @@ private:
     void UpdateLightBuffer();
     void UpdateShadowBuffer();
     HRESULT CreateDebugResources();
+    void SyncLightsToDeferred();
 private:
     KGraphicsDevice* GraphicsDevice = nullptr;
     KCamera* CurrentCamera = nullptr;

@@ -1256,4 +1256,16 @@ extern "C"
 
         material->SetTexture(static_cast<EMaterialTextureSlot>(textureSlot), texture);
     }
+
+    ENGINEAPI void Renderer_SetSSGIEnabled(void* renderer, bool enabled)
+    {
+        if (!renderer) return;
+        static_cast<KRenderer*>(renderer)->SetSSGIEnabled(enabled);
+    }
+
+    ENGINEAPI bool Renderer_IsSSGIEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsSSGIEnabled();
+    }
 }

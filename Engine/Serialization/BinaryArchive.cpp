@@ -43,7 +43,13 @@ bool KBinaryArchive::ReadAndValidateHeader()
     }
 
     uint32 computedChecksum = ComputeChecksum();
-    if (storedChecksum != 0 && storedChecksum != computedChecksum)
+    if (storedChecksum == 0)
+    {
+        LOG_ERROR("Binary archive: missing checksum (file may be corrupted or improperly created)");
+        bHeaderValid = false;
+        return false;
+    }
+    if (storedChecksum != computedChecksum)
     {
         LOG_ERROR("Binary archive: checksum mismatch (stored and computed checksums do not match)");
         bHeaderValid = false;

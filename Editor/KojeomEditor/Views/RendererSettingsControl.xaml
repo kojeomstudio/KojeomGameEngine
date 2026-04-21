@@ -28,6 +28,7 @@
                 <CheckBox x:Name="CheckBoxDebugUI" Content="Debug UI" Foreground="White" Margin="0,4,0,4" Checked="OnDebugUIChanged" Unchecked="OnDebugUIChanged"/>
                 <CheckBox x:Name="CheckBoxSSR" Content="SSR (Screen-Space Reflections)" Foreground="White" Margin="0,4,0,4" Checked="OnSSRChanged" Unchecked="OnSSRChanged"/>
                 <CheckBox x:Name="CheckBoxVolumetricFog" Content="Volumetric Fog" Foreground="White" Margin="0,4,0,4" Checked="OnVolumetricFogChanged" Unchecked="OnVolumetricFogChanged"/>
+                <CheckBox x:Name="CheckBoxSSGI" Content="SSGI (Screen-Space Global Illumination)" Foreground="White" Margin="0,4,0,4" Checked="OnSSGIChanged" Unchecked="OnSSGIChanged"/>
                 <Separator Background="#3F3F46" Margin="0,4,0,4"/>
                 <CheckBox x:Name="CheckBoxWireframe" Content="Wireframe Mode" Foreground="White" Margin="0,4,0,4" Checked="OnWireframeChanged" Unchecked="OnWireframeChanged"/>
                 <Separator Background="#3F3F46" Margin="0,4,0,4"/>

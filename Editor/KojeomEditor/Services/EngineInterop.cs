@@ -522,6 +522,18 @@ public class EngineInterop : IDisposable
         if (renderer != IntPtr.Zero) Renderer_SetSSREnabled(renderer, enabled);
     }
 
+    public void SetSSGIEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetSSGIEnabled(renderer, enabled);
+    }
+
+    public bool IsSSGIEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsSSGIEnabled(renderer);
+    }
+
     public void SetVolumetricFogEnabled(bool enabled)
     {
         var renderer = GetRenderer();
@@ -1079,6 +1091,13 @@ public class EngineInterop : IDisposable
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Material_SetTexture(IntPtr component, int textureSlot, [MarshalAs(UnmanagedType.LPWStr)] string texturePath);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_SetSSGIEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsSSGIEnabled(IntPtr renderer);
 
     #endregion
 
