@@ -196,6 +196,7 @@ void KBinaryArchive::Read(void* Data, size_t Size)
     {
         LOG_ERROR("Binary archive read overflow");
         bHasError = true;
+        memset(Data, 0, Size);
         return;
     }
     memcpy(Data, Buffer.data() + ReadPosition, Size);

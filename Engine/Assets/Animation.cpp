@@ -49,6 +49,14 @@ void FAnimationChannel::Deserialize(KBinaryArchive& Archive)
     
     uint32 posKeyCount, rotKeyCount, scaleKeyCount;
     Archive >> posKeyCount >> rotKeyCount >> scaleKeyCount;
+
+    static constexpr uint32 MAX_KEYS_PER_CHANNEL = 100000;
+    if (posKeyCount > MAX_KEYS_PER_CHANNEL || rotKeyCount > MAX_KEYS_PER_CHANNEL || scaleKeyCount > MAX_KEYS_PER_CHANNEL)
+    {
+        LOG_ERROR("Animation channel key count exceeds maximum: pos=" + std::to_string(posKeyCount) +
+                  " rot=" + std::to_string(rotKeyCount) + " scale=" + std::to_string(scaleKeyCount));
+        return;
+    }
     
     PositionKeys.resize(posKeyCount);
     RotationKeys.resize(rotKeyCount);
@@ -230,6 +238,12 @@ HRESULT KAnimation::LoadFromFile(const std::wstring& Path)
     Deserialize(archive);
     archive.Close();
     
+    if (archive.HasError() || !IsValid())
+    {
+        LOG_ERROR("Animation data is invalid after loading: " + StringUtils::WideToMultiByte(Path));
+        return E_FAIL;
+    }
+    
     return S_OK;
 }
 
@@ -272,6 +286,7 @@ void KAnimation::Deserialize(KBinaryArchive& Archive)
     
     if (version != ANIMATION_VERSION)
     {
+        LOG_ERROR("Animation version mismatch: expected " + std::to_string(ANIMATION_VERSION) + ", got " + std::to_string(version));
         return;
     }
     

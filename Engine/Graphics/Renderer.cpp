@@ -304,7 +304,6 @@ void KRenderer::RenderSkeletalMesh(KSkeletalMesh* InMesh, const XMMATRIX& WorldM
     TransformData.ViewMatrix = XMMatrixTranspose(CurrentCamera->GetViewMatrix());
     TransformData.ProjectionMatrix = XMMatrixTranspose(CurrentCamera->GetProjectionMatrix());
 
-    // Use dedicated skeletal transform buffer instead of reusing shadow buffer
     if (!SkeletalTransformBuffer)
     {
         D3D11_BUFFER_DESC bd = {};
@@ -312,7 +311,13 @@ void KRenderer::RenderSkeletalMesh(KSkeletalMesh* InMesh, const XMMATRIX& WorldM
         bd.ByteWidth = sizeof(FConstantBuffer);
         bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        GraphicsDevice->GetDevice()->CreateBuffer(&bd, nullptr, &SkeletalTransformBuffer);
+        HRESULT createHR = GraphicsDevice->GetDevice()->CreateBuffer(&bd, nullptr, &SkeletalTransformBuffer);
+        if (FAILED(createHR) || !SkeletalTransformBuffer)
+        {
+            LOG_ERROR("Failed to create skeletal transform buffer");
+            SkinnedShader->Unbind(Context);
+            return;
+        }
     }
 
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -925,6 +930,9 @@ void KRenderer::SetShadowSceneBounds(const XMFLOAT3& Center, float Radius)
 void KRenderer::UpdateShadowBuffer()
 {
     if (!ShadowConstantBuffer || !bShadowsEnabled)
+        return;
+
+    if (!ShadowRenderer.GetShadowMap())
         return;
 
     ID3D11DeviceContext* Context = GraphicsDevice->GetContext();

@@ -136,28 +136,7 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& P
         return nullptr;
     }
 
-    if (IsModelLoaded(Path))
-    {
-        return LoadedModels[Path];
-    }
-
-    std::shared_ptr<FLoadedModel> result;
-    std::future<std::shared_ptr<FLoadedModel>> future = std::async(std::launch::async, [this, Path, Options]() -> std::shared_ptr<FLoadedModel> {
-        return this->LoadModel(Path, Options);
-    });
-
-    auto status = future.wait_for(std::chrono::milliseconds(0));
-    if (status == std::future_status::ready)
-    {
-        result = future.get();
-    }
-    else
-    {
-        LOG_INFO("Model load started asynchronously: " + StringUtils::WideToMultiByte(Path));
-        result = future.get();
-    }
-
-    return result;
+    return LoadModel(Path, Options);
 }
 
 bool KModelLoader::IsModelLoaded(const std::wstring& Path) const

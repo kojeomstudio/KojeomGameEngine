@@ -180,6 +180,12 @@ void KSkeleton::Deserialize(KBinaryArchive& Archive)
     Archive >> Name;
     uint32 boneCount;
     Archive >> boneCount;
+
+    if (boneCount > MAX_BONES)
+    {
+        LOG_ERROR("Skeleton bone count exceeds maximum: " + std::to_string(boneCount) + " (max: " + std::to_string(MAX_BONES) + ")");
+        return;
+    }
     
     Bones.resize(boneCount);
     BoneNameToIndex.clear();

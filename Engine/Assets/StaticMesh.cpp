@@ -24,6 +24,14 @@ HRESULT KStaticMesh::LoadFromFile(const std::wstring& Path, ID3D11Device* Device
 
     uint32 NumLODs;
     Archive >> NumLODs;
+
+    if (NumLODs > MAX_MESH_LODS)
+    {
+        LOG_ERROR("Static mesh LOD count exceeds maximum: " + std::to_string(NumLODs) + " (max: " + std::to_string(MAX_MESH_LODS) + ")");
+        Archive.Close();
+        return E_FAIL;
+    }
+
     LODs.resize(NumLODs);
 
     for (uint32 i = 0; i < NumLODs; ++i)
@@ -297,6 +305,20 @@ void KStaticMesh::DeserializeLOD(KBinaryArchive& Archive, FMeshLOD& LOD)
     uint32 VertexCount, IndexCount;
     Archive >> VertexCount >> IndexCount;
     Archive >> LOD.ScreenSize >> LOD.Distance;
+
+    static constexpr uint32 MAX_VERTICES_PER_LOD = 5000000;
+    static constexpr uint32 MAX_INDICES_PER_LOD = 15000000;
+
+    if (VertexCount > MAX_VERTICES_PER_LOD)
+    {
+        LOG_ERROR("LOD vertex count exceeds maximum: " + std::to_string(VertexCount));
+        return;
+    }
+    if (IndexCount > MAX_INDICES_PER_LOD)
+    {
+        LOG_ERROR("LOD index count exceeds maximum: " + std::to_string(IndexCount));
+        return;
+    }
 
     LOD.Vertices.resize(VertexCount);
     LOD.Indices.resize(IndexCount);

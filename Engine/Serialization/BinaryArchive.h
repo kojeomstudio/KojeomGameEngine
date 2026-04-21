@@ -76,8 +76,12 @@ public:
         *this >> Length;
         if (Length > MaxStringSize)
         {
-            Length = 0;
+            bHasError = true;
             Value.clear();
+            if (ReadPosition + Length <= Buffer.size())
+            {
+                ReadPosition += Length;
+            }
             return *this;
         }
         Value.resize(Length);
@@ -91,8 +95,13 @@ public:
         *this >> Length;
         if (Length > MaxStringSize || Length > std::numeric_limits<uint32>::max() / sizeof(wchar_t))
         {
-            Length = 0;
+            bHasError = true;
             Value.clear();
+            size_t byteSize = static_cast<size_t>(Length) * sizeof(wchar_t);
+            if (ReadPosition + byteSize <= Buffer.size())
+            {
+                ReadPosition += byteSize;
+            }
             return *this;
         }
         Value.resize(Length);
@@ -103,7 +112,26 @@ public:
     void WriteRaw(const void* Data, size_t Size) { Write(Data, Size); }
     void ReadRaw(void* Data, size_t Size) { Read(Data, Size); }
 
+    void Skip(size_t Size)
+    {
+        if (Mode != EMode::Read) return;
+        if (ReadPosition + Size > Buffer.size())
+        {
+            bHasError = true;
+            return;
+        }
+        ReadPosition += Size;
+    }
+
+    void PatchAt(size_t Offset, const void* Data, size_t Size)
+    {
+        if (Mode != EMode::Write) return;
+        if (Offset + Size > Buffer.size()) return;
+        memcpy(Buffer.data() + Offset, Data, Size);
+    }
+
     size_t GetSize() const { return Buffer.size(); }
+    size_t GetReadPosition() const { return ReadPosition; }
     const uint8* GetData() const { return Buffer.data(); }
 
     template<typename T>

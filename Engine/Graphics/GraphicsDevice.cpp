@@ -78,18 +78,19 @@ void KGraphicsDevice::Cleanup()
 
 void KGraphicsDevice::BeginFrame(const float ClearColor[4])
 {
-    // Clear render target
+    if (!Context || !RenderTargetView || !DepthStencilView) return;
+
     Context->ClearRenderTargetView(RenderTargetView.Get(), ClearColor);
 
-    // Clear depth stencil
     Context->ClearDepthStencilView(DepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-    // Set render target with depth stencil
     Context->OMSetRenderTargets(1, RenderTargetView.GetAddressOf(), DepthStencilView.Get());
 }
 
 void KGraphicsDevice::EndFrame(bool bVSync)
 {
+    if (!SwapChain) return;
+
     HRESULT hr = SwapChain->Present(bVSync ? 1 : 0, 0);
     if (FAILED(hr))
     {

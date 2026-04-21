@@ -132,7 +132,15 @@ void KActor::Serialize(KBinaryArchive& Archive)
 
     for (auto& comp : Components)
     {
+        uint32 blockSize = 0;
+        size_t sizeFieldPos = Archive.GetSize();
+        Archive << blockSize;
+
+        size_t dataStart = Archive.GetSize();
         comp->Serialize(Archive);
+
+        blockSize = static_cast<uint32>(Archive.GetSize() - dataStart);
+        Archive.PatchAt(sizeFieldPos, &blockSize, sizeof(blockSize));
     }
 
     uint32 NumChildren = static_cast<uint32>(Children.size());
@@ -163,6 +171,11 @@ void KActor::Deserialize(KBinaryArchive& Archive)
 
     for (uint32 i = 0; i < NumComponents; ++i)
     {
+        uint32 blockSize = 0;
+        Archive >> blockSize;
+
+        size_t blockDataStart = Archive.GetReadPosition();
+
         uint32 componentTypeID = 0;
         Archive >> componentTypeID;
 
@@ -175,6 +188,18 @@ void KActor::Deserialize(KBinaryArchive& Archive)
         else
         {
             LOG_WARNING("Actor::Deserialize: unknown component type: " + std::to_string(componentTypeID) + " - skipping");
+            size_t consumed = Archive.GetReadPosition() - blockDataStart;
+            size_t remaining = (blockSize > consumed) ? (blockSize - consumed) : 0;
+            if (remaining > 0)
+            {
+                Archive.Skip(remaining);
+            }
+        }
+
+        size_t expectedEnd = blockDataStart + blockSize;
+        if (Archive.GetReadPosition() != expectedEnd && blockSize > 0)
+        {
+            Archive.Skip(expectedEnd - Archive.GetReadPosition());
         }
     }
 

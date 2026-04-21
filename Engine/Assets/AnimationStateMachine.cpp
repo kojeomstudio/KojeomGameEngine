@@ -562,12 +562,42 @@ void KAnimationStateMachine::EvaluateState(KAnimationState* State, float Weight,
         LocalTransforms[BoneIdx] = ScaleMatrix * RotationMatrix * TranslationMatrix;
     }
 
-    for (uint32 BoneIdx = 0; BoneIdx < BoneCount; ++BoneIdx)
+    std::vector<bool> processed(BoneCount, false);
+    std::vector<uint32> evalOrder;
+    evalOrder.reserve(BoneCount);
+
+    bool bProgress = true;
+    while (bProgress && evalOrder.size() < BoneCount)
+    {
+        bProgress = false;
+        for (uint32 i = 0; i < BoneCount; ++i)
+        {
+            if (processed[i]) continue;
+
+            const FBone* Bone = Skeleton->GetBone(i);
+            if (!Bone) { processed[i] = true; evalOrder.push_back(i); bProgress = true; continue; }
+
+            if (Bone->ParentIndex == INVALID_BONE_INDEX ||
+                (Bone->ParentIndex >= 0 && static_cast<uint32>(Bone->ParentIndex) < BoneCount && processed[Bone->ParentIndex]))
+            {
+                evalOrder.push_back(i);
+                processed[i] = true;
+                bProgress = true;
+            }
+        }
+    }
+
+    for (uint32 i = 0; i < BoneCount; ++i)
+    {
+        if (!processed[i]) evalOrder.push_back(i);
+    }
+
+    for (uint32 BoneIdx : evalOrder)
     {
         XMMATRIX GlobalTransform = LocalTransforms[BoneIdx];
-        
+
         const FBone* Bone = Skeleton->GetBone(BoneIdx);
-        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex < static_cast<int32>(BoneIdx))
+        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex >= 0 && static_cast<uint32>(Bone->ParentIndex) < BoneIdx)
         {
             GlobalTransform = LocalTransforms[BoneIdx] * OutMatrices[Bone->ParentIndex];
         }
@@ -575,10 +605,10 @@ void KAnimationStateMachine::EvaluateState(KAnimationState* State, float Weight,
         OutMatrices[BoneIdx] = GlobalTransform;
     }
 
-    for (uint32 BoneIdx = 0; BoneIdx < BoneCount; ++BoneIdx)
+    for (uint32 BoneIdx : evalOrder)
     {
         const FBone* Bone = Skeleton->GetBone(BoneIdx);
-        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex >= static_cast<int32>(BoneIdx))
+        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex >= 0 && static_cast<uint32>(Bone->ParentIndex) >= BoneIdx)
         {
             OutMatrices[BoneIdx] = LocalTransforms[BoneIdx] * OutMatrices[Bone->ParentIndex];
         }
