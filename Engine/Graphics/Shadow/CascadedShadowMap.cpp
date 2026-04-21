@@ -26,6 +26,18 @@ HRESULT KCascadedShadowMap::Initialize(ID3D11Device* Device, const FCascadedShad
         return hr;
     }
 
+    D3D11_DEPTH_STENCIL_DESC depthStateDesc = {};
+    depthStateDesc.DepthEnable = TRUE;
+    depthStateDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    depthStateDesc.DepthFunc = D3D11_COMPARISON_LESS;
+    depthStateDesc.StencilEnable = FALSE;
+    hr = Device->CreateDepthStencilState(&depthStateDesc, &SharedDepthState);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create cascade depth state");
+        return hr;
+    }
+
     bInitialized = true;
     LOG_INFO("Cascaded shadow map initialized successfully");
     return S_OK;
@@ -37,8 +49,8 @@ void KCascadedShadowMap::Cleanup()
     {
         CascadeTextures[i].Reset();
         CascadeDSVs[i].Reset();
-        CascadeDepthStates[i].Reset();
     }
+    SharedDepthState.Reset();
     CascadeArrayTexture.Reset();
     CascadeArraySRV.Reset();
     bInitialized = false;
@@ -64,12 +76,6 @@ HRESULT KCascadedShadowMap::CreateCascadeTextures(ID3D11Device* Device)
     dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     dsvDesc.Texture2D.MipSlice = 0;
 
-    D3D11_DEPTH_STENCIL_DESC depthStateDesc = {};
-    depthStateDesc.DepthEnable = TRUE;
-    depthStateDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    depthStateDesc.DepthFunc = D3D11_COMPARISON_LESS;
-    depthStateDesc.StencilEnable = FALSE;
-
     for (UINT32 i = 0; i < Config.CascadeCount; ++i)
     {
         HRESULT hr = Device->CreateTexture2D(&texDesc, nullptr, &CascadeTextures[i]);
@@ -83,13 +89,6 @@ HRESULT KCascadedShadowMap::CreateCascadeTextures(ID3D11Device* Device)
         if (FAILED(hr))
         {
             LOG_ERROR("Failed to create cascade DSV");
-            return hr;
-        }
-
-        hr = Device->CreateDepthStencilState(&depthStateDesc, &CascadeDepthStates[i]);
-        if (FAILED(hr))
-        {
-            LOG_ERROR("Failed to create cascade depth state");
             return hr;
         }
     }
@@ -143,7 +142,7 @@ void KCascadedShadowMap::BeginCascadePass(ID3D11DeviceContext* Context, UINT32 C
         return;
 
     Context->ClearDepthStencilView(CascadeDSVs[CascadeIndex].Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-    Context->OMSetDepthStencilState(CascadeDepthStates[CascadeIndex].Get(), 0);
+    Context->OMSetDepthStencilState(SharedDepthState.Get(), 0);
     
     ID3D11RenderTargetView* nullRTV = nullptr;
     Context->OMSetRenderTargets(1, &nullRTV, CascadeDSVs[CascadeIndex].Get());
@@ -166,6 +165,38 @@ void KCascadedShadowMap::EndCascadePass(ID3D11DeviceContext* Context)
     ID3D11RenderTargetView* nullRTV = nullptr;
     ID3D11DepthStencilView* nullDSV = nullptr;
     Context->OMSetRenderTargets(1, &nullRTV, nullDSV);
+}
+
+void KCascadedShadowMap::CopyCascadesToArray(ID3D11DeviceContext* Context)
+{
+    if (!Context || !CascadeArrayTexture)
+        return;
+
+    for (UINT32 i = 0; i < Config.CascadeCount; ++i)
+    {
+        if (!CascadeTextures[i])
+            continue;
+
+        D3D11_TEXTURE2D_DESC srcDesc;
+        CascadeTextures[i]->GetDesc(&srcDesc);
+
+        D3D11_BOX srcBox = {};
+        srcBox.left = 0;
+        srcBox.top = 0;
+        srcBox.front = 0;
+        srcBox.right = srcDesc.Width;
+        srcBox.bottom = srcDesc.Height;
+        srcBox.back = 1;
+
+        Context->CopySubresourceRegion(
+            CascadeArrayTexture.Get(),
+            D3D11CalcSubresource(0, i, 1),
+            0, 0, 0,
+            CascadeTextures[i].Get(),
+            0,
+            &srcBox
+        );
+    }
 }
 
 void KCascadedShadowMap::ClearAllDepths(ID3D11DeviceContext* Context)

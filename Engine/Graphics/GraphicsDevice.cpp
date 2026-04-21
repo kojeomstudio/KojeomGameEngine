@@ -108,8 +108,10 @@ HRESULT KGraphicsDevice::ResizeBuffers(UINT32 NewWidth, UINT32 NewHeight)
     Width = NewWidth;
     Height = NewHeight;
 
-    // Release render target and depth stencil views
-    Context->OMSetRenderTargets(0, nullptr, nullptr);
+    if (Context)
+    {
+        Context->OMSetRenderTargets(0, nullptr, nullptr);
+    }
     DepthStencilView.Reset();
     DepthStencilTexture.Reset();
     RenderTargetView.Reset();
@@ -208,7 +210,7 @@ HRESULT KGraphicsDevice::CreateSwapChain(HWND InWindowHandle)
 
     // Create swap chain description
     DXGI_SWAP_CHAIN_DESC SwapChainDesc = {};
-    SwapChainDesc.BufferCount = 1;
+    SwapChainDesc.BufferCount = 2;
     SwapChainDesc.BufferDesc.Width = Width;
     SwapChainDesc.BufferDesc.Height = Height;
     SwapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;

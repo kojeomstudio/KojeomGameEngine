@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using KojeomEditor.Services;
 
 namespace KojeomEditor.ViewModels;
@@ -141,6 +142,7 @@ public class SceneViewModel : ViewModelBase
         }
         else if (type == "SkeletalMesh" && nativePtr != IntPtr.Zero)
         {
+            actor.AddComponent(new ComponentViewModel { Name = "SkeletalMesh", ComponentType = EComponentType.SkeletalMesh });
             var compPtr = _engine!.AddComponent(nativePtr, NativeComponentType.SkeletalMesh);
         }
         else if (type == "Light" && nativePtr != IntPtr.Zero)
@@ -199,11 +201,13 @@ public class SceneViewModel : ViewModelBase
     {
         if (_engine == null || !_engine.IsInitialized) return;
 
+        IntPtr selectedPtr = _selectedActor?.NativePtr ?? IntPtr.Zero;
         if (_selectedActor != null)
         {
             _selectedActor.PropertyChanged -= OnActorPropertyChanged;
         }
 
+        _selectedActor = null;
         Actors.Clear();
 
         var allViewModels = new List<ActorViewModel>();
@@ -274,9 +278,13 @@ public class SceneViewModel : ViewModelBase
             }
         }
 
-        if (_selectedActor != null)
+        if (selectedPtr != IntPtr.Zero)
         {
-            _selectedActor.PropertyChanged += OnActorPropertyChanged;
+            var found = allViewModels.FirstOrDefault(vm => vm.NativePtr == selectedPtr);
+            if (found != null)
+            {
+                SelectedActor = found;
+            }
         }
     }
 

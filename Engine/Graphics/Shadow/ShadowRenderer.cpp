@@ -265,7 +265,7 @@ void KShadowRenderer::RenderShadowCasters(ID3D11DeviceContext* Context)
                 continue;
             }
 
-            XMMATRIX worldLightVP = XMMatrixTranspose(caster.WorldMatrix) * LightViewProjection;
+            XMMATRIX worldLightVP = caster.WorldMatrix * LightViewProjection;
             D3D11_MAPPED_SUBRESOURCE mapped;
             HRESULT hr = Context->Map(ShadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
             if (SUCCEEDED(hr))
@@ -290,7 +290,7 @@ void KShadowRenderer::RenderShadowCasters(ID3D11DeviceContext* Context)
             Context->IASetIndexBuffer(caster.SkeletalIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
             Context->DrawIndexed(caster.SkeletalIndexCount, 0, 0);
 
-            Context->IASetVertexBuffers(0, 1, &nullBuffer, &offset, &offset);
+            Context->IASetVertexBuffers(0, 1, &nullBuffer, &stride, &offset);
             Context->IASetIndexBuffer(nullBuffer, DXGI_FORMAT_R32_UINT, 0);
             ID3D11Buffer* nullCB = nullptr;
             Context->VSSetConstantBuffers(5, 1, &nullCB);
@@ -299,7 +299,7 @@ void KShadowRenderer::RenderShadowCasters(ID3D11DeviceContext* Context)
         }
         else
         {
-            XMMATRIX worldLightVP = XMMatrixTranspose(caster.WorldMatrix) * LightViewProjection;
+            XMMATRIX worldLightVP = caster.WorldMatrix * LightViewProjection;
             D3D11_MAPPED_SUBRESOURCE mapped;
             HRESULT hr = Context->Map(ShadowConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
             if (SUCCEEDED(hr))

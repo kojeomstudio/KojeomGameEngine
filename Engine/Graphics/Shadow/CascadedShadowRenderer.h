@@ -20,6 +20,7 @@ struct FCascadedShadowBuffer
     UINT32 CascadeCount;
     float Padding;
 };
+static_assert(sizeof(FCascadedShadowBuffer) % 16 == 0, "FCascadedShadowBuffer must be 16-byte aligned");
 
 struct FCascadeSplit
 {

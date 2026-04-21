@@ -836,6 +836,15 @@ std::shared_ptr<KStaticMesh> KModelLoader::ProcessMesh(void* AssimpMesh, void* A
     std::vector<FVertex> vertices;
     std::vector<uint32> indices;
     
+    for (uint32 i = 0; i < mesh->mNumFaces; ++i)
+    {
+        const aiFace& face = mesh->mFaces[i];
+        for (uint32 j = 0; j < face.mNumIndices; ++j)
+        {
+            indices.push_back(face.mIndices[j]);
+        }
+    }
+    
     std::vector<std::vector<std::pair<uint32, float>>> vertexBoneWeights;
     vertexBoneWeights.resize(mesh->mNumVertices);
 

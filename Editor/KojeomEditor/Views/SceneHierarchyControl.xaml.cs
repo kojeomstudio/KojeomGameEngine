@@ -126,7 +126,7 @@ public partial class SceneHierarchyControl : UserControl
 
         if (DataContext is ViewModels.MainViewModel mainVm)
         {
-            mainVm.SceneViewModel.ReorderActors(draggedActor, targetActor);
+            mainVm.SceneViewModel.MakeParentChild(targetActor, draggedActor);
         }
 
         _draggedItem = null;

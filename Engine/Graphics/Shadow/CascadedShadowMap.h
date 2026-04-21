@@ -22,8 +22,8 @@ struct FCascadedShadowConfig
 
 struct FCascadeData
 {
-    XMMATRIX LightViewProjection;
-    XMFLOAT4 SplitDistance;
+    XMMATRIX LightViewProjection[MAX_CASCADE_COUNT];
+    XMFLOAT4 SplitDistances[MAX_CASCADE_COUNT];
     XMFLOAT4 CascadeScale[MAX_CASCADE_COUNT];
     XMFLOAT4 CascadeOffset[MAX_CASCADE_COUNT];
 };
@@ -43,6 +43,7 @@ public:
     void BeginCascadePass(ID3D11DeviceContext* Context, UINT32 CascadeIndex);
     void EndCascadePass(ID3D11DeviceContext* Context);
     void ClearAllDepths(ID3D11DeviceContext* Context);
+    void CopyCascadesToArray(ID3D11DeviceContext* Context);
 
     ID3D11ShaderResourceView* GetCascadeArraySRV() const { return CascadeArraySRV.Get(); }
     ID3D11DepthStencilView* GetCascadeDSV(UINT32 Index) const;
@@ -65,6 +66,6 @@ private:
     std::array<ComPtr<ID3D11DepthStencilView>, MAX_CASCADE_COUNT> CascadeDSVs;
     ComPtr<ID3D11Texture2D> CascadeArrayTexture;
     ComPtr<ID3D11ShaderResourceView> CascadeArraySRV;
-    std::array<ComPtr<ID3D11DepthStencilState>, MAX_CASCADE_COUNT> CascadeDepthStates;
+    ComPtr<ID3D11DepthStencilState> SharedDepthState;
     bool bInitialized = false;
 };

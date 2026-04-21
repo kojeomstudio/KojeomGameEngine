@@ -21,6 +21,8 @@
                 <CheckBox x:Name="CheckBoxSSAO" Content="SSAO (Screen-Space Ambient Occlusion)" Foreground="White" Margin="0,4,0,4" Checked="OnSSAOChanged" Unchecked="OnSSAOChanged"/>
                 <CheckBox x:Name="CheckBoxPostProcess" Content="Post Processing" Foreground="White" Margin="0,4,0,4" Checked="OnPostProcessChanged" Unchecked="OnPostProcessChanged"/>
                 <CheckBox x:Name="CheckBoxShadows" Content="Shadows" Foreground="White" Margin="0,4,0,4" Checked="OnShadowsChanged" Unchecked="OnShadowsChanged"/>
+                <CheckBox x:Name="CheckBoxCascadedShadows" Content="Cascaded Shadows" Foreground="White" Margin="0,4,0,4" Checked="OnCascadedShadowsChanged" Unchecked="OnCascadedShadowsChanged"/>
+                <CheckBox x:Name="CheckBoxIBL" Content="IBL (Image-Based Lighting)" Foreground="White" Margin="0,4,0,4" Checked="OnIBLChanged" Unchecked="OnIBLChanged"/>
                 <CheckBox x:Name="CheckBoxSky" Content="Sky" Foreground="White" Margin="0,4,0,4" Checked="OnSkyChanged" Unchecked="OnSkyChanged"/>
                 <CheckBox x:Name="CheckBoxTAA" Content="TAA (Temporal Anti-Aliasing)" Foreground="White" Margin="0,4,0,4" Checked="OnTAAChanged" Unchecked="OnTAAChanged"/>
                 <CheckBox x:Name="CheckBoxDebugUI" Content="Debug UI" Foreground="White" Margin="0,4,0,4" Checked="OnDebugUIChanged" Unchecked="OnDebugUIChanged"/>

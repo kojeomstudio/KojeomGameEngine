@@ -1246,4 +1246,40 @@ public class EngineInterop : IDisposable
         if (!_isInitialized || _enginePtr == IntPtr.Zero) return IntPtr.Zero;
         return Model_LoadAndGetStaticMesh(_enginePtr, path);
     }
+
+    public void SetCascadedShadowsEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetCascadedShadowsEnabled(renderer, enabled);
+    }
+
+    public bool IsCascadedShadowsEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsCascadedShadowsEnabled(renderer);
+    }
+
+    public void SetIBLEnabled(bool enabled)
+    {
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero) Renderer_SetIBLEnabled(renderer, enabled);
+    }
+
+    public bool IsIBLEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsIBLEnabled(renderer);
+    }
+
+    public int LoadEnvironmentMap(string hdrPath)
+    {
+        var renderer = GetRenderer();
+        if (renderer == IntPtr.Zero) return -1;
+        return Renderer_LoadEnvironmentMap(renderer, hdrPath);
+    }
+
+    public void SetMaterialTexture(IntPtr material, int textureSlot, string texturePath)
+    {
+        if (material != IntPtr.Zero) Material_SetTexture(material, textureSlot, texturePath);
+    }
 }

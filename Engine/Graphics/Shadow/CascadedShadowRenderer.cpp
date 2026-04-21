@@ -266,7 +266,8 @@ void KCascadedShadowRenderer::EndShadowPass(ID3D11DeviceContext* Context)
 {
     if (!Context)
         return;
-        
+
+    CascadedShadowMap.CopyCascadesToArray(Context);
     UpdateCascadeBuffer(Context);
 }
 
@@ -285,8 +286,8 @@ void KCascadedShadowRenderer::UpdateCascadeBuffer(ID3D11DeviceContext* Context)
     
     for (UINT32 i = 0; i < CascadedShadowMap.GetCascadeCount(); ++i)
     {
-        bufferData->CascadeData.LightViewProjection = XMMatrixTranspose(CascadeSplits[i].LightViewProjection);
-        bufferData->CascadeData.SplitDistance = XMFLOAT4(
+        bufferData->CascadeData.LightViewProjection[i] = XMMatrixTranspose(CascadeSplits[i].LightViewProjection);
+        bufferData->CascadeData.SplitDistances[i] = XMFLOAT4(
             CascadeSplits[i].NearDistance, 
             CascadeSplits[i].FarDistance,
             0.0f, 0.0f
