@@ -124,9 +124,9 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModel(const std::wstring& Path, 
 
 std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options)
 {
-    if (PathUtils::ContainsTraversal(Path))
+    if (bInitialized && !bAssimpAvailable)
     {
-        LOG_ERROR("Model: async load path contains traversal");
+        LOG_WARNING("Model: no loader available for async load");
         return nullptr;
     }
 
@@ -141,11 +141,26 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& P
         return GetLoadedModel(Path);
     }
 
-    auto future = std::async(std::launch::async, [this, Path, Options]() -> std::shared_ptr<FLoadedModel> {
-        return this->LoadModel(Path, Options);
+    std::mutex mtx;
+    std::condition_variable cv;
+    std::shared_ptr<FLoadedModel> result;
+    bool done = false;
+
+    std::thread worker([this, &Path, &Options, &result, &mtx, &cv, &done]() {
+        auto loaded = this->LoadModel(Path, Options);
+        std::lock_guard<std::mutex> lock(mtx);
+        result = loaded;
+        done = true;
+        cv.notify_one();
     });
 
-    return future.get();
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [&done] { return done; });
+    }
+
+    worker.detach();
+    return result;
 }
 
 bool KModelLoader::IsModelLoaded(const std::wstring& Path) const

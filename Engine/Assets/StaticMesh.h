@@ -41,6 +41,9 @@ public:
     void SetName(const std::string& InName) { Name = InName; }
     const std::string& GetName() const { return Name; }
 
+    void SetSourcePath(const std::wstring& InPath) { SourcePath = InPath; }
+    const std::wstring& GetSourcePath() const { return SourcePath; }
+
     void SetLODData(uint32 LODIndex, const std::vector<FVertex>& Vertices, const std::vector<uint32>& Indices);
     void AddLOD(const std::vector<FVertex>& Vertices, const std::vector<uint32>& Indices, float ScreenSize = 1.0f);
 
@@ -72,6 +75,7 @@ private:
 
 private:
     std::string Name;
+    std::wstring SourcePath;
     std::vector<FMeshLOD> LODs;
     std::vector<std::shared_ptr<KMesh>> RenderMeshes;
     std::vector<FMaterialSlot> MaterialSlots;

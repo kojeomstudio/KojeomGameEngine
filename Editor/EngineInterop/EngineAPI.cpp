@@ -55,6 +55,11 @@ extern "C"
     {
         try
         {
+            if (g_EngineWrapper)
+            {
+                delete g_EngineWrapper;
+                g_EngineWrapper = nullptr;
+            }
             g_EngineWrapper = new (std::nothrow) FEngineWrapper();
             return g_EngineWrapper;
         }
@@ -355,9 +360,10 @@ extern "C"
     ENGINEAPI void* Model_Load(void* engine, const wchar_t* path)
     {
         if (!engine || !path) return nullptr;
-        if (PathUtils::ContainsTraversal(std::wstring(path))) return nullptr;
+        std::wstring wpath(path);
+        if (PathUtils::ContainsTraversal(wpath) || !PathUtils::IsPathSafe(wpath, L".")) return nullptr;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
-        auto model = wrapper->ModelLoader->LoadModel(std::wstring(path));
+        auto model = wrapper->ModelLoader->LoadModel(wpath);
         if (!model) return nullptr;
         return model.get();
     }

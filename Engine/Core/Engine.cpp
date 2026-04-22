@@ -119,7 +119,7 @@ HRESULT KEngine::InitializeWithExternalHwnd(HWND InExternalHwnd, UINT32 InWidth,
     WindowHeight = InHeight;
     bIsEmbedded = true;
 
-    InstanceHandle = (HINSTANCE)GetWindowLongPtr(InExternalHwnd, GWLP_HINSTANCE);
+    InstanceHandle = reinterpret_cast<HINSTANCE>(GetWindowLongPtr(InExternalHwnd, GWLP_HINSTANCE));
 
     HRESULT hr = InitializeGraphics();
     if (FAILED(hr))
@@ -508,7 +508,7 @@ LRESULT CALLBACK WindowProc(HWND WindowHandle, UINT Message, WPARAM WParam, LPAR
     case WM_KEYDOWN:
         if (inputMgr)
         {
-            inputMgr->ProcessKeyDown(static_cast<uint32_t>(WParam));
+            inputMgr->ProcessKeyDown(static_cast<uint32>(WParam));
         }
         if (WParam == VK_ESCAPE)
         {
@@ -519,15 +519,15 @@ LRESULT CALLBACK WindowProc(HWND WindowHandle, UINT Message, WPARAM WParam, LPAR
     case WM_KEYUP:
         if (inputMgr)
         {
-            inputMgr->ProcessKeyUp(static_cast<uint32_t>(WParam));
+            inputMgr->ProcessKeyUp(static_cast<uint32>(WParam));
         }
         break;
 
     case WM_MOUSEMOVE:
         if (inputMgr)
         {
-            int32_t x = static_cast<int32_t>(LOWORD(LParam));
-            int32_t y = static_cast<int32_t>(HIWORD(LParam));
+            int32 x = static_cast<int32>(LOWORD(LParam));
+            int32 y = static_cast<int32>(HIWORD(LParam));
             inputMgr->ProcessMouseMove(x, y);
         }
         break;
@@ -579,7 +579,7 @@ LRESULT CALLBACK WindowProc(HWND WindowHandle, UINT Message, WPARAM WParam, LPAR
     case WM_MOUSEWHEEL:
         if (inputMgr)
         {
-            int32_t wheelDelta = GET_WHEEL_DELTA_WPARAM(WParam);
+            int32 wheelDelta = GET_WHEEL_DELTA_WPARAM(WParam);
             inputMgr->ProcessMouseWheel(wheelDelta);
         }
         break;

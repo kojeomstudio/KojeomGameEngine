@@ -1105,7 +1105,7 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
             return normalize(mul(tangentNormal, TBN));
         }
 
-        float3 CalculatePBRLighting(float3 N, float3 V, float3 albedo, float metallic, float roughness, float ao, float shadow)
+        float3 CalculatePBRLighting(float3 N, float3 V, float3 worldPos, float3 albedo, float metallic, float roughness, float ao, float shadow)
         {
             float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
 
@@ -1137,7 +1137,7 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
             {
                 if (i >= NumPointLights) break;
 
-                float3 lightDir = PointLights[i].Position - input.WorldPos;
+                float3 lightDir = PointLights[i].Position - worldPos;
                 float distance = length(lightDir);
 
                 if (distance > PointLights[i].Radius) continue;
@@ -1170,7 +1170,7 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
             {
                 if (j >= NumSpotLights) break;
 
-                float3 lightDir = SpotLights[j].Position - input.WorldPos;
+                float3 lightDir = SpotLights[j].Position - worldPos;
                 float distance = length(lightDir);
 
                 if (distance > SpotLights[j].Radius) continue;
@@ -1247,7 +1247,7 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
 
             float shadow = CalculateShadow(input.ShadowPos);
 
-            float3 color = CalculatePBRLighting(normal, V, albedo, metallic, roughness, ao, shadow);
+            float3 color = CalculatePBRLighting(normal, V, input.WorldPos, albedo, metallic, roughness, ao, shadow);
 
             float3 emissive = EmissiveMap.Sample(MaterialSampler, input.TexCoord).rgb * EmissiveColor.rgb * EmissiveIntensity;
             color += emissive;

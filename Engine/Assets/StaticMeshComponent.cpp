@@ -1,5 +1,6 @@
 #include "StaticMeshComponent.h"
 #include "../Graphics/Renderer.h"
+#include <algorithm>
 
 KStaticMeshComponent::KStaticMeshComponent()
 {
@@ -39,11 +40,16 @@ void KStaticMeshComponent::Serialize(KBinaryArchive& Archive)
     KActorComponent::Serialize(Archive);
 
     std::string meshPath;
+    std::string meshSourcePath;
     if (StaticMesh)
     {
         meshPath = StaticMesh->GetName();
+        std::wstring ws = StaticMesh->GetSourcePath();
+        meshSourcePath.resize(ws.size());
+        std::transform(ws.begin(), ws.end(), meshSourcePath.begin(), [](wchar_t c) { return static_cast<char>(c); });
     }
     Archive << meshPath;
+    Archive << meshSourcePath;
     Archive << bCastShadow;
 
     if (Material)
@@ -68,7 +74,9 @@ void KStaticMeshComponent::Deserialize(KBinaryArchive& Archive)
     KActorComponent::Deserialize(Archive);
 
     std::string meshPath;
+    std::string meshSourcePath;
     Archive >> meshPath;
+    Archive >> meshSourcePath;
     Archive >> bCastShadow;
 
     if (Material)
@@ -96,6 +104,13 @@ void KStaticMeshComponent::Deserialize(KBinaryArchive& Archive)
     {
         auto mesh = std::make_shared<KStaticMesh>();
         mesh->SetName(meshPath);
+        if (!meshSourcePath.empty())
+        {
+            std::wstring ws;
+            ws.resize(meshSourcePath.size());
+            std::transform(meshSourcePath.begin(), meshSourcePath.end(), ws.begin(), [](char c) { return static_cast<wchar_t>(c); });
+            mesh->SetSourcePath(ws);
+        }
         StaticMesh = mesh;
     }
 }
