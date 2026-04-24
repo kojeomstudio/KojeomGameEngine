@@ -516,6 +516,8 @@ void KAnimationStateMachine::EvaluateState(KAnimationState* State, float Weight,
 
     auto* Animation = State->GetAnimation().get();
     float CurrentTime = State->GetCurrentTime();
+    float TicksPerSecond = Animation->GetTicksPerSecond();
+    float TimeInTicks = CurrentTime * TicksPerSecond;
     
     uint32 BoneCount = Skeleton->GetBoneCount();
     OutMatrices.resize(BoneCount);
@@ -536,9 +538,9 @@ void KAnimationStateMachine::EvaluateState(KAnimationState* State, float Weight,
 
         if (Channel)
         {
-            Position = Channel->InterpolatePosition(CurrentTime);
-            Rotation = Channel->InterpolateRotation(CurrentTime);
-            Scale = Channel->InterpolateScale(CurrentTime);
+            Position = Channel->InterpolatePosition(TimeInTicks);
+            Rotation = Channel->InterpolateRotation(TimeInTicks);
+            Scale = Channel->InterpolateScale(TimeInTicks);
         }
         else
         {

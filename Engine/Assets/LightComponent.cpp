@@ -34,6 +34,24 @@ void KLightComponent::Tick(float DeltaTime)
     }
 }
 
+void KLightComponent::Render(KRenderer* Renderer)
+{
+    if (!Renderer) return;
+
+    switch (LightType)
+    {
+    case ELightType::Directional:
+        Renderer->SetDirectionalLight(DirectionalLight);
+        break;
+    case ELightType::Point:
+        Renderer->AddPointLight(PointLight);
+        break;
+    case ELightType::Spot:
+        Renderer->AddSpotLight(SpotLight);
+        break;
+    }
+}
+
 void KLightComponent::SetIntensity(float InIntensity)
 {
     switch (LightType)

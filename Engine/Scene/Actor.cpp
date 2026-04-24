@@ -95,6 +95,30 @@ void KActor::SetParent(KActor* InParent)
     }
 
     Parent = InParent;
+
+    if (InParent)
+    {
+        bool bAlreadyInParent = false;
+        for (const auto& child : InParent->Children)
+        {
+            if (child.get() == this)
+            {
+                bAlreadyInParent = true;
+                break;
+            }
+        }
+        if (!bAlreadyInParent)
+        {
+            try
+            {
+                InParent->Children.push_back(shared_from_this());
+            }
+            catch (const std::bad_weak_ptr&)
+            {
+                LOG_WARNING("SetParent: actor not managed by shared_ptr, cannot add to parent's children");
+            }
+        }
+    }
 }
 
 void KActor::AddChild(ActorPtr Child)

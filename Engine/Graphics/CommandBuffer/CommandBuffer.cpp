@@ -279,6 +279,7 @@ void KCommandBuffer::ExecuteCommand(ID3D11DeviceContext* Context, const FRenderC
     case ERenderCommandType::Draw:
         if (Command.Mesh)
         {
+            if (Command.Shader) Command.Shader->Bind(Context);
             pVertexBuffer = Command.Mesh->GetVertexBuffer();
             Context->IASetVertexBuffers(0, 1, &pVertexBuffer, &Stride, &Offset);
             Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -289,6 +290,7 @@ void KCommandBuffer::ExecuteCommand(ID3D11DeviceContext* Context, const FRenderC
     case ERenderCommandType::DrawIndexed:
         if (Command.Mesh)
         {
+            if (Command.Shader) Command.Shader->Bind(Context);
             pVertexBuffer = Command.Mesh->GetVertexBuffer();
             pIndexBuffer = Command.Mesh->GetIndexBuffer();
             Context->IASetVertexBuffers(0, 1, &pVertexBuffer, &Stride, &Offset);
@@ -301,6 +303,7 @@ void KCommandBuffer::ExecuteCommand(ID3D11DeviceContext* Context, const FRenderC
     case ERenderCommandType::DrawInstanced:
         if (Command.Mesh)
         {
+            if (Command.Shader) Command.Shader->Bind(Context);
             pVertexBuffer = Command.Mesh->GetVertexBuffer();
             Context->IASetVertexBuffers(0, 1, &pVertexBuffer, &Stride, &Offset);
             Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -312,6 +315,7 @@ void KCommandBuffer::ExecuteCommand(ID3D11DeviceContext* Context, const FRenderC
     case ERenderCommandType::DrawIndexedInstanced:
         if (Command.Mesh)
         {
+            if (Command.Shader) Command.Shader->Bind(Context);
             pVertexBuffer = Command.Mesh->GetVertexBuffer();
             pIndexBuffer = Command.Mesh->GetIndexBuffer();
             Context->IASetVertexBuffers(0, 1, &pVertexBuffer, &Stride, &Offset);

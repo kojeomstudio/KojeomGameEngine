@@ -296,7 +296,14 @@ void KAnimation::Deserialize(KBinaryArchive& Archive)
     
     uint32 channelCount;
     Archive >> channelCount;
-    
+
+    static constexpr uint32 MAX_CHANNELS = 1000;
+    if (channelCount > MAX_CHANNELS)
+    {
+        LOG_ERROR("Animation channel count exceeds maximum: " + std::to_string(channelCount));
+        return;
+    }
+
     Channels.resize(channelCount);
     
     for (uint32 i = 0; i < channelCount; ++i)

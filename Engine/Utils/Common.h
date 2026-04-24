@@ -92,10 +92,19 @@ namespace PathUtils
             return true;
         }
 
-        if (normalized.size() >= 2 && normalized[normalized.size() - 1] == L'.' &&
-            normalized.size() >= 3 && normalized[normalized.size() - 2] == L'.')
+        if (normalized == L"..")
         {
             return true;
+        }
+
+        if (normalized.size() >= 2 && normalized[normalized.size() - 1] == L'.' &&
+            normalized[normalized.size() - 2] == L'.')
+        {
+            size_t pos = normalized.size() - 2;
+            if (pos == 0 || normalized[pos - 1] == L'\\')
+            {
+                return true;
+            }
         }
 
         if (normalized.size() >= 2 && normalized[0] == L'\\' && normalized[1] == L'\\')
@@ -139,6 +148,7 @@ namespace PathUtils
 
         size_t basePathLen = wcslen(resolvedBase);
         if (wcsncmp(fullPath, resolvedBase, basePathLen) != 0) return false;
+        if (basePathLen > 0 && fullPath[basePathLen] != L'\\' && fullPath[basePathLen] != L'\0') return false;
 
         return true;
     }

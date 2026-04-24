@@ -18,6 +18,7 @@ public:
     virtual ~KLightComponent() = default;
 
     virtual void Tick(float DeltaTime) override;
+    virtual void Render(class KRenderer* Renderer) override;
 
     void SetLightType(ELightType InType) { LightType = InType; }
     ELightType GetLightType() const { return LightType; }

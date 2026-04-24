@@ -51,7 +51,7 @@ protected:
     KActor* Owner = nullptr;
 };
 
-class KActor
+class KActor : public std::enable_shared_from_this<KActor>
 {
 public:
     KActor() = default;

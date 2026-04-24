@@ -38,6 +38,11 @@ void FBone::Deserialize(KBinaryArchive& Archive)
 
 uint32 KSkeleton::AddBone(const FBone& Bone)
 {
+    if (Bones.size() >= MAX_BONES)
+    {
+        LOG_ERROR("Cannot add bone: maximum bone count (" + std::to_string(MAX_BONES) + ") reached");
+        return INVALID_BONE_INDEX;
+    }
     uint32 index = static_cast<uint32>(Bones.size());
     Bones.push_back(Bone);
     BoneNameToIndex[Bone.Name] = index;

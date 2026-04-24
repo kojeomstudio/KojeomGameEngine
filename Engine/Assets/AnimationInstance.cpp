@@ -181,9 +181,11 @@ void KAnimationInstance::EvaluateAnimation()
         
         if (channel)
         {
-            XMFLOAT3 pos = channel->InterpolatePosition(CurrentState.CurrentTime);
-            XMFLOAT4 rot = channel->InterpolateRotation(CurrentState.CurrentTime);
-            XMFLOAT3 scale = channel->InterpolateScale(CurrentState.CurrentTime);
+            float ticksPerSecond = CurrentState.Animation->GetTicksPerSecond();
+            float timeInTicks = CurrentState.CurrentTime * ticksPerSecond;
+            XMFLOAT3 pos = channel->InterpolatePosition(timeInTicks);
+            XMFLOAT4 rot = channel->InterpolateRotation(timeInTicks);
+            XMFLOAT3 scale = channel->InterpolateScale(timeInTicks);
 
             XMVECTOR posVec = XMLoadFloat3(&pos);
             XMVECTOR rotVec = XMLoadFloat4(&rot);

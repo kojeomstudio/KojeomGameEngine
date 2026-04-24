@@ -15,6 +15,7 @@
 struct FLoadedModel
 {
     std::shared_ptr<KStaticMesh> StaticMesh;
+    std::vector<std::shared_ptr<KStaticMesh>> SubMeshes;
     std::shared_ptr<KSkeletalMesh> SkeletalMesh;
     std::shared_ptr<KSkeleton> Skeleton;
     std::vector<std::shared_ptr<KAnimation>> Animations;

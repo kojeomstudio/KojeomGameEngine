@@ -383,6 +383,7 @@ void KRenderer::SetPointLight(UINT32 Index, const FPointLight& Light)
     if (Index < PointLights.size())
     {
         PointLights[Index] = Light;
+        SyncLightsToDeferred();
     }
 }
 
@@ -425,6 +426,7 @@ void KRenderer::SetSpotLight(UINT32 Index, const FSpotLight& Light)
     if (Index < SpotLights.size())
     {
         SpotLights[Index] = Light;
+        SyncLightsToDeferred();
     }
 }
 

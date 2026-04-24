@@ -141,10 +141,9 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& P
         return GetLoadedModel(Path);
     }
 
-    std::packaged_task<std::shared_ptr<FLoadedModel>()> task(
-        [this, Path, Options]() { return this->LoadModel(Path, Options); });
-    auto future = task.get_future();
-    std::thread(std::move(task)).detach();
+    auto future = std::async(std::launch::async, [this, Path, Options]() {
+        return this->LoadModel(Path, Options);
+    });
     return future.get();
 }
 
@@ -739,61 +738,8 @@ HRESULT KModelLoader::ParseGLTFJson(const std::string& JsonContent, const std::w
     std::string buffersJson = findJsonArray(JsonContent, "buffers");
     std::string meshesJson = findJsonArray(JsonContent, "meshes");
 
-    LOG_INFO("GLTF parsed JSON structure - attempting basic geometry extraction");
-    LOG_WARNING("GLTF fallback loader only supports basic geometry. Install Assimp for full GLTF/GLB support.");
-
-    // Create a visible placeholder unit cube so the model is at least visible in the viewport
-    auto mesh = std::make_shared<KStaticMesh>();
-    mesh->SetName(OutModel->Name);
-
-    float s = Options.Scale * 0.5f;
-    std::vector<FVertex> vertices;
-    std::vector<uint32> indices;
-
-    // Front face
-    vertices.push_back({XMFLOAT3(-s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, 1), XMFLOAT2(0, 1)});
-    vertices.push_back({XMFLOAT3( s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, 1), XMFLOAT2(1, 1)});
-    vertices.push_back({XMFLOAT3( s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, 1), XMFLOAT2(1, 0)});
-    vertices.push_back({XMFLOAT3(-s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, 1), XMFLOAT2(0, 0)});
-    // Back face
-    vertices.push_back({XMFLOAT3( s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, -1), XMFLOAT2(0, 1)});
-    vertices.push_back({XMFLOAT3(-s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, -1), XMFLOAT2(1, 1)});
-    vertices.push_back({XMFLOAT3(-s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, -1), XMFLOAT2(1, 0)});
-    vertices.push_back({XMFLOAT3( s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 0, -1), XMFLOAT2(0, 0)});
-    // Top face
-    vertices.push_back({XMFLOAT3(-s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 1, 0), XMFLOAT2(0, 1)});
-    vertices.push_back({XMFLOAT3( s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 1, 0), XMFLOAT2(1, 1)});
-    vertices.push_back({XMFLOAT3( s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 1, 0), XMFLOAT2(1, 0)});
-    vertices.push_back({XMFLOAT3(-s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, 1, 0), XMFLOAT2(0, 0)});
-    // Bottom face
-    vertices.push_back({XMFLOAT3(-s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, -1, 0), XMFLOAT2(0, 1)});
-    vertices.push_back({XMFLOAT3( s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, -1, 0), XMFLOAT2(1, 1)});
-    vertices.push_back({XMFLOAT3( s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, -1, 0), XMFLOAT2(1, 0)});
-    vertices.push_back({XMFLOAT3(-s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(0, -1, 0), XMFLOAT2(0, 0)});
-    // Right face
-    vertices.push_back({XMFLOAT3( s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(1, 0, 0), XMFLOAT2(0, 1)});
-    vertices.push_back({XMFLOAT3( s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(1, 0, 0), XMFLOAT2(1, 1)});
-    vertices.push_back({XMFLOAT3( s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(1, 0, 0), XMFLOAT2(1, 0)});
-    vertices.push_back({XMFLOAT3( s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(1, 0, 0), XMFLOAT2(0, 0)});
-    // Left face
-    vertices.push_back({XMFLOAT3(-s, -s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(-1, 0, 0), XMFLOAT2(0, 1)});
-    vertices.push_back({XMFLOAT3(-s, -s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(-1, 0, 0), XMFLOAT2(1, 1)});
-    vertices.push_back({XMFLOAT3(-s,  s,  s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(-1, 0, 0), XMFLOAT2(1, 0)});
-    vertices.push_back({XMFLOAT3(-s,  s, -s), XMFLOAT4(0.8f, 0.8f, 0.8f, 1), XMFLOAT3(-1, 0, 0), XMFLOAT2(0, 0)});
-
-    for (uint32 face = 0; face < 6; ++face)
-    {
-        uint32 base = face * 4;
-        indices.push_back(base); indices.push_back(base + 1); indices.push_back(base + 2);
-        indices.push_back(base); indices.push_back(base + 2); indices.push_back(base + 3);
-    }
-
-    mesh->AddLOD(vertices, indices);
-    mesh->CalculateBounds();
-
-    OutModel->StaticMesh = mesh;
-    
-    return S_OK;
+    LOG_WARNING("GLTF fallback loader does not support binary geometry extraction. Use Assimp for full GLTF/GLB support.");
+    return E_NOTIMPL;
 }
 
 void KModelLoader::ProcessNode(void* AssimpNode, void* AssimpScene, FLoadedModel* OutModel, const FModelLoadOptions& Options)
@@ -814,8 +760,8 @@ void KModelLoader::ProcessNode(void* AssimpNode, void* AssimpScene, FLoadedModel
             }
             else
             {
-                staticMesh->SetName(OutModel->StaticMesh->GetName() + "_sub" + std::to_string(i));
-                LOG_WARNING("Multiple meshes detected; only first mesh is stored as primary StaticMesh");
+                staticMesh->SetName(OutModel->StaticMesh->GetName() + "_sub" + std::to_string(OutModel->SubMeshes.size()));
+                OutModel->SubMeshes.push_back(staticMesh);
             }
         }
     }
