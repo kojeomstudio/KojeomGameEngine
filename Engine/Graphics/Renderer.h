@@ -9,6 +9,7 @@
 #include "Texture.h"
 #include "Light.h"
 #include "Material.h"
+#include "RenderModule.h"
 #include "Shadow/ShadowRenderer.h"
 #include "Shadow/CascadedShadowRenderer.h"
 #include "Deferred/DeferredRenderer.h"
@@ -230,6 +231,15 @@ public:
     KIBLSystem* GetIBLSystem() { return &IBLSystem; }
     HRESULT LoadEnvironmentMap(const std::wstring& HDRPath);
 
+    KRenderModuleRegistry& GetModuleRegistry() { return ModuleRegistry; }
+    const KRenderModuleRegistry& GetModuleRegistry() const { return ModuleRegistry; }
+
+    template<typename T>
+    T* GetRenderModule()
+    {
+        return ModuleRegistry.GetModule<T>();
+    }
+
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
@@ -315,4 +325,6 @@ private:
     KIBLSystem IBLSystem;
     bool bCascadedShadowsEnabled = false;
     bool bIBLEnabled = false;
+
+    KRenderModuleRegistry ModuleRegistry;
 };

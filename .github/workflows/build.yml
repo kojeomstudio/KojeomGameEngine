@@ -43,6 +43,21 @@ jobs:
         run: msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /t:Engine;EngineInterop /v:minimal
         shell: cmd
 
+      - name: Verify build outputs
+        shell: pwsh
+        run: |
+          $config = "${{ matrix.configuration }}"
+          $engineLib = "lib/x64/$config/Engine.lib"
+          $interopDll = "Editor/EngineInterop/bin/x64/$config/EngineInterop.dll"
+          $missing = @()
+          if (-not (Test-Path $engineLib)) { $missing += $engineLib }
+          if (-not (Test-Path $interopDll)) { $missing += $interopDll }
+          if ($missing.Count -gt 0) {
+            Write-Error "Missing build outputs: $($missing -join ', ')"
+            exit 1
+          }
+          Write-Host "All build outputs verified successfully"
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -73,6 +88,22 @@ jobs:
         with:
           name: engine-interop-${{ matrix.configuration }}
           path: .
+
+      - name: Verify downloaded artifacts
+        shell: pwsh
+        run: |
+          $config = "${{ matrix.configuration }}"
+          $engineLib = "lib/x64/$config/Engine.lib"
+          $interopDll = "Editor/EngineInterop/bin/x64/$config/EngineInterop.dll"
+          if (-not (Test-Path $engineLib)) {
+            Write-Error "Engine.lib not found at $engineLib"
+            exit 1
+          }
+          if (-not (Test-Path $interopDll)) {
+            Write-Error "EngineInterop.dll not found at $interopDll"
+            exit 1
+          }
+          Write-Host "Artifacts verified: $engineLib, $interopDll"
 
       - name: Build all samples
         run: |
