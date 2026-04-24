@@ -140,6 +140,7 @@ HRESULT KMesh::InitializeFromBuffer(ID3D11Buffer* InVertexBuffer, UINT32 InVerte
         return E_INVALIDARG;
     }
 
+    InVertexBuffer->AddRef();
     VertexBuffer = InVertexBuffer;
     VertexCount = InVertexCount;
     IndexCount = 0;
@@ -158,7 +159,12 @@ HRESULT KMesh::InitializeFromBuffers(ID3D11Device* Device,
         return E_INVALIDARG;
     }
 
+    InVertexBuffer->AddRef();
     VertexBuffer = InVertexBuffer;
+    if (InIndexBuffer)
+    {
+        InIndexBuffer->AddRef();
+    }
     IndexBuffer = InIndexBuffer;
     VertexCount = InVertexCount;
     IndexCount = InIndexCount;

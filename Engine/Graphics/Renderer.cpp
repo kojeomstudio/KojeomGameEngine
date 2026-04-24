@@ -251,7 +251,11 @@ void KRenderer::RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
             D3D11_SUBRESOURCE_DATA initData = {};
             initData.pSysMem = &DefaultParams;
 
-            GraphicsDevice->GetDevice()->CreateBuffer(&desc, &initData, &DefaultMaterialBuffer);
+            HRESULT bufHR = GraphicsDevice->GetDevice()->CreateBuffer(&desc, &initData, &DefaultMaterialBuffer);
+            if (FAILED(bufHR))
+            {
+                LOG_ERROR("Failed to create default material buffer");
+            }
         }
         if (DefaultMaterialBuffer)
         {
@@ -361,6 +365,7 @@ void KRenderer::RemovePointLight(UINT32 Index)
     if (Index < PointLights.size())
     {
         PointLights.erase(PointLights.begin() + Index);
+        SyncLightsToDeferred();
     }
 }
 
@@ -402,6 +407,7 @@ void KRenderer::RemoveSpotLight(UINT32 Index)
     if (Index < SpotLights.size())
     {
         SpotLights.erase(SpotLights.begin() + Index);
+        SyncLightsToDeferred();
     }
 }
 
@@ -1074,10 +1080,12 @@ void KRenderer::SetRenderPath(ERenderPath Path)
     if (Path == ERenderPath::Deferred)
     {
         DeferredRenderer.SetDirectionalLight(DirectionalLight);
+        DeferredRenderer.ClearPointLights();
         for (const auto& Light : PointLights)
         {
             DeferredRenderer.AddPointLight(Light);
         }
+        DeferredRenderer.ClearSpotLights();
         for (const auto& Light : SpotLights)
         {
             DeferredRenderer.AddSpotLight(Light);

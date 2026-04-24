@@ -89,14 +89,14 @@ public:
     void ClearPointLights();
     void SetPointLight(UINT32 Index, const FPointLight& Light);
     UINT32 GetNumPointLights() const { return static_cast<UINT32>(PointLights.size()); }
-    const FPointLight& GetPointLight(UINT32 Index) const { return PointLights[Index]; }
+    const FPointLight& GetPointLight(UINT32 Index) const { return PointLights.at(Index); }
 
     void AddSpotLight(const FSpotLight& Light);
     void RemoveSpotLight(UINT32 Index);
     void ClearSpotLights();
     void SetSpotLight(UINT32 Index, const FSpotLight& Light);
     UINT32 GetNumSpotLights() const { return static_cast<UINT32>(SpotLights.size()); }
-    const FSpotLight& GetSpotLight(UINT32 Index) const { return SpotLights[Index]; }
+    const FSpotLight& GetSpotLight(UINT32 Index) const { return SpotLights.at(Index); }
 
     void ClearAllLights();
 

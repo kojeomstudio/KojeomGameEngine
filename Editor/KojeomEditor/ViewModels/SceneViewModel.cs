@@ -175,10 +175,6 @@ public class SceneViewModel : ViewModelBase
             Actors.Remove(actor);
         }
 
-        if (_engine != null && _engine.IsInitialized && actor.NativePtr != IntPtr.Zero && _activeScenePtr != IntPtr.Zero)
-        {
-            _engine.DestroyActor(_activeScenePtr, actor.NativePtr);
-        }
         if (SelectedActor == actor)
         {
             SelectedActor = null;
@@ -293,7 +289,9 @@ public class SceneViewModel : ViewModelBase
         if (_engine == null || !_engine.IsInitialized) return;
         if (parent.NativePtr == IntPtr.Zero || child.NativePtr == IntPtr.Zero) return;
 
-        _engine.AddChild(parent.NativePtr, child.NativePtr);
+        bool success = _engine.AddChild(parent.NativePtr, child.NativePtr);
+        if (!success) return;
+
         Actors.Remove(child);
         child.Parent = parent;
         parent.Children.Add(child);

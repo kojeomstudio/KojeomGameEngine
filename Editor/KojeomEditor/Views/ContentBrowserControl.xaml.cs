@@ -213,10 +213,16 @@ public partial class ContentBrowserControl : UserControl
             var destPath = Path.Combine(CurrentFolder, Path.GetFileName(dialog.FileName));
             try
             {
+                if (File.Exists(destPath))
+                {
+                    var result = MessageBox.Show($"File '{Path.GetFileName(destPath)}' already exists. Overwrite?",
+                        "Confirm Overwrite", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result != MessageBoxResult.Yes) return;
+                }
                 File.Copy(dialog.FileName, destPath, true);
                 RefreshAssets();
             }
-            catch { }
+            catch (Exception ex) { MessageBox.Show($"Import failed: {ex.Message}", "Error"); }
         }
     }
 

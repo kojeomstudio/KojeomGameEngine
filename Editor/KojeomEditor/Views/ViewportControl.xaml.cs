@@ -458,10 +458,6 @@ public partial class ViewportControl : UserControl
         {
             PropertiesViewModel.SetSelectedActor(actor);
         }
-        if (_engine != null && actor != null && actor.NativePtr != IntPtr.Zero)
-        {
-            _engine.SetActorPosition(actor.NativePtr, actor.PositionX, actor.PositionY, actor.PositionZ);
-        }
         ActorSelected?.Invoke(this, actor);
     }
 

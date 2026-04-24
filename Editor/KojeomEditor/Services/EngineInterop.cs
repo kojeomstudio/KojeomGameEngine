@@ -659,10 +659,11 @@ public class EngineInterop : IDisposable
         return ptr != IntPtr.Zero ? Marshal.PtrToStringAnsi(ptr) : null;
     }
 
-    public void AddChild(IntPtr parent, IntPtr child)
+    public bool AddChild(IntPtr parent, IntPtr child)
     {
         if (parent != IntPtr.Zero && child != IntPtr.Zero)
-            Actor_AddChild(parent, child);
+            return Actor_AddChild(parent, child);
+        return false;
     }
 
     public int GetChildCount(IntPtr actor)

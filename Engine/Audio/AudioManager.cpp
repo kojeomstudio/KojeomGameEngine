@@ -530,15 +530,10 @@ float KAudioManager::GetSoundCurrentTime(uint32_t VoiceId) const
         XAUDIO2_VOICE_STATE State;
         It->second.SourceVoice->GetState(&State);
         
-        float BytesPerSecond = static_cast<float>(It->second.Sound->GetSampleRate() * 
-                                                   It->second.Sound->GetChannels() * 
-                                                   (It->second.Sound->GetBitsPerSample() / 8));
-        if (BytesPerSecond > 0)
+        uint32_t SampleRate = It->second.Sound->GetSampleRate();
+        if (SampleRate > 0)
         {
-            float BytesPlayed = static_cast<float>(State.SamplesPlayed) * 
-                               It->second.Sound->GetChannels() * 
-                               (It->second.Sound->GetBitsPerSample() / 8);
-            return BytesPlayed / BytesPerSecond;
+            return static_cast<float>(State.SamplesPlayed) / static_cast<float>(SampleRate);
         }
     }
     return 0.0f;

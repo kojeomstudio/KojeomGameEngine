@@ -585,12 +585,89 @@ std::vector<FPhysicsRaycastHit> KPhysicsWorld::RaycastAll(const XMFLOAT3& Origin
     for (const auto& Pair : Bodies)
     {
         FPhysicsRaycastHit Hit;
-        if (Raycast(Origin, Direction, MaxDistance, Hit))
+        Hit.Distance = MaxDistance;
+        Hit.bHit = false;
+
+        const KRigidBody* Body = Pair.second.get();
+        XMVECTOR RayOrigin = XMLoadFloat3(&Origin);
+        XMVECTOR RayDir = XMVector3Normalize(XMLoadFloat3(&Direction));
+
+        bool bHit = false;
+        if (Body->GetColliderType() == EColliderType::Sphere)
         {
-            if (Hit.BodyId == Pair.first)
+            XMFLOAT3 SpherePos = Body->GetPosition();
+            XMVECTOR SphereCenter = XMLoadFloat3(&SpherePos);
+            float Radius = Body->GetSphereRadius();
+            XMVECTOR ToSphere = SphereCenter - RayOrigin;
+            float tca = XMVectorGetX(XMVector3Dot(ToSphere, RayDir));
+            if (tca >= 0.0f)
             {
-                Hits.push_back(Hit);
+                float d2 = XMVectorGetX(XMVector3LengthSq(ToSphere)) - tca * tca;
+                float Radius2 = Radius * Radius;
+                if (d2 <= Radius2)
+                {
+                    float thc = sqrtf(Radius2 - d2);
+                    float t = tca - thc;
+                    if (t > 0.0f)
+                    {
+                        Hit.bHit = true;
+                        Hit.Distance = t;
+                        Hit.BodyId = Body->GetBodyId();
+                        XMVECTOR HitPoint = RayOrigin + RayDir * t;
+                        XMVECTOR Normal = XMVector3Normalize(HitPoint - SphereCenter);
+                        XMStoreFloat3(&Hit.Point, HitPoint);
+                        XMStoreFloat3(&Hit.Normal, Normal);
+                        bHit = true;
+                    }
+                }
             }
+        }
+        else if (Body->GetColliderType() == EColliderType::Box)
+        {
+            XMFLOAT3 BoxPos = Body->GetPosition();
+            XMFLOAT3 BoxHalfExtents = Body->GetBoxHalfExtents();
+            XMFLOAT3 BoxMinF = XMFLOAT3(BoxPos.x - BoxHalfExtents.x, BoxPos.y - BoxHalfExtents.y, BoxPos.z - BoxHalfExtents.z);
+            XMFLOAT3 BoxMaxF = XMFLOAT3(BoxPos.x + BoxHalfExtents.x, BoxPos.y + BoxHalfExtents.y, BoxPos.z + BoxHalfExtents.z);
+            XMVECTOR BoxMin = XMLoadFloat3(&BoxMinF);
+            XMVECTOR BoxMax = XMLoadFloat3(&BoxMaxF);
+            XMVECTOR InvDir = XMVectorReciprocal(RayDir);
+            XMVECTOR T1 = (BoxMin - RayOrigin) * InvDir;
+            XMVECTOR T2 = (BoxMax - RayOrigin) * InvDir;
+            XMVECTOR TMin = XMVectorMin(T1, T2);
+            XMVECTOR TMax = XMVectorMax(T1, T2);
+            float tNear = XMMax(XMMax(XMVectorGetX(TMin), XMVectorGetY(TMin)), XMVectorGetZ(TMin));
+            float tFar = XMMin(XMMin(XMVectorGetX(TMax), XMVectorGetY(TMax)), XMVectorGetZ(TMax));
+            if (!(tNear > tFar || tFar < 0.0f))
+            {
+                float t = tNear > 0.0f ? tNear : tFar;
+                if (t > 0.0f)
+                {
+                    Hit.bHit = true;
+                    Hit.Distance = t;
+                    Hit.BodyId = Body->GetBodyId();
+                    XMVECTOR HitPoint = RayOrigin + RayDir * t;
+                    XMStoreFloat3(&Hit.Point, HitPoint);
+                    XMVECTOR Center = XMLoadFloat3(&BoxPos);
+                    XMVECTOR HalfExtents = XMLoadFloat3(&BoxHalfExtents);
+                    XMVECTOR LocalPoint = (HitPoint - Center) / HalfExtents;
+                    XMFLOAT3 Local;
+                    XMStoreFloat3(&Local, LocalPoint);
+                    XMFLOAT3 Normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
+                    if (fabsf(Local.x) > fabsf(Local.y) && fabsf(Local.x) > fabsf(Local.z))
+                        Normal.x = Local.x > 0 ? 1.0f : -1.0f;
+                    else if (fabsf(Local.y) > fabsf(Local.z))
+                        Normal.y = Local.y > 0 ? 1.0f : -1.0f;
+                    else
+                        Normal.z = Local.z > 0 ? 1.0f : -1.0f;
+                    Hit.Normal = Normal;
+                    bHit = true;
+                }
+            }
+        }
+
+        if (bHit)
+        {
+            Hits.push_back(Hit);
         }
     }
 

@@ -624,10 +624,45 @@ extern "C"
         auto staticMesh = std::make_shared<KStaticMesh>();
         std::vector<FVertex> vertices;
         std::vector<uint32> indices;
-        for (uint32 i = 0; i < 24; ++i)
-        {
-            vertices.push_back(FVertex());
-        }
+
+        float Size = 0.5f;
+        FVertex CubeVerts[] = {
+            FVertex(XMFLOAT3(-Size, Size, -Size), XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,1,0), XMFLOAT2(0,0)),
+            FVertex(XMFLOAT3(Size, Size, -Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,1,0), XMFLOAT2(1,0)),
+            FVertex(XMFLOAT3(Size, Size, Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,1,0), XMFLOAT2(1,1)),
+            FVertex(XMFLOAT3(-Size, Size, Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,1,0), XMFLOAT2(0,1)),
+            FVertex(XMFLOAT3(-Size,-Size, Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,-1,0), XMFLOAT2(0,0)),
+            FVertex(XMFLOAT3(Size,-Size, Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,-1,0), XMFLOAT2(1,0)),
+            FVertex(XMFLOAT3(Size,-Size,-Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,-1,0), XMFLOAT2(1,1)),
+            FVertex(XMFLOAT3(-Size,-Size,-Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,-1,0), XMFLOAT2(0,1)),
+            FVertex(XMFLOAT3(-Size, Size,-Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,0,-1), XMFLOAT2(0,0)),
+            FVertex(XMFLOAT3(Size, Size,-Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,0,-1), XMFLOAT2(1,0)),
+            FVertex(XMFLOAT3(Size,-Size,-Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,0,-1), XMFLOAT2(1,1)),
+            FVertex(XMFLOAT3(-Size,-Size,-Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,0,-1), XMFLOAT2(0,1)),
+            FVertex(XMFLOAT3(Size, Size, Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,0,1), XMFLOAT2(0,0)),
+            FVertex(XMFLOAT3(-Size, Size, Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,0,1), XMFLOAT2(1,0)),
+            FVertex(XMFLOAT3(-Size,-Size, Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,0,1), XMFLOAT2(1,1)),
+            FVertex(XMFLOAT3(Size,-Size, Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(0,0,1), XMFLOAT2(0,1)),
+            FVertex(XMFLOAT3(-Size, Size, Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(-1,0,0), XMFLOAT2(0,0)),
+            FVertex(XMFLOAT3(-Size, Size,-Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(-1,0,0), XMFLOAT2(1,0)),
+            FVertex(XMFLOAT3(-Size,-Size,-Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(-1,0,0), XMFLOAT2(1,1)),
+            FVertex(XMFLOAT3(-Size,-Size, Size),  XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(-1,0,0), XMFLOAT2(0,1)),
+            FVertex(XMFLOAT3(Size, Size,-Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(1,0,0), XMFLOAT2(0,0)),
+            FVertex(XMFLOAT3(Size, Size, Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(1,0,0), XMFLOAT2(1,0)),
+            FVertex(XMFLOAT3(Size,-Size, Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(1,0,0), XMFLOAT2(1,1)),
+            FVertex(XMFLOAT3(Size,-Size,-Size),   XMFLOAT4(0.8f,0.8f,0.8f,1), XMFLOAT3(1,0,0), XMFLOAT2(0,1)),
+        };
+        uint32 CubeIndices[] = {
+            0,2,1, 3,2,0,
+            4,6,5, 4,7,6,
+            8,9,10, 8,10,11,
+            12,13,14, 12,14,15,
+            16,17,18, 16,18,19,
+            20,21,22, 20,22,23,
+        };
+        for (auto& v : CubeVerts) vertices.push_back(v);
+        for (auto idx : CubeIndices) indices.push_back(idx);
+
         staticMesh->AddLOD(vertices, indices);
         smc->SetStaticMesh(staticMesh);
         return staticMesh.get();

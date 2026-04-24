@@ -416,6 +416,10 @@ void KUICanvas::AddElement(std::shared_ptr<KUIElement> Element)
 
 void KUICanvas::RemoveElement(std::shared_ptr<KUIElement> Element)
 {
+    if (!Element) return;
+    if (HoveredElement == Element.get()) HoveredElement = nullptr;
+    if (FocusedElement == Element.get()) FocusedElement = nullptr;
+    if (PressedElement == Element.get()) PressedElement = nullptr;
     Elements.remove(Element);
 }
 

@@ -140,6 +140,22 @@ jobs:
           name: engine-interop-${{ matrix.configuration }}
           path: .
 
+      - name: Verify downloaded artifacts
+        shell: pwsh
+        run: |
+          $config = "${{ matrix.configuration }}"
+          $engineLib = "lib/x64/$config/Engine.lib"
+          $interopDll = "Editor/EngineInterop/bin/x64/$config/EngineInterop.dll"
+          if (-not (Test-Path $engineLib)) {
+            Write-Error "Engine.lib not found at $engineLib"
+            exit 1
+          }
+          if (-not (Test-Path $interopDll)) {
+            Write-Error "EngineInterop.dll not found at $interopDll"
+            exit 1
+          }
+          Write-Host "Artifacts verified: $engineLib, $interopDll"
+
       - name: Restore Dependencies
         run: dotnet restore Editor/KojeomEditor/KojeomEditor.csproj
         shell: cmd
