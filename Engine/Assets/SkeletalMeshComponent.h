@@ -72,6 +72,8 @@ struct FBoneMatrixBuffer
     XMMATRIX BoneMatrices[MAX_SKINNING_BONES];
 };
 
+static_assert(sizeof(FBoneMatrixBuffer) % 16 == 0, "FBoneMatrixBuffer must be 16-byte aligned");
+
 class KSkeletalMesh
 {
 public:

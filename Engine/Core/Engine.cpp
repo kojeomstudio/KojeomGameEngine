@@ -268,6 +268,7 @@ void KEngine::Shutdown()
     }
 
     bIsInitialized = false;
+    Instance = nullptr;
     LOG_INFO("Engine shutdown completed");
 }
 

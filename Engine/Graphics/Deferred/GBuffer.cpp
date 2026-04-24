@@ -79,6 +79,7 @@ HRESULT KGBuffer::CreateGBufferTextures(ID3D11Device* Device)
         return hr;
     }
 
+    TexDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     hr = Device->CreateTexture2D(&TexDesc, nullptr, &GBufferTextures[1].Texture);
     if (FAILED(hr))
     {
@@ -106,6 +107,7 @@ HRESULT KGBuffer::CreateGBufferTextures(ID3D11Device* Device)
         return hr;
     }
 
+    RTVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     hr = Device->CreateRenderTargetView(GBufferTextures[1].Texture.Get(), &RTVDesc, &GBufferTextures[1].RTV);
     if (FAILED(hr))
     {
@@ -134,6 +136,7 @@ HRESULT KGBuffer::CreateGBufferTextures(ID3D11Device* Device)
         return hr;
     }
 
+    SRVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     hr = Device->CreateShaderResourceView(GBufferTextures[1].Texture.Get(), &SRVDesc, &GBufferTextures[1].SRV);
     if (FAILED(hr))
     {
@@ -141,7 +144,6 @@ HRESULT KGBuffer::CreateGBufferTextures(ID3D11Device* Device)
         return hr;
     }
 
-    SRVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     hr = Device->CreateShaderResourceView(GBufferTextures[2].Texture.Get(), &SRVDesc, &GBufferTextures[2].SRV);
     if (FAILED(hr))
     {
@@ -233,7 +235,7 @@ void KGBuffer::Clear(ID3D11DeviceContext* Context, const float ClearColor[4])
 
 ID3D11RenderTargetView* const* KGBuffer::GetRenderTargetViews() const
 {
-    static ID3D11RenderTargetView* RTVs[GBUFFER_RT_COUNT];
+    thread_local ID3D11RenderTargetView* RTVs[GBUFFER_RT_COUNT];
     for (UINT32 i = 0; i < GBUFFER_RT_COUNT; ++i)
     {
         RTVs[i] = GBufferTextures[i].RTV.Get();

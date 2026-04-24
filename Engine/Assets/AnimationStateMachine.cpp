@@ -597,21 +597,12 @@ void KAnimationStateMachine::EvaluateState(KAnimationState* State, float Weight,
         XMMATRIX GlobalTransform = LocalTransforms[BoneIdx];
 
         const FBone* Bone = Skeleton->GetBone(BoneIdx);
-        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex >= 0 && static_cast<uint32>(Bone->ParentIndex) < BoneIdx)
+        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex >= 0 && static_cast<uint32>(Bone->ParentIndex) < BoneCount)
         {
             GlobalTransform = LocalTransforms[BoneIdx] * OutMatrices[Bone->ParentIndex];
         }
 
         OutMatrices[BoneIdx] = GlobalTransform;
-    }
-
-    for (uint32 BoneIdx : evalOrder)
-    {
-        const FBone* Bone = Skeleton->GetBone(BoneIdx);
-        if (Bone && Bone->ParentIndex != INVALID_BONE_INDEX && Bone->ParentIndex >= 0 && static_cast<uint32>(Bone->ParentIndex) >= BoneIdx)
-        {
-            OutMatrices[BoneIdx] = LocalTransforms[BoneIdx] * OutMatrices[Bone->ParentIndex];
-        }
     }
 
     for (uint32 BoneIdx = 0; BoneIdx < BoneCount; ++BoneIdx)
@@ -638,8 +629,18 @@ void KAnimationStateMachine::BlendBoneMatrices(const std::vector<XMMATRIX>& Sour
         XMVECTOR SourceScale, SourceRot, SourceTrans;
         XMVECTOR TargetScale, TargetRot, TargetTrans;
 
-        XMMatrixDecompose(&SourceScale, &SourceRot, &SourceTrans, Source[i]);
-        XMMatrixDecompose(&TargetScale, &TargetRot, &TargetTrans, Target[i]);
+        if (!XMMatrixDecompose(&SourceScale, &SourceRot, &SourceTrans, Source[i]))
+        {
+            SourceScale = XMVectorSet(1, 1, 1, 0);
+            SourceRot = XMQuaternionIdentity();
+            SourceTrans = XMVectorSet(0, 0, 0, 0);
+        }
+        if (!XMMatrixDecompose(&TargetScale, &TargetRot, &TargetTrans, Target[i]))
+        {
+            TargetScale = XMVectorSet(1, 1, 1, 0);
+            TargetRot = XMQuaternionIdentity();
+            TargetTrans = XMVectorSet(0, 0, 0, 0);
+        }
 
         XMVECTOR BlendScale = XMVectorLerp(SourceScale, TargetScale, BlendFactor);
         XMVECTOR BlendRot = XMQuaternionSlerp(SourceRot, TargetRot, BlendFactor);

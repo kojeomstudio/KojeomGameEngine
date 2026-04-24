@@ -141,26 +141,11 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& P
         return GetLoadedModel(Path);
     }
 
-    std::mutex mtx;
-    std::condition_variable cv;
-    std::shared_ptr<FLoadedModel> result;
-    bool done = false;
-
-    std::thread worker([this, &Path, &Options, &result, &mtx, &cv, &done]() {
-        auto loaded = this->LoadModel(Path, Options);
-        std::lock_guard<std::mutex> lock(mtx);
-        result = loaded;
-        done = true;
-        cv.notify_one();
-    });
-
-    {
-        std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [&done] { return done; });
-    }
-
-    worker.detach();
-    return result;
+    std::packaged_task<std::shared_ptr<FLoadedModel>()> task(
+        [this, Path, Options]() { return this->LoadModel(Path, Options); });
+    auto future = task.get_future();
+    std::thread(std::move(task)).detach();
+    return future.get();
 }
 
 bool KModelLoader::IsModelLoaded(const std::wstring& Path) const

@@ -17,6 +17,27 @@ HRESULT KMaterial::Initialize(KGraphicsDevice* InDevice)
         return hr;
     }
 
+    DefaultWhiteTexture = std::make_shared<KTexture>();
+    hr = DefaultWhiteTexture->CreateSolidColor(InDevice->GetDevice(), 4, 4, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Failed to create default white texture for material");
+    }
+
+    DefaultNormalTexture = std::make_shared<KTexture>();
+    hr = DefaultNormalTexture->CreateSolidColor(InDevice->GetDevice(), 4, 4, XMFLOAT4(0.5f, 0.5f, 1.0f, 1.0f));
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Failed to create default normal texture for material");
+    }
+
+    DefaultBlackTexture = std::make_shared<KTexture>();
+    hr = DefaultBlackTexture->CreateSolidColor(InDevice->GetDevice(), 4, 4, XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Failed to create default black texture for material");
+    }
+
     bInitialized = true;
     bParamsDirty = true;
     return S_OK;
@@ -29,6 +50,9 @@ void KMaterial::Cleanup()
     {
         Textures[i].reset();
     }
+    DefaultWhiteTexture.reset();
+    DefaultNormalTexture.reset();
+    DefaultBlackTexture.reset();
     TextureMask = 0;
     bInitialized = false;
 }
@@ -90,12 +114,27 @@ void KMaterial::UpdateConstantBuffer(ID3D11DeviceContext* Context)
 void KMaterial::BindTextures(ID3D11DeviceContext* Context)
 {
     ID3D11ShaderResourceView* srvs[static_cast<uint32>(EMaterialTextureSlot::Count)] = {};
-
     for (uint32 i = 0; i < static_cast<uint32>(EMaterialTextureSlot::Count); ++i)
     {
         if (Textures[i])
         {
             srvs[i] = Textures[i]->GetShaderResourceView();
+        }
+        else
+        {
+            EMaterialTextureSlot slot = static_cast<EMaterialTextureSlot>(i);
+            if (slot == EMaterialTextureSlot::Normal)
+            {
+                srvs[i] = DefaultNormalTexture ? DefaultNormalTexture->GetShaderResourceView() : nullptr;
+            }
+            else if (slot == EMaterialTextureSlot::Emissive)
+            {
+                srvs[i] = DefaultBlackTexture ? DefaultBlackTexture->GetShaderResourceView() : nullptr;
+            }
+            else
+            {
+                srvs[i] = DefaultWhiteTexture ? DefaultWhiteTexture->GetShaderResourceView() : nullptr;
+            }
         }
     }
 

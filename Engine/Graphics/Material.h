@@ -141,6 +141,9 @@ private:
     FPBRMaterialParams Params;
     ComPtr<ID3D11Buffer> ConstantBuffer;
     std::shared_ptr<KTexture> Textures[static_cast<uint32>(EMaterialTextureSlot::Count)];
+    std::shared_ptr<KTexture> DefaultWhiteTexture;
+    std::shared_ptr<KTexture> DefaultNormalTexture;
+    std::shared_ptr<KTexture> DefaultBlackTexture;
     uint32 TextureMask = 0;
     bool bInitialized = false;
     bool bParamsDirty = true;
