@@ -109,11 +109,7 @@ void KAudioManager::Shutdown()
             Voice.SourceVoice->FlushSourceBuffers();
             Voice.SourceVoice->DestroyVoice();
         }
-        if (Voice.Callback)
-        {
-            delete Voice.Callback;
-            Voice.Callback = nullptr;
-        }
+        Voice.Callback.reset();
     }
     ActiveVoices.clear();
 
@@ -160,11 +156,7 @@ void KAudioManager::Update(float DeltaTime)
                 It->second.SourceVoice->DestroyVoice();
                 It->second.SourceVoice = nullptr;
             }
-            if (It->second.Callback)
-            {
-                delete It->second.Callback;
-                It->second.Callback = nullptr;
-            }
+            It->second.Callback.reset();
             ActiveVoices.erase(It);
         }
     }
@@ -193,10 +185,7 @@ void KAudioManager::Update(float DeltaTime)
             {
                 It->second.SourceVoice->DestroyVoice();
             }
-            if (It->second.Callback)
-            {
-                delete It->second.Callback;
-            }
+            It->second.Callback.reset();
             ActiveVoices.erase(It);
         }
     }
@@ -278,20 +267,19 @@ uint32_t KAudioManager::PlaySoundInternal(std::shared_ptr<KSound> Sound, const F
     }
 
     IXAudio2SourceVoice* SourceVoice = nullptr;
-    FVoiceCallback* Callback = new FVoiceCallback(this, NextVoiceId);
+    auto Callback = std::make_unique<FVoiceCallback>(this, NextVoiceId);
 
     HRESULT hr = XAudio2->CreateSourceVoice(
         &SourceVoice,
         reinterpret_cast<WAVEFORMATEX*>(Sound->GetWaveFormat()),
         0,
         XAUDIO2_DEFAULT_FREQ_RATIO,
-        Callback
+        Callback.get()
     );
 
     if (FAILED(hr))
     {
         LOG_ERROR("Failed to create source voice");
-        delete Callback;
         return 0;
     }
 
@@ -310,7 +298,6 @@ uint32_t KAudioManager::PlaySoundInternal(std::shared_ptr<KSound> Sound, const F
     {
         LOG_ERROR("Failed to submit source buffer");
         SourceVoice->DestroyVoice();
-        delete Callback;
         return 0;
     }
 
@@ -331,7 +318,6 @@ uint32_t KAudioManager::PlaySoundInternal(std::shared_ptr<KSound> Sound, const F
     {
         LOG_ERROR("Failed to start voice");
         SourceVoice->DestroyVoice();
-        delete Callback;
         return 0;
     }
 
@@ -344,9 +330,9 @@ uint32_t KAudioManager::PlaySoundInternal(std::shared_ptr<KSound> Sound, const F
     ActiveVoice.Params = Params;
     ActiveVoice.bIsMusic = Params.bIsMusic;
     ActiveVoice.bIsPaused = false;
-    ActiveVoice.Callback = Callback;
+    ActiveVoice.Callback = std::move(Callback);
 
-    ActiveVoices[VoiceId] = ActiveVoice;
+    ActiveVoices[VoiceId] = std::move(ActiveVoice);
 
     return VoiceId;
 }
@@ -362,11 +348,7 @@ void KAudioManager::StopSound(uint32_t VoiceId)
             It->second.SourceVoice->FlushSourceBuffers();
             It->second.SourceVoice->DestroyVoice();
         }
-        if (It->second.Callback)
-        {
-            delete It->second.Callback;
-            It->second.Callback = nullptr;
-        }
+        It->second.Callback.reset();
         ActiveVoices.erase(It);
     }
 }
@@ -399,11 +381,7 @@ void KAudioManager::StopAllSounds()
             Pair.second.SourceVoice->FlushSourceBuffers();
             Pair.second.SourceVoice->DestroyVoice();
         }
-        if (Pair.second.Callback)
-        {
-            delete Pair.second.Callback;
-            Pair.second.Callback = nullptr;
-        }
+        Pair.second.Callback.reset();
     }
     ActiveVoices.clear();
 }

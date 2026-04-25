@@ -258,21 +258,6 @@ void KAnimationInstance::EvaluateAnimation()
     }
 }
 
-void KAnimationInstance::CalculateBoneTransformRecursive(uint32 BoneIndex, const std::vector<XMMATRIX>& LocalTransforms)
-{
-    const FBone* bone = Skeleton->GetBone(BoneIndex);
-    if (!bone) return;
-
-    if (bone->ParentIndex >= 0)
-    {
-        BoneMatrices[BoneIndex] = LocalTransforms[BoneIndex] * BoneMatrices[bone->ParentIndex];
-    }
-    else
-    {
-        BoneMatrices[BoneIndex] = LocalTransforms[BoneIndex];
-    }
-}
-
 void KAnimationInstance::CalculateFinalBoneTransforms()
 {
     uint32 boneCount = Skeleton->GetBoneCount();

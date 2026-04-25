@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <string>
 
+class FVoiceCallback;
+
 class KAudioManager
 {
 public:
@@ -73,7 +75,7 @@ private:
         FSoundParams Params;
         bool bIsMusic = false;
         bool bIsPaused = false;
-        IXAudio2VoiceCallback* Callback = nullptr;
+        std::unique_ptr<FVoiceCallback> Callback;
     };
 
     uint32_t PlaySoundInternal(std::shared_ptr<KSound> Sound, const FSoundParams& Params);

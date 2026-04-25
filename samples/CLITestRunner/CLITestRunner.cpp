@@ -48,9 +48,11 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+    int32 ExitCode = 0;
+
     if (Command == "all")
     {
-        Runner.RunAll();
+        ExitCode = Runner.RunAll();
     }
     else if (Command == "list")
     {
@@ -58,9 +60,9 @@ int main(int argc, char* argv[])
     }
     else
     {
-        Runner.RunTest(Command);
+        ExitCode = Runner.RunTest(Command);
     }
 
     KEngine::CleanupDebugEnvironment();
-    return 0;
+    return ExitCode;
 }

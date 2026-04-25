@@ -318,6 +318,7 @@ private:
     
     int32 DrawCallCount = 0;
     int32 VertexCount = 0;
+    int32 TriangleCount = 0;
     
     KojeomEngine::KDebugUI DebugUI;
     KSkySystem SkySystem;

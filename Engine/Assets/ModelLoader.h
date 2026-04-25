@@ -47,7 +47,7 @@ public:
     void SetDevice(ID3D11Device* InDevice) { Device = InDevice; }
 
     std::shared_ptr<FLoadedModel> LoadModel(const std::wstring& Path, const FModelLoadOptions& Options = FModelLoadOptions());
-    std::shared_ptr<FLoadedModel> LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options = FModelLoadOptions());
+    std::future<std::shared_ptr<FLoadedModel>> LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options = FModelLoadOptions());
 
     bool IsModelLoaded(const std::wstring& Path) const;
     std::shared_ptr<FLoadedModel> GetLoadedModel(const std::wstring& Path);

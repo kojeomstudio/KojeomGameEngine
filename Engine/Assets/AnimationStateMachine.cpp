@@ -424,20 +424,25 @@ void KAnimationStateMachine::ForceState(const std::string& StateName, float Blen
         return;
     }
 
-    if (BlendState.bIsActive)
+    if (BlendState.bIsActive && BlendState.TargetState)
     {
-        BlendState.SourceState = CurrentState;
+        BlendState.SourceState = BlendState.TargetState;
         BlendState.TargetState = TargetState;
         BlendState.BlendDuration = BlendDuration;
         BlendState.BlendProgress = 0.0f;
         BlendState.bIsActive = true;
-        
+
+        if (BlendState.SourceState)
+        {
+            BlendState.SourceState->SetStatus(EAnimStateStatus::TransitioningOut);
+        }
+
         PreviousStateName = CurrentStateName;
         CurrentStateName = StateName;
         CurrentState = TargetState;
-        
+
         TargetState->Reset();
-        TargetState->SetStatus(EAnimStateStatus::Active);
+        TargetState->SetStatus(EAnimStateStatus::TransitioningIn);
     }
     else if (CurrentState)
     {

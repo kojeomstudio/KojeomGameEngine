@@ -38,7 +38,7 @@ namespace CLITest
             Tests.push_back({ Name, TestFunc });
         }
 
-        void RunAll()
+        int32 RunAll()
         {
             PrintHeader();
             int32 Passed = 0;
@@ -63,9 +63,10 @@ namespace CLITest
             }
 
             PrintSummary(Passed, Failed, TotalMs);
+            return Failed;
         }
 
-        void RunTest(const std::string& Name)
+        int32 RunTest(const std::string& Name)
         {
             PrintHeader();
             for (const auto& Test : Tests)
@@ -78,12 +79,14 @@ namespace CLITest
                     Result.ElapsedMs = std::chrono::duration<double, std::milli>(End - Start).count();
                     Result.Name = Test.Name;
                     PrintResult(Result);
-                    PrintSummary(Result.bPassed ? 1 : 0, Result.bPassed ? 0 : 1, Result.ElapsedMs);
-                    return;
+                    int32 Failed = Result.bPassed ? 0 : 1;
+                    PrintSummary(Result.bPassed ? 1 : 0, Failed, Result.ElapsedMs);
+                    return Failed;
                 }
             }
             std::cout << "[ERROR] Test not found: " << Name << std::endl;
             ListTests();
+            return 1;
         }
 
         void ListTests()

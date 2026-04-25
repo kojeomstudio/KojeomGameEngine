@@ -122,29 +122,33 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModel(const std::wstring& Path, 
     return model;
 }
 
-std::shared_ptr<FLoadedModel> KModelLoader::LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options)
+std::future<std::shared_ptr<FLoadedModel>> KModelLoader::LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options)
 {
+    std::promise<std::shared_ptr<FLoadedModel>> Promise;
+
     if (bInitialized && !bAssimpAvailable)
     {
         LOG_WARNING("Model: no loader available for async load");
-        return nullptr;
+        Promise.set_value(nullptr);
+        return Promise.get_future();
     }
 
     if (PathUtils::ContainsTraversal(Path) || !PathUtils::IsPathSafe(Path, L"."))
     {
         LOG_WARNING("Model: async load path is outside allowed directory");
-        return nullptr;
+        Promise.set_value(nullptr);
+        return Promise.get_future();
     }
 
     if (IsModelLoaded(Path))
     {
-        return GetLoadedModel(Path);
+        Promise.set_value(GetLoadedModel(Path));
+        return Promise.get_future();
     }
 
-    auto future = std::async(std::launch::async, [this, Path, Options]() {
+    return std::async(std::launch::async, [this, Path, Options]() {
         return this->LoadModel(Path, Options);
     });
-    return future.get();
 }
 
 bool KModelLoader::IsModelLoaded(const std::wstring& Path) const

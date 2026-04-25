@@ -39,6 +39,7 @@ void KRenderer::BeginFrame(KCamera* InCamera, const float ClearColor[4])
     // Reset per-frame counters
     DrawCallCount = 0;
     VertexCount = 0;
+    TriangleCount = 0;
 
     CurrentCamera->UpdateMatrices();
 
@@ -125,6 +126,7 @@ void KRenderer::RenderObject(const FRenderObject& RenderObject)
 
     DrawCallCount++;
     VertexCount += static_cast<int32>(RenderObject.Mesh->GetVertexCount());
+    TriangleCount += static_cast<int32>(RenderObject.Mesh->GetIndexCount()) / 3;
 
     if (RenderObject.Texture)
     {
@@ -267,6 +269,7 @@ void KRenderer::RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
 
     DrawCallCount++;
     VertexCount += static_cast<int32>(InMesh->GetVertexCount());
+    TriangleCount += static_cast<int32>(InMesh->GetIndexCount()) / 3;
 
     ID3D11ShaderResourceView* nullSRVs[10] = {};
     Context->PSSetShaderResources(0, 10, nullSRVs);
@@ -340,6 +343,7 @@ void KRenderer::RenderSkeletalMesh(KSkeletalMesh* InMesh, const XMMATRIX& WorldM
 
     DrawCallCount++;
     VertexCount += static_cast<int32>(InMesh->GetVertexCount());
+    TriangleCount += static_cast<int32>(InMesh->GetIndexCount()) / 3;
 
     SkinnedShader->Unbind(Context);
 }
@@ -1569,7 +1573,7 @@ void KRenderer::RenderDebugUI()
     stats.FrameTime = gpuStats.FrameTimeMs;
     stats.FPS = gpuStats.FrameTimeMs > 0.0f ? 1000.0f / gpuStats.FrameTimeMs : 0.0f;
     stats.DrawCalls = static_cast<UINT>(DrawCallCount);
-    stats.TriangleCount = static_cast<UINT>(DrawCallCount * 3);
+    stats.TriangleCount = static_cast<UINT>(TriangleCount);
     stats.VertexCount = static_cast<UINT>(VertexCount);
     
     DebugUI.SetFrameStats(stats);

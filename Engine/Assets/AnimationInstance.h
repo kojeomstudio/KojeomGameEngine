@@ -95,7 +95,6 @@ public:
 private:
     void EvaluateAnimation();
     void CalculateFinalBoneTransforms();
-    void CalculateBoneTransformRecursive(uint32 BoneIndex, const std::vector<XMMATRIX>& LocalTransforms);
 
 private:
     KSkeleton* Skeleton = nullptr;
