@@ -107,7 +107,7 @@ jobs:
 
       - name: Build all samples
         run: |
-          msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /t:BasicRenderingSample;LightingSample;PBRSample;PostProcessingSample;DebugRenderingSample;TerrainSample;WaterSample;SkySample;ParticlesSample;SkeletalMeshSample;AnimationStateMachineSample;GameplaySample;PhysicsSample;UISample;LayoutSample;LODSample /v:minimal
+          msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /t:BasicRenderingSample;LightingSample;PBRSample;PostProcessingSample;DebugRenderingSample;TerrainSample;WaterSample;SkySample;ParticlesSample;SkeletalMeshSample;AnimationStateMachineSample;GameplaySample;PhysicsSample;UISample;LayoutSample;LODSample;CLITestRunner /v:minimal
         shell: cmd
 
   build-csharp:

@@ -1059,6 +1059,7 @@ extern "C"
     {
         if (!engine || !path) return;
         if (PathUtils::ContainsTraversal(path)) return;
+        if (!PathUtils::IsPathSafe(path, L".")) return;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         auto* renderer = wrapper->Engine->GetRenderer();
         if (!renderer) return;
