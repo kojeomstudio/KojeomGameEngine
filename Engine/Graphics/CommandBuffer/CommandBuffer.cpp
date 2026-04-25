@@ -114,7 +114,7 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
         
     case ERenderSortKey::Shader:
         {
-            UINT64 ShaderId = Command.Shader ? reinterpret_cast<UINT64>(Command.Shader.get()) : 0;
+            UINT64 ShaderId = Command.Shader ? static_cast<UINT64>(reinterpret_cast<uintptr_t>(Command.Shader.get())) : 0;
             Key = (ShaderId & 0xFFFFFFFF) << 32;
             Key |= (static_cast<UINT64>(Command.Priority + 1000) & 0xFFFF);
         }
@@ -122,7 +122,7 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
         
     case ERenderSortKey::Texture:
         {
-            UINT64 TextureId = Command.Texture ? reinterpret_cast<UINT64>(Command.Texture.get()) : 0;
+            UINT64 TextureId = Command.Texture ? static_cast<UINT64>(reinterpret_cast<uintptr_t>(Command.Texture.get())) : 0;
             Key = (TextureId & 0xFFFFFFFF) << 32;
             Key |= (static_cast<UINT64>(Command.Priority + 1000) & 0xFFFF);
         }
@@ -130,7 +130,7 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
         
     case ERenderSortKey::Material:
         {
-            UINT64 MaterialId = Command.Material ? reinterpret_cast<UINT64>(Command.Material) : 0;
+            UINT64 MaterialId = Command.Material ? static_cast<UINT64>(reinterpret_cast<uintptr_t>(Command.Material)) : 0;
             Key = (MaterialId & 0xFFFFFFFF) << 32;
             Key |= (static_cast<UINT64>(Command.Priority + 1000) & 0xFFFF);
         }
@@ -150,8 +150,8 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
         
     case ERenderSortKey::ShaderThenTexture:
         {
-            UINT64 ShaderId = Command.Shader ? reinterpret_cast<UINT64>(Command.Shader.get()) : 0;
-            UINT64 TextureId = Command.Texture ? reinterpret_cast<UINT64>(Command.Texture.get()) : 0;
+            UINT64 ShaderId = Command.Shader ? static_cast<UINT64>(reinterpret_cast<uintptr_t>(Command.Shader.get())) : 0;
+            UINT64 TextureId = Command.Texture ? static_cast<UINT64>(reinterpret_cast<uintptr_t>(Command.Texture.get())) : 0;
             Key = ((ShaderId & 0xFFFF) << 48);
             Key |= ((TextureId & 0xFFFF) << 32);
             Key |= (static_cast<UINT64>(Command.Priority + 1000) & 0xFFFF) << 16;
@@ -160,7 +160,7 @@ UINT64 KCommandBuffer::CalculateSortKey(const FRenderCommand& Command)
         
     case ERenderSortKey::MaterialThenDepth:
         {
-            UINT64 MaterialId = Command.Material ? reinterpret_cast<UINT64>(Command.Material) : 0;
+            UINT64 MaterialId = Command.Material ? static_cast<UINT64>(reinterpret_cast<uintptr_t>(Command.Material)) : 0;
             XMFLOAT3 Translation;
             XMStoreFloat3(&Translation, Command.WorldMatrix.r[3]);
             XMVECTOR Pos = XMVector3TransformCoord(XMLoadFloat3(&Translation), CurrentViewProjection);

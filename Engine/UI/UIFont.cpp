@@ -162,7 +162,7 @@ HRESULT KUIFont::LoadFontFile(const std::wstring& FontPath)
                         filename = filename.substr(0, filename.length() - 1);
 
                     std::wstring baseDir = FontPath.substr(0, FontPath.find_last_of(L"\\/") + 1);
-                    page.TexturePath = baseDir + std::wstring(filename.begin(), filename.end());
+                    page.TexturePath = baseDir + StringUtils::MultiByteToWide(filename);
 
                     if (PathUtils::ContainsTraversal(page.TexturePath) || !PathUtils::IsPathSafe(page.TexturePath, L"."))
                     {

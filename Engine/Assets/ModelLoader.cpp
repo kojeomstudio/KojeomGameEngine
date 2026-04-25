@@ -595,6 +595,14 @@ HRESULT KModelLoader::LoadGLTFFallback(const std::wstring& Path, FLoadedModel* O
             LOG_ERROR("GLB JSON chunk too large: " + std::to_string(jsonChunkLength));
             return E_FAIL;
         }
+
+        static constexpr uint32 GLBHeaderSize = 12;
+        static constexpr uint32 GLBChunkHeaderSize = 8;
+        if (jsonChunkLength + GLBHeaderSize + GLBChunkHeaderSize > totalLength)
+        {
+            LOG_ERROR("GLB JSON chunk size exceeds total file size");
+            return E_FAIL;
+        }
         
         std::string jsonContent(jsonChunkLength, '\0');
         file.read(&jsonContent[0], jsonChunkLength);

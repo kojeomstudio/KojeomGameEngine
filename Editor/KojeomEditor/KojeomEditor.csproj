@@ -10,7 +10,6 @@
     <AssemblyName>KojeomEditor</AssemblyName>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
