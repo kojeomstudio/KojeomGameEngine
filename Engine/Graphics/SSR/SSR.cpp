@@ -238,6 +238,7 @@ float2 RayMarch(float3 rayOrigin, float3 rayDir, out float hitDepth)
     float2 hitUV = float2(-1.0, -1.0);
     hitDepth = 1.0;
 
+    [loop]
     for (float i = 0; i < MaxSteps; i += 1.0)
     {
         currentPos += rayDir * stepSize;
@@ -252,7 +253,7 @@ float2 RayMarch(float3 rayOrigin, float3 rayDir, out float hitDepth)
             break;
         }
 
-        float sampledDepth = DepthTexture.Sample(PointSampler, screenUV).r;
+        float sampledDepth = DepthTexture.SampleLevel(PointSampler, screenUV, 0).r;
         float4 sampledClip = float4(screenUV * 2.0 - 1.0, sampledDepth, 1.0);
         float4 sampledView = mul(InverseProjection, sampledClip);
         float3 sampledPos = sampledView.xyz / sampledView.w;

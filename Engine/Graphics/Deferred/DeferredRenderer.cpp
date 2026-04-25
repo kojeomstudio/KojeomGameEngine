@@ -244,7 +244,25 @@ VSOutput main(VSInput input)
 )";
 
     std::string PSSource = R"(
-struct LightBuffer
+struct PointLightData
+{
+    float3 Position;
+    float Intensity;
+    float3 Color;
+    float Radius;
+};
+
+struct SpotLightData
+{
+    float3 Position;
+    float Intensity;
+    float3 Direction;
+    float OuterConeAngle;
+    float3 Color;
+    float InnerConeAngle;
+};
+
+cbuffer LightBufferCB : register(b1)
 {
     float3 CameraPosition;
     float Padding0;
@@ -255,24 +273,8 @@ struct LightBuffer
     uint NumPointLights;
     uint NumSpotLights;
     float Padding2[2];
-    
-    struct PointLightData
-    {
-        float3 Position;
-        float Intensity;
-        float3 Color;
-        float Radius;
-    } PointLights[8];
-    
-    struct SpotLightData
-    {
-        float3 Position;
-        float Intensity;
-        float3 Direction;
-        float OuterConeAngle;
-        float3 Color;
-        float InnerConeAngle;
-    } SpotLights[4];
+    PointLightData PointLights[8];
+    SpotLightData SpotLights[4];
 };
 
 Texture2D AlbedoMetallicTex : register(t0);
@@ -282,11 +284,6 @@ Texture2D DepthTex : register(t3);
 
 SamplerState PointSampler : register(s0);
 SamplerState LinearSampler : register(s1);
-
-cbuffer LightBufferCB : register(b1)
-{
-    LightBuffer LightData;
-};
 
 float3 ComputeDirectionalLight(float3 normal, float3 lightDir, float3 lightColor, float intensity)
 {
@@ -344,20 +341,20 @@ float4 main(float4 Position : SV_POSITION, float2 TexCoord : TEXCOORD0) : SV_TAR
     float3 ambient = float3(0.1f, 0.1f, 0.15f) * albedo * ao;
     float3 totalLight = ambient;
     
-    totalLight += ComputeDirectionalLight(normal, LightData.DirLightDirection, LightData.DirLightColor, LightData.DirLightIntensity);
+    totalLight += ComputeDirectionalLight(normal, DirLightDirection, DirLightColor, DirLightIntensity);
     
-    for (uint i = 0; i < LightData.NumPointLights; ++i)
+    for (uint i = 0; i < NumPointLights; ++i)
     {
-        totalLight += ComputePointLight(worldPos, normal, LightData.PointLights[i].Position, 
-            LightData.PointLights[i].Color, LightData.PointLights[i].Intensity, LightData.PointLights[i].Radius);
+        totalLight += ComputePointLight(worldPos, normal, PointLights[i].Position, 
+            PointLights[i].Color, PointLights[i].Intensity, PointLights[i].Radius);
     }
     
-    for (uint j = 0; j < LightData.NumSpotLights; ++j)
+    for (uint j = 0; j < NumSpotLights; ++j)
     {
-        totalLight += ComputeSpotLight(worldPos, normal, LightData.SpotLights[j].Position,
-            LightData.SpotLights[j].Direction, LightData.SpotLights[j].Color,
-            LightData.SpotLights[j].Intensity, LightData.SpotLights[j].InnerConeAngle,
-            LightData.SpotLights[j].OuterConeAngle);
+        totalLight += ComputeSpotLight(worldPos, normal, SpotLights[j].Position,
+            SpotLights[j].Direction, SpotLights[j].Color,
+            SpotLights[j].Intensity, SpotLights[j].InnerConeAngle,
+            SpotLights[j].OuterConeAngle);
     }
     
     float3 finalColor = totalLight * albedo;
@@ -775,35 +772,22 @@ VSOutput main(VSInput input)
 )";
 
     std::string PSSource = R"(
-struct LightBuffer
+struct PointLightData
 {
-    float3 CameraPosition;
-    float Padding0;
-    float3 DirLightDirection;
-    float Padding1;
-    float3 DirLightColor;
-    float DirLightIntensity;
-    uint NumPointLights;
-    uint NumSpotLights;
-    float Padding2[2];
-    
-    struct PointLightData
-    {
-        float3 Position;
-        float Intensity;
-        float3 Color;
-        float Radius;
-    } PointLights[8];
-    
-    struct SpotLightData
-    {
-        float3 Position;
-        float Intensity;
-        float3 Direction;
-        float OuterConeAngle;
-        float3 Color;
-        float InnerConeAngle;
-    } SpotLights[4];
+    float3 Position;
+    float Intensity;
+    float3 Color;
+    float Radius;
+};
+
+struct SpotLightData
+{
+    float3 Position;
+    float Intensity;
+    float3 Direction;
+    float OuterConeAngle;
+    float3 Color;
+    float InnerConeAngle;
 };
 
 struct PSInput
@@ -820,7 +804,17 @@ SamplerState LinearSampler : register(s0);
 
 cbuffer LightBufferCB : register(b1)
 {
-    LightBuffer LightData;
+    float3 CameraPosition;
+    float Padding0;
+    float3 DirLightDirection;
+    float Padding1;
+    float3 DirLightColor;
+    float DirLightIntensity;
+    uint NumPointLights;
+    uint NumSpotLights;
+    float Padding2[2];
+    PointLightData PointLights[8];
+    SpotLightData SpotLights[4];
 };
 
 cbuffer MaterialBuffer : register(b2)
@@ -859,12 +853,12 @@ float4 main(PSInput input) : SV_TARGET
     float3 ambient = float3(0.15f, 0.15f, 0.2f) * albedo.rgb;
     float3 totalLight = ambient;
     
-    totalLight += ComputeDirectionalLight(normal, LightData.DirLightDirection, LightData.DirLightColor, LightData.DirLightIntensity);
+    totalLight += ComputeDirectionalLight(normal, DirLightDirection, DirLightColor, DirLightIntensity);
     
-    for (uint i = 0; i < LightData.NumPointLights; ++i)
+    for (uint i = 0; i < NumPointLights; ++i)
     {
-        totalLight += ComputePointLight(input.WorldPos, normal, LightData.PointLights[i].Position, 
-            LightData.PointLights[i].Color, LightData.PointLights[i].Intensity, LightData.PointLights[i].Radius);
+        totalLight += ComputePointLight(input.WorldPos, normal, PointLights[i].Position, 
+            PointLights[i].Color, PointLights[i].Intensity, PointLights[i].Radius);
     }
     
     float3 finalColor = totalLight * albedo.rgb;

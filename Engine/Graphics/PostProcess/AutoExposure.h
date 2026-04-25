@@ -15,9 +15,10 @@ struct FAutoExposureParams
     float AdaptationSpeedDown = 1.0f;
     float LowPercentile = 0.5f;
     float HighPercentile = 0.95f;
-    bool bEnabled = true;
-    XMFLOAT3 Padding;
+    uint32 bEnabled = 1;
+    float Padding[4];
 };
+static_assert(sizeof(FAutoExposureParams) % 16 == 0, "FAutoExposureParams must be 16-byte aligned");
 
 class KAutoExposure
 {
