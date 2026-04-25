@@ -20,7 +20,7 @@ if ([string]::IsNullOrWhiteSpace($promptInput)) {
 try {
     # Example: kilo run --auto "input_value"
     # Pay attention to how the variable is wrapped for quote handling.
-    & kilo run "$promptInput" --auto --continue
+    & kilo run "$promptInput" --auto
     #& claude --permission-mode bypassPermissions -p "$promptInput"
 	#& opencode --print-logs run "$promptInput"
 	
