@@ -7,9 +7,9 @@ Instructions for AI coding agents working in this repository.
 C++17 / DirectX 11 game engine with a WPF-based editor (C# / .NET 8.0). Supports Forward and Deferred rendering, PBR, skeletal animation, physics, audio, and a canvas UI system.
 
 - **Solution:** `KojeomEngine.sln` (Visual Studio 2022, MSVC v143, C++17, x64 only)
-- **Core Engine:** `Engine/` (static library, .lib, third-party at `Engine/third_party/`)
-- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL exposing flat C API for P/Invoke)
-- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, x64)
+- **Core Engine:** `Engine/` (static library, .lib, 150 files, ~33,127 lines, third-party at `Engine/third_party/`)
+- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL exposing flat C API for P/Invoke, 115 exported functions)
+- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, x64, 23 files, ~4,449 lines)
 - **Samples:** `samples/` (16 sample projects demonstrating engine features)
 
 ## Build Commands
@@ -150,7 +150,7 @@ private:
   - `KAudioManager` also has `ISubsystem` adapter: `KAudioSubsystem` wraps `KAudioManager`, accessible via `KEngine::GetSubsystem<T>()`
   - `KPhysicsWorld` is a regular class owned by `KPhysicsSubsystem` (not a singleton)
   - `ESubsystemState` enum: `Uninitialized`, `Initialized`, `Running`, `Shutdown`
-- **C#/C++ Interop**: `EngineInterop.dll` flat C API (`extern "C"`) consumed by C# P/Invoke
+- **C#/C++ Interop**: `EngineInterop.dll` flat C API (`extern "C"`, 115 functions) consumed by C# P/Invoke (115 DllImport declarations)
 - **Serialization**: `KBinaryArchive` for binary data, `KJsonArchive` with custom DOM parser
 
 ## Engine Module Map

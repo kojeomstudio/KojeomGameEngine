@@ -50,7 +50,7 @@ docs/
 - [Getting Started](getting-started.md) - 시작하기 가이드 (필수 조건, 빌드 방법, 샘플 실행)
 - [Coding Standards](coding-standards.md) - 코딩 표준 (C++/C# 명명 규칙, 코드 스타일, 에러 처리)
 - [Rendering Pipeline](rendering-pipeline.md) - 렌더링 파이프라인 기술 문서 (Forward/Deferred, PBR, 후처리, 스크린 공간 효과)
-- [API Reference](api-reference.md) - EngineInterop API 레퍼런스 (113개 C API 함수)
+- [API Reference](api-reference.md) - EngineInterop API 레퍼런스 (115개 C API 함수)
 - [Samples Guide](samples-guide.md) - 샘플 프로젝트 가이드 (16개 샘플)
 - [CI/CD](ci.md) - CI/CD 설정 (GitHub Actions)
 - [DirectX 11 Renderer Documentation](renderer/DirectX11Renderer.md) - 렌더링 시스템 기술 문서
@@ -79,25 +79,25 @@ KojeomGameEngine은 11개 모듈로 구성된 모듈형 게임 엔진입니다:
 
 | Module | Files | Lines | Description |
 |--------|------:|------:|-------------|
-| Graphics | 69 | 20,064 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 19 서브디렉토리) |
-| Assets | 18 | 4,600 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 애니메이션 상태 머신, 모델 로더 (FBX/OBJ/GLTF), 액터 컴포넌트 (StaticMesh, SkeletalMesh, Light) |
-| UI | 27 | 2,208 | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
-| Physics | 6 | 937 | 리지드바디, 충돌 감지, Raycast |
-| Serialization | 4 | 1,030 | 바이너리/JSON 아카이브 |
-| Core | 3 | 935 | KEngine - 윈도우 관리, 메인 루프, 서브시스템 소유, ISubsystem 인터페이스, KSubsystemRegistry |
-| Audio | 6 | 929 | XAudio2 오디오, 3D 사운드 |
+| Graphics | 74 | 20,357 | DirectX 11 렌더링 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, SSAO, SSR, TAA, SSGI, 19 서브디렉토리) |
+| Assets | 18 | 4,665 | 정적/스켈레탈 메시, 스켈레톤, 애니메이션, 애니메이션 상태 머신, 모델 로더 (FBX/OBJ/GLTF), 액터 컴포넌트 (StaticMesh, SkeletalMesh, Light) |
+| UI | 27 | 2,212 | 캔버스 기반 UI (Text, Button, Image, Slider, Checkbox, Layouts) |
+| Physics | 6 | 1,011 | 리지드바디, 충돌 감지, Raycast |
+| Serialization | 4 | 1,063 | 바이너리/JSON 아카이브 |
+| Core | 3 | 943 | KEngine - 윈도우 관리, 메인 루프, 서브시스템 소유, ISubsystem 인터페이스, KSubsystemRegistry |
+| Audio | 6 | 924 | XAudio2 오디오, 3D 사운드 |
 | Input | 3 | 658 | 키보드, 마우스, Raw Input, Action Mapping |
-| Scene | 4 | 690 | Actor-Component 시스템, 씬 관리 |
+| Scene | 4 | 733 | Actor-Component 시스템, 씬 관리 |
 | DebugUI | 2 | 241 | ImGui 디버그 오버레이 |
-| Utils | 3 | 311 | Common.h, Logger.h, Math.h |
-| **Total** | **145** | **32,603** | |
+| Utils | 3 | 320 | Common.h, Logger.h, Math.h |
+| **Total** | **150** | **33,127** | |
 
 ### Editor
 
 | Component | Files | Lines | Description |
 |-----------|------:|------:|-------------|
-| EngineInterop | 2 | 1,249 | C++ DLL (flat C API, 113 exported functions) for C# P/Invoke |
-| KojeomEditor | 24 | 4,379 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Renderer Settings, Content Browser (14 C# + 6 XAML + 6 code-behind, Styles 포함) |
+| EngineInterop | 2 | 1,310 | C++ DLL (flat C API, 115 exported functions) for C# P/Invoke |
+| KojeomEditor | 23 | 4,449 | WPF 에디터 (.NET 8.0) - Viewport, Scene Hierarchy, Properties, Material Editor, Renderer Settings, Content Browser (14 C# + 9 XAML, Styles 포함) |
 
 ### Samples
 

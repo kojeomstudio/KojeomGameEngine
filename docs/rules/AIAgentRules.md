@@ -17,11 +17,11 @@ KojeomGameEngine is a C++ game engine built with DirectX 11, featuring a WPF-bas
 ## Engine Module Structure
 
 ```
-Engine/ (145 files, ~32,560 lines)
-├── Core/ (3 files, ~935 lines)        # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
+Engine/ (150 files, ~33,127 lines)
+├── Core/ (3 files, ~943 lines)        # KEngine - Main engine class, Win32 window, main loop, subsystem ownership, ISubsystem interface, KSubsystemRegistry
 │   ├── Engine.h/cpp                   # Main engine singleton
 │   └── Subsystem.h                    # ISubsystem interface, KSubsystemRegistry
-├── Graphics/ (69 files, ~20,064 lines) # Rendering pipeline and all visual subsystems (19 subdirectories)
+├── Graphics/ (74 files, ~20,357 lines) # Rendering pipeline and all visual subsystems (19 subdirectories)
 │   ├── GraphicsDevice.h/cpp           # DirectX 11 device, swap chain, render targets
 │   ├── Renderer.h/cpp                 # Central rendering orchestrator
 │   ├── Camera.h/cpp                   # Perspective/orthographic camera
@@ -52,20 +52,20 @@ Engine/ (145 files, ~32,560 lines)
 ├── Input/ (3 files, ~658 lines)       # Keyboard, mouse, raw input, action mapping, input callbacks
 │   ├── InputManager.h/cpp             # Global input manager singleton
 │   └── InputTypes.h                   # Key codes, mouse buttons, input types
-├── Audio/ (6 files, ~929 lines)       # XAudio2-based audio, 3D sound, volume channels
+├── Audio/ (6 files, ~924 lines)       # XAudio2-based audio, 3D sound, volume channels
 │   ├── AudioManager.h/cpp             # Global audio manager singleton
 │   ├── AudioSubsystem.h               # ISubsystem adapter wrapping AudioManager
 │   ├── AudioTypes.h                   # Audio type definitions
 │   └── Sound.h/cpp                    # Sound resource
-├── Physics/ (6 files, ~937 lines)     # Rigid body, physics world, collision detection, raycast
+├── Physics/ (6 files, ~1,011 lines)     # Rigid body, physics world, collision detection, raycast
 │   ├── PhysicsWorld.h/cpp             # Physics simulation world
 │   ├── PhysicsSubsystem.h             # ISubsystem adapter for physics
 │   ├── PhysicsTypes.h                 # Physics type definitions
 │   └── RigidBody.h/cpp                # Rigid body component
-├── Scene/ (4 files, ~690 lines)       # Actor-Component system, scene management, parent-child hierarchy
+├── Scene/ (4 files, ~733 lines)       # Actor-Component system, scene management, parent-child hierarchy
 │   ├── Actor.h/cpp                    # KActor - entity with components
 │   └── SceneManager.h/cpp             # KScene - scene management
-├── Assets/ (18 files, ~4,600 lines)   # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components
+├── Assets/ (18 files, ~4,665 lines)   # Static mesh (LOD), skeletal mesh, skeleton, animation, animation state machine, model loader (Assimp + fallbacks), actor components
 │   ├── StaticMesh.h/cpp               # Static mesh with LOD support
 │   ├── SkeletalMeshComponent.h/cpp    # Skeletal mesh actor component
 │   ├── StaticMeshComponent.h/cpp      # Static mesh actor component
@@ -75,10 +75,10 @@ Engine/ (145 files, ~32,560 lines)
 │   ├── AnimationInstance.h/cpp        # Runtime animation state
 │   ├── AnimationStateMachine.h/cpp    # Animation state machine
 │   └── ModelLoader.h/cpp              # Model loading (Assimp + fallbacks)
-├── Serialization/ (4 files, ~1,030 lines) # Binary archive, JSON archive (custom DOM parser)
+├── Serialization/ (4 files, ~1,063 lines) # Binary archive, JSON archive (custom DOM parser)
 │   ├── BinaryArchive.h/cpp            # KBinaryArchive
 │   └── JsonArchive.h/cpp              # KJsonArchive with custom DOM parser
-├── UI/ (27 files, ~2,208 lines)       # Canvas-based UI system (element, panel, button, text, image, slider, checkbox, layouts, font)
+├── UI/ (27 files, ~2,212 lines)       # Canvas-based UI system (element, panel, button, text, image, slider, checkbox, layouts, font)
 │   ├── UICanvas.h/cpp                 # Root canvas container
 │   ├── UIElement.h/cpp                # Base UI element
 │   ├── UIPanel.h/cpp                  # Container panel
@@ -95,18 +95,18 @@ Engine/ (145 files, ~32,560 lines)
 │   └── UITypes.h                      # UI type definitions
 ├── DebugUI/ (2 files, ~241 lines)     # ImGui-based debug overlay with panel registration
 │   └── DebugUI.h/cpp                  # KDebugUI singleton
-└── Utils/ (3 files, ~311 lines)       # Common.h, Logger.h, Math.h
+└── Utils/ (3 files, ~320 lines)       # Common.h, Logger.h, Math.h
 ```
 
 ## Editor Structure
 
 ```
 Editor/
-├── EngineInterop/ (2 files, ~1,249 lines) # C++ DLL exposing flat C API (extern "C") for P/Invoke
-│   ├── EngineAPI.h     # 113 exported functions for engine operations
+├── EngineInterop/ (2 files, ~1,310 lines) # C++ DLL exposing flat C API (extern "C") for P/Invoke
+│   ├── EngineAPI.h     # 115 exported functions for engine operations
 │   └── EngineAPI.cpp   # Implementation wrapping C++ engine classes via FEngineWrapper
-└── KojeomEditor/ (24 files, ~4,379 lines) # C# WPF editor (.NET 8.0)
-    ├── Services/       # EngineInterop P/Invoke wrapper (113 DllImport), UndoRedoService (2 C# files, ~1,230 lines)
+└── KojeomEditor/ (23 files, ~4,449 lines) # C# WPF editor (.NET 8.0)
+    ├── Services/       # EngineInterop P/Invoke wrapper (115 DllImport), UndoRedoService (2 C# files)
     ├── ViewModels/     # MainViewModel, SceneViewModel, PropertiesViewModel, ComponentViewModel (4 C# files, ~928 lines)
     ├── Views/          # ViewportControl, SceneHierarchy, PropertiesPanel, MaterialEditor, RendererSettings, ContentBrowser (6 XAML + 6 code-behind, ~1,784 lines)
     └── Styles/         # CommonStyles.xaml
@@ -226,12 +226,12 @@ The engine uses a two-class shader system:
 - Registered subsystems: `KAudioSubsystem`, `KPhysicsSubsystem`
 
 ### C#/C++ Interop
-- `EngineInterop.dll` exposes 113 flat C functions (`extern "C"`, `__declspec(dllexport)`)
-- C# consumes via P/Invoke (`DllImport`, 113 DllImport declarations in `EngineInterop.cs`)
+- `EngineInterop.dll` exposes 115 flat C functions (`extern "C"`, `__declspec(dllexport)`)
+- C# consumes via P/Invoke (`DllImport`, 115 DllImport declarations in `EngineInterop.cs`)
 - Internal `FEngineWrapper` class manages engine instance, model loader, and debug renderer
 - String returns use `thread_local std::string` buffers
 - Preprocessor: `ENGINEAPI_EXPORTS` controls dllexport/dllimport
-- API groups: Engine lifecycle (9), Scene management (8), Actor management (23), Camera (11), Renderer settings (17), Directional light (7), Point light (4), Spot light (2), Material (9), StaticMesh component (3), SkeletalMesh component (7), Model loading (7), Texture (2), DebugRenderer (4)
+- API groups: Engine lifecycle (9), Scene management (8), Actor management (23), Camera (11), Renderer settings (17), Directional light (7), Point light (4), Spot light (2), Material (9), StaticMesh component (3), SkeletalMesh component (7), Model loading (7), Texture (2), DebugRenderer (4), Hierarchy (4), IBL (5), Cascaded Shadows (2)
 
 ### Serialization
 - Binary archive (`KBinaryArchive`) with `<<`/`>>` operators for all engine types
@@ -314,4 +314,4 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 6. **Do not** change the build configuration without updating documentation
 7. **Do not** add new dependencies without explicit approval
 8. **Do not** create `.hlsl` shader files. All shaders must be defined as inline C++ string literals and compiled at runtime via `KShader::CompileFromString()`.
-9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. Currently 113 C API functions with 113 C# DllImport declarations.
+9. **Do not** add new C API functions to `EngineAPI.h`/`EngineAPI.cpp` without also adding corresponding C# `DllImport` declarations in `Editor/KojeomEditor/Services/EngineInterop.cs`. Currently 115 C API functions with 115 C# DllImport declarations.

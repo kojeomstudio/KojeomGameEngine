@@ -10,8 +10,8 @@ C++17 / DirectX 11 기반 게임 엔진입니다. WPF 기반 에디터(Editor/Ko
 
 - **Solution:** `KojeomEngine.sln` (Visual Studio 2022, C++17, x64)
 - **Core Engine:** `Engine/` (Static Library, .lib)
-- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop, 113 exported functions)
-- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, 113 DllImport declarations)
+- **Editor Bridge:** `Editor/EngineInterop/` (C++ DLL for C# interop, 115 exported functions)
+- **Editor UI:** `Editor/KojeomEditor/` (C# WPF, .NET 8.0, 115 DllImport declarations)
 - **Samples:** `samples/` (16 sample projects: AnimationStateMachine, BasicRendering, DebugRendering, Gameplay, Lighting, LOD, Particles, PBR, Physics, PostProcessing, SkeletalMesh, Sky, Terrain, UI, UI/Layout, Water)
 
 ## Naming Conventions
@@ -40,21 +40,21 @@ C++17 / DirectX 11 기반 게임 엔진입니다. WPF 기반 에디터(Editor/Ko
 
 ```
 Engine/
-├── Core/ (3 files, ~935 lines)        # KEngine - 윈도우, 메인 루프, 서브시스템 관리, ISubsystem 인터페이스, KSubsystemRegistry
-├── Graphics/ (69 files, ~20,064 lines) # 렌더링 파이프라인 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, FXAA, Color Grading, 등, 19 서브디렉토리)
+├── Core/ (3 files, ~943 lines)        # KEngine - 윈도우, 메인 루프, 서브시스템 관리, ISubsystem 인터페이스, KSubsystemRegistry
+├── Graphics/ (74 files, ~20,357 lines) # 렌더링 파이프라인 (Forward/Deferred, PBR, Shadow, PostProcess, IBL, FXAA, Color Grading, 등, 19 서브디렉토리)
 ├── Input/ (3 files, ~658 lines)       # 키보드, 마우스, 액션 매핑
-├── Audio/ (6 files, ~929 lines)       # XAudio2 기반 오디오, 3D 사운드
-├── Physics/ (6 files, ~937 lines)     # 리지드바디, 충돌 감지, 물리 월드
-├── Scene/ (4 files, ~690 lines)       # Actor-Component 시스템, 씬 관리
-├── Assets/ (18 files, ~4,600 lines)   # 정적/스켈레탈 메시, 애니메이션, 모델 로더(Assimp), 액터 컴포넌트(StaticMesh, SkeletalMesh, Light)
-├── Serialization/ (4 files, ~1,030 lines) # 바이너리/JSON 아카이브
-├── UI/ (27 files, ~2,208 lines)       # 캔버스 기반 UI 시스템
+├── Audio/ (6 files, ~924 lines)       # XAudio2 기반 오디오, 3D 사운드
+├── Physics/ (6 files, ~1,011 lines)     # 리지드바디, 충돌 감지, 물리 월드
+├── Scene/ (4 files, ~733 lines)       # Actor-Component 시스템, 씬 관리
+├── Assets/ (18 files, ~4,665 lines)   # 정적/스켈레탈 메시, 애니메이션, 모델 로더(Assimp), 액터 컴포넌트(StaticMesh, SkeletalMesh, Light)
+├── Serialization/ (4 files, ~1,063 lines) # 바이너리/JSON 아카이브
+├── UI/ (27 files, ~2,212 lines)       # 캔버스 기반 UI 시스템
 ├── DebugUI/ (2 files, ~241 lines)     # ImGui 디버그 오버레이
-└── Utils/ (3 files, ~311 lines)       # Common.h, Logger.h, Math.h
+└── Utils/ (3 files, ~320 lines)       # Common.h, Logger.h, Math.h
 
 Editor/
-├── EngineInterop/ (2 files, ~1,249 lines) # C API DLL (extern "C" P/Invoke, 113 functions)
-└── KojeomEditor/ (24 files, ~4,379 lines) # C# WPF 에디터 (.NET 8.0, 113 DllImport)
+├── EngineInterop/ (2 files, ~1,310 lines) # C API DLL (extern "C" P/Invoke, 115 functions)
+└── KojeomEditor/ (23 files, ~4,449 lines) # C# WPF 에디터 (.NET 8.0, 115 DllImport)
 
 samples/            # 16개 샘플 프로젝트 (15개 최상위 + 1개 중첩)
 ```
@@ -78,7 +78,7 @@ samples/            # 16개 샘플 프로젝트 (15개 최상위 + 1개 중첩)
     - `KEngine::GetSubsystem<T>()`으로 싱글톤 `GetInstance()` 대신 접근 가능
   - `KPhysicsWorld`는 `KPhysicsSubsystem`이 소유하는 일반 클래스 (싱글톤 아님)
   - `ESubsystemState` enum: `Uninitialized`, `Initialized`, `Running`, `Shutdown`
-- **C#/C++ Interop**: `EngineInterop.dll` flat C API (113 functions) -> C# P/Invoke (113 DllImport)
+- **C#/C++ Interop**: `EngineInterop.dll` flat C API (115 functions) -> C# P/Invoke (115 DllImport)
 - **Subsystem Interface**: `ISubsystem` (Engine/Core/Subsystem.h), `KSubsystemRegistry` (same file)
   - 등록된 서브시스템: `KAudioSubsystem`, `KPhysicsSubsystem`
 
@@ -128,7 +128,7 @@ Categories: `[Core]`, `[Graphics]`, `[Input]`, `[Audio]`, `[Physics]`, `[Scene]`
 - 기존 API 파괴적 변경 없이 사용처 업데이트 누락
 - 승인 없는 새로운 의존성 추가
 - `.hlsl` 셰이더 파일 생성 (모든 셰이더는 인라인 C++ 문자열 리터럴로 정의하고 `KShader::CompileFromString()`으로 런타임 컴파일해야 함)
-- `EngineAPI.h`/`EngineAPI.cpp`에 새 C API 함수 추가 시 `Editor/KojeomEditor/Services/EngineInterop.cs`에 해당 C# `DllImport` 선언 누락 (현재 113개 C API 함수, 113개 C# DllImport)
+- `EngineAPI.h`/`EngineAPI.cpp`에 새 C API 함수 추가 시 `Editor/KojeomEditor/Services/EngineInterop.cs`에 해당 C# `DllImport` 선언 누락 (현재 115개 C API 함수, 115개 C# DllImport)
 
 ## Build Verification
 

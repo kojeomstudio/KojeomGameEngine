@@ -194,9 +194,8 @@ extern "C"
             }
         }
 
-        LOG_WARNING("Scene_Save: Scene not found in manager, attempting save with non-owning reference");
-        auto scenePtr = std::shared_ptr<KScene>(rawScene, [](KScene*) {});
-        return mgr->SaveScene(std::wstring(path), scenePtr);
+        LOG_WARNING("Scene_Save: Scene not found in manager");
+        return E_INVALIDARG;
     }
 
     ENGINEAPI void Scene_SetActive(void* sceneMgr, void* scene)
@@ -1059,6 +1058,7 @@ extern "C"
     ENGINEAPI void Texture_Unload(void* engine, const wchar_t* path)
     {
         if (!engine || !path) return;
+        if (PathUtils::ContainsTraversal(path)) return;
         FEngineWrapper* wrapper = static_cast<FEngineWrapper*>(engine);
         auto* renderer = wrapper->Engine->GetRenderer();
         if (!renderer) return;

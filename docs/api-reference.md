@@ -576,7 +576,7 @@ public:
 
 ## EngineInterop C API 레퍼런스
 
-`Editor/EngineInterop/EngineAPI.h`에 정의된 flat C API입니다. 총 113개 함수가 `extern "C"`로 노출되며, C#에서 P/Invoke로 호출됩니다.
+`Editor/EngineInterop/EngineAPI.h`에 정의된 flat C API입니다. 총 115개 함수가 `extern "C"`로 노출되며, C#에서 P/Invoke로 호출됩니다.
 
 ### 엔진 관리 (9)
 
