@@ -200,6 +200,13 @@ public partial class ContentBrowserControl : UserControl
         }
     }
 
+    private bool IsPathWithinProject(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var projectRoot = Path.GetFullPath("Assets");
+        return fullPath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void Import_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
@@ -211,6 +218,7 @@ public partial class ContentBrowserControl : UserControl
         if (dialog.ShowDialog() == true)
         {
             var destPath = Path.Combine(CurrentFolder, Path.GetFileName(dialog.FileName));
+            if (!IsPathWithinProject(destPath)) return;
             try
             {
                 if (File.Exists(destPath))

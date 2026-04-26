@@ -835,6 +835,12 @@ HRESULT KModelLoader::ParseGLTFJson(const std::string& JsonContent, const std::w
                 continue;
             }
             std::wstring filePath = BasePath + wideUri;
+            if (!PathUtils::IsPathSafe(filePath, BasePath))
+            {
+                LOG_ERROR("GLTF buffer URI resolves to unsafe path: " + uri);
+                bufferData.push_back(std::move(data));
+                continue;
+            }
             std::ifstream binFile(filePath, std::ios::binary);
             if (binFile.is_open())
             {
@@ -1728,13 +1734,20 @@ HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* Ou
                     std::vector<int32> currentPoly;
                     for (int32 idx : idxArray)
                     {
+                        int32 actualIdx = (idx >= 0) ? idx : ~idx;
+                        if (actualIdx < 0 || static_cast<size_t>(actualIdx) >= positions.size())
+                        {
+                            LOG_WARNING("FBX: polygon vertex index out of range, skipping face");
+                            currentPoly.clear();
+                            continue;
+                        }
                         if (idx >= 0)
                         {
-                            currentPoly.push_back(idx);
+                            currentPoly.push_back(actualIdx);
                         }
                         else
                         {
-                            currentPoly.push_back(~idx);
+                            currentPoly.push_back(actualIdx);
                             if (currentPoly.size() == 3)
                             {
                                 triangleIndices.push_back(currentPoly[0]);

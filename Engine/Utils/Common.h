@@ -122,6 +122,11 @@ namespace PathUtils
             return true;
         }
 
+        if (!normalized.empty() && normalized[0] == L'\\')
+        {
+            return true;
+        }
+
         if (normalized.size() >= 3 && normalized[1] == L':' && normalized[2] == L'\\')
         {
             wchar_t drive = towupper(normalized[0]);
