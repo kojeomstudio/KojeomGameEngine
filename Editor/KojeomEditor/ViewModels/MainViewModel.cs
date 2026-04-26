@@ -64,6 +64,14 @@ public class MainViewModel : ViewModelBase
 
         if (dialog.ShowDialog() == true)
         {
+            var fullPath = System.IO.Path.GetFullPath(dialog.FileName);
+            var projectRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
+            if (!fullPath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                System.Windows.MessageBox.Show("Scene file must be within the project directory.", "Security Warning",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
             _sceneViewModel.LoadScene(dialog.FileName);
         }
     }
@@ -78,6 +86,14 @@ public class MainViewModel : ViewModelBase
 
         if (dialog.ShowDialog() == true)
         {
+            var fullPath = System.IO.Path.GetFullPath(dialog.FileName);
+            var projectRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
+            if (!fullPath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                System.Windows.MessageBox.Show("Scene file must be saved within the project directory.", "Security Warning",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
             _sceneViewModel.SaveScene(dialog.FileName);
         }
     }

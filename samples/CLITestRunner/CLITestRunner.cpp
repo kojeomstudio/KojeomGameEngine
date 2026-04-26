@@ -31,6 +31,7 @@ int main(int argc, char* argv[])
     Runner.AddTest("scene", CLITest::TestSceneSubsystem);
     Runner.AddTest("model-loading", CLITest::TestModelLoadingSubsystem);
     Runner.AddTest("subsystem-registry", CLITest::TestSubsystemRegistry);
+    Runner.AddTest("animation", CLITest::TestAnimationSubsystem);
     Runner.AddTest("path-utils", CLITest::TestPathUtils);
 
     std::string Command = Args.Command;

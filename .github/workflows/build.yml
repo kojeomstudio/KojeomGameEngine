@@ -36,7 +36,7 @@ jobs:
             Engine/x64
             Editor/EngineInterop/x64
             lib/x64
-          key: engine-${{ matrix.configuration }}-${{ hashFiles('Engine/**/*.h', 'Engine/**/*.cpp', 'Engine/Engine.vcxproj', 'Editor/EngineInterop/**') }}
+          key: engine-${{ matrix.configuration }}-${{ hashFiles('Engine/**/*.h', 'Engine/**/*.cpp', 'Engine/Engine.vcxproj', 'Editor/EngineInterop/**', 'KojeomEngine.sln') }}
           restore-keys: engine-${{ matrix.configuration }}-
 
       - name: Build Engine and EngineInterop
@@ -125,7 +125,8 @@ jobs:
             }
             Write-Host "CLI tests passed"
           } else {
-            Write-Warning "CLITestRunner not found at $testExe"
+            Write-Error "CLITestRunner not found at $testExe"
+            exit 1
           }
 
   build-csharp:
@@ -176,11 +177,9 @@ jobs:
 
       - name: Restore Dependencies
         run: dotnet restore Editor/KojeomEditor/KojeomEditor.csproj
-        shell: cmd
 
       - name: Build KojeomEditor
         run: dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c ${{ matrix.configuration }}
-        shell: cmd
 
   ci-success:
     name: CI Success

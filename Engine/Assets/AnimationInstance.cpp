@@ -268,7 +268,7 @@ void KAnimationInstance::CalculateFinalBoneTransforms()
         const FBone* bone = Skeleton->GetBone(i);
         if (bone)
         {
-            FinalBoneMatrices[i] = BoneMatrices[i] * bone->InverseBindPose;
+            FinalBoneMatrices[i] = bone->InverseBindPose * BoneMatrices[i];
         }
         else
         {

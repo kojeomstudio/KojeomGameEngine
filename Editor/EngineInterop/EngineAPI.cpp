@@ -14,6 +14,8 @@
 #include <Engine/Assets/StaticMeshComponent.h>
 #include <Engine/Assets/SkeletalMeshComponent.h>
 #include <Engine/Assets/LightComponent.h>
+#include <Engine/Graphics/Water/Water.h>
+#include <Engine/Graphics/Terrain/Terrain.h>
 #include <Engine/Graphics/Debug/DebugRenderer.h>
 
 class FEngineWrapper
@@ -490,6 +492,9 @@ extern "C"
             KActorComponent* comp = components[index].get();
             if (auto* smc = dynamic_cast<KStaticMeshComponent*>(comp)) return "StaticMesh";
             if (auto* skmc = dynamic_cast<KSkeletalMeshComponent*>(comp)) return "SkeletalMesh";
+            if (auto* lc = dynamic_cast<KLightComponent*>(comp)) return "Light";
+            if (auto* tc = dynamic_cast<KTerrainComponent*>(comp)) return "Terrain";
+            if (auto* wc = dynamic_cast<KWaterComponent*>(comp)) return "Water";
             return "Component";
         }
         return "";
