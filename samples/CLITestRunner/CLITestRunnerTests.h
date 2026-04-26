@@ -160,11 +160,12 @@ namespace CLITest
         }
 
         KEngine Engine;
-        HRESULT hr = Engine.Initialize(GetModuleHandle(nullptr), L"CLI Test", 800, 600);
+        HRESULT hr = Engine.InitializeWithExternalHwnd(HiddenWnd, 800, 600);
         if (FAILED(hr))
         {
             Result.Message = "Engine initialization failed (hr=" + std::to_string(hr) + ")";
             DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRunner", GetModuleHandle(nullptr));
             return Result;
         }
 
@@ -174,6 +175,7 @@ namespace CLITest
             Result.Message = "Renderer is null";
             Engine.Shutdown();
             DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRunner", GetModuleHandle(nullptr));
             return Result;
         }
 
@@ -184,6 +186,7 @@ namespace CLITest
             Result.Message = "Mesh creation failed";
             Engine.Shutdown();
             DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRunner", GetModuleHandle(nullptr));
             return Result;
         }
 
@@ -193,6 +196,7 @@ namespace CLITest
             Result.Message = "Camera is null";
             Engine.Shutdown();
             DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRunner", GetModuleHandle(nullptr));
             return Result;
         }
         Camera->SetPosition(XMFLOAT3(0.0f, 2.0f, -5.0f));
@@ -200,6 +204,7 @@ namespace CLITest
         Engine.Render();
         Engine.Shutdown();
         DestroyWindow(HiddenWnd);
+        UnregisterClassW(L"CLITestRunner", GetModuleHandle(nullptr));
 
         Result.bPassed = true;
         Result.Message = "Device, renderer, mesh creation, camera OK";

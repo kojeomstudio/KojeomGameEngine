@@ -750,8 +750,389 @@ HRESULT KModelLoader::ParseGLTFJson(const std::string& JsonContent, const std::w
     std::string buffersJson = findJsonArray(JsonContent, "buffers");
     std::string meshesJson = findJsonArray(JsonContent, "meshes");
 
-    LOG_WARNING("GLTF fallback loader does not support binary geometry extraction. Use Assimp for full GLTF/GLB support.");
-    return E_NOTIMPL;
+    auto extractJsonObjects = [](const std::string& jsonArray) -> std::vector<std::string> {
+        std::vector<std::string> objects;
+        if (jsonArray.size() < 2 || jsonArray[0] != '[') return objects;
+
+        int depth = 0;
+        size_t objStart = std::string::npos;
+        for (size_t i = 0; i < jsonArray.size(); ++i)
+        {
+            char c = jsonArray[i];
+            if (c == '{')
+            {
+                if (depth == 0) objStart = i;
+                depth++;
+            }
+            else if (c == '}')
+            {
+                depth--;
+                if (depth == 0 && objStart != std::string::npos)
+                {
+                    objects.push_back(jsonArray.substr(objStart, i - objStart + 1));
+                    objStart = std::string::npos;
+                }
+            }
+            else if (c == '"')
+            {
+                i++;
+                while (i < jsonArray.size() && jsonArray[i] != '"')
+                {
+                    if (jsonArray[i] == '\\') i++;
+                    i++;
+                }
+            }
+        }
+        return objects;
+    };
+
+    auto buffers = extractJsonObjects(buffersJson);
+    std::vector<std::vector<uint8>> bufferData;
+    for (const auto& buf : buffers)
+    {
+        std::string uri;
+        size_t uriPos = buf.find("\"uri\":");
+        if (uriPos != std::string::npos)
+        {
+            size_t qStart = buf.find('"', uriPos + 6);
+            size_t qEnd = buf.find('"', qStart + 1);
+            while (qEnd != std::string::npos && buf[qEnd - 1] == '\\') qEnd = buf.find('"', qEnd + 1);
+            if (qStart != std::string::npos && qEnd != std::string::npos)
+            {
+                uri = buf.substr(qStart + 1, qEnd - qStart - 1);
+            }
+        }
+
+        std::vector<uint8> data;
+        if (!uri.empty() && uri.find("data:application/octet-stream;base64,") == 0)
+        {
+            static const std::string b64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+            std::string b64 = uri.substr(37);
+            data.reserve(b64.size() * 3 / 4);
+            uint32 accum = 0;
+            int bits = 0;
+            for (char c : b64)
+            {
+                if (c == '=') break;
+                size_t idx = b64Chars.find(c);
+                if (idx == std::string::npos) continue;
+                accum = (accum << 6) | static_cast<uint32>(idx);
+                bits += 6;
+                if (bits >= 8)
+                {
+                    bits -= 8;
+                    data.push_back(static_cast<uint8>((accum >> bits) & 0xFF));
+                }
+            }
+        }
+        else if (!uri.empty() && !BasePath.empty())
+        {
+            std::wstring wideUri = StringUtils::MultiByteToWide(uri);
+            if (PathUtils::ContainsTraversal(wideUri))
+            {
+                LOG_ERROR("GLTF buffer URI contains path traversal: " + uri);
+                bufferData.push_back(std::move(data));
+                continue;
+            }
+            std::wstring filePath = BasePath + wideUri;
+            std::ifstream binFile(filePath, std::ios::binary);
+            if (binFile.is_open())
+            {
+                static constexpr uint32 MaxBufferSize = 256 * 1024 * 1024;
+                binFile.seekg(0, std::ios::end);
+                auto fsize = binFile.tellg();
+                binFile.seekg(0, std::ios::beg);
+                if (fsize > 0 && static_cast<int64>(fsize) <= MaxBufferSize)
+                {
+                    data.resize(static_cast<size_t>(fsize));
+                    binFile.read(reinterpret_cast<char*>(data.data()), data.size());
+                }
+                binFile.close();
+            }
+        }
+        bufferData.push_back(std::move(data));
+    }
+
+    auto bufferViews = extractJsonObjects(bufferViewsJson);
+    struct FBufferViewInfo { uint32 Buffer = 0; uint32 ByteOffset = 0; uint32 ByteLength = 0; };
+    std::vector<FBufferViewInfo> bvInfos;
+    for (const auto& bv : bufferViews)
+    {
+        FBufferViewInfo info;
+        info.Buffer = static_cast<uint32>(getInteger(bv, "buffer", 0));
+        info.ByteOffset = static_cast<uint32>(getInteger(bv, "byteOffset", 0));
+        info.ByteLength = static_cast<uint32>(getInteger(bv, "byteLength", 0));
+        bvInfos.push_back(info);
+    }
+
+    auto accessors = extractJsonObjects(accessorsJson);
+    struct FAccessorInfo { int32 BufferView = -1; uint32 ByteOffset = 0; uint32 Count = 0; int32 ComponentType = 5126; std::string Type; };
+    std::vector<FAccessorInfo> accInfos;
+    for (const auto& acc : accessors)
+    {
+        FAccessorInfo info;
+        info.BufferView = getInteger(acc, "bufferView", -1);
+        info.ByteOffset = static_cast<uint32>(getInteger(acc, "byteOffset", 0));
+        int32 rawCount = getInteger(acc, "count", 0);
+        if (rawCount < 0 || rawCount > 5000000)
+        {
+            LOG_ERROR("GLTF accessor count out of range: " + std::to_string(rawCount));
+            rawCount = 0;
+        }
+        info.Count = static_cast<uint32>(rawCount);
+        info.ComponentType = getInteger(acc, "componentType", 5126);
+        size_t typePos = acc.find("\"type\":");
+        if (typePos != std::string::npos)
+        {
+            size_t qStart = acc.find('"', typePos + 7);
+            size_t qEnd = acc.find('"', qStart + 1);
+            if (qStart != std::string::npos && qEnd != std::string::npos)
+                info.Type = acc.substr(qStart + 1, qEnd - qStart - 1);
+        }
+        accInfos.push_back(info);
+    }
+
+    auto readAccessorData = [&](int32 accIdx) -> std::vector<float> {
+        std::vector<float> result;
+        if (accIdx < 0 || static_cast<size_t>(accIdx) >= accInfos.size()) return result;
+        const auto& ai = accInfos[static_cast<size_t>(accIdx)];
+        if (ai.BufferView < 0 || static_cast<size_t>(ai.BufferView) >= bvInfos.size()) return result;
+        const auto& bv = bvInfos[static_cast<size_t>(ai.BufferView)];
+        if (static_cast<size_t>(bv.Buffer) >= bufferData.size()) return result;
+        const auto& buf = bufferData[bv.Buffer];
+
+        int32 numComponents = 1;
+        if (ai.Type == "VEC2") numComponents = 2;
+        else if (ai.Type == "VEC3") numComponents = 3;
+        else if (ai.Type == "VEC4") numComponents = 4;
+        else if (ai.Type == "MAT4") numComponents = 16;
+
+        size_t byteSize = (ai.ComponentType == 5126) ? 4 : (ai.ComponentType == 5125) ? 4 : (ai.ComponentType == 5123) ? 2 : 1;
+        size_t totalFloats = static_cast<size_t>(ai.Count) * numComponents;
+        static constexpr size_t MaxAccessorFloats = 80000000;
+        if (totalFloats > MaxAccessorFloats)
+        {
+            LOG_ERROR("GLTF accessor data exceeds limit: " + std::to_string(totalFloats) + " floats");
+            return result;
+        }
+        result.resize(totalFloats);
+
+        size_t offset = static_cast<size_t>(bv.ByteOffset) + ai.ByteOffset;
+        for (size_t i = 0; i < totalFloats; ++i)
+        {
+            size_t dataOffset = offset + i * byteSize;
+            if (dataOffset + byteSize > buf.size()) break;
+            if (ai.ComponentType == 5126)
+            {
+                memcpy(&result[i], &buf[dataOffset], sizeof(float));
+            }
+            else if (ai.ComponentType == 5125)
+            {
+                uint32 val;
+                memcpy(&val, &buf[dataOffset], sizeof(uint32));
+                result[i] = static_cast<float>(val);
+            }
+            else if (ai.ComponentType == 5123)
+            {
+                uint16 val;
+                memcpy(&val, &buf[dataOffset], sizeof(uint16));
+                result[i] = static_cast<float>(val);
+            }
+            else if (ai.ComponentType == 5122)
+            {
+                int16 val;
+                memcpy(&val, &buf[dataOffset], sizeof(int16));
+                result[i] = static_cast<float>(val);
+            }
+            else if (ai.ComponentType == 5121)
+            {
+                uint8 val;
+                memcpy(&val, &buf[dataOffset], sizeof(uint8));
+                result[i] = static_cast<float>(val);
+            }
+        }
+        return result;
+    };
+
+    auto readAccessorIndices = [&](int32 accIdx) -> std::vector<uint32> {
+        std::vector<uint32> result;
+        if (accIdx < 0 || static_cast<size_t>(accIdx) >= accInfos.size()) return result;
+        const auto& ai = accInfos[static_cast<size_t>(accIdx)];
+        if (ai.BufferView < 0 || static_cast<size_t>(ai.BufferView) >= bvInfos.size()) return result;
+        const auto& bv = bvInfos[static_cast<size_t>(ai.BufferView)];
+        if (static_cast<size_t>(bv.Buffer) >= bufferData.size()) return result;
+        const auto& buf = bufferData[bv.Buffer];
+
+        size_t offset = static_cast<size_t>(bv.ByteOffset) + ai.ByteOffset;
+        size_t byteSize = (ai.ComponentType == 5125) ? 4 : (ai.ComponentType == 5123) ? 2 : 1;
+        static constexpr size_t MaxAccessorIndices = 20000000;
+        if (ai.Count > MaxAccessorIndices)
+        {
+            LOG_ERROR("GLTF index accessor count exceeds limit: " + std::to_string(ai.Count));
+            return result;
+        }
+        result.resize(ai.Count);
+        for (uint32 i = 0; i < ai.Count; ++i)
+        {
+            size_t dataOffset = offset + static_cast<size_t>(i) * byteSize;
+            if (dataOffset + byteSize > buf.size()) { result.resize(i); break; }
+            if (ai.ComponentType == 5125)
+            {
+                memcpy(&result[i], &buf[dataOffset], sizeof(uint32));
+            }
+            else if (ai.ComponentType == 5123)
+            {
+                uint16 val;
+                memcpy(&val, &buf[dataOffset], sizeof(uint16));
+                result[i] = static_cast<uint32>(val);
+            }
+            else if (ai.ComponentType == 5121)
+            {
+                uint8 val;
+                memcpy(&val, &buf[dataOffset], sizeof(uint8));
+                result[i] = static_cast<uint32>(val);
+            }
+        }
+        return result;
+    };
+
+    bool hasAnyData = false;
+    for (const auto& bd : bufferData)
+    {
+        if (!bd.empty()) { hasAnyData = true; break; }
+    }
+    if (!hasAnyData)
+    {
+        LOG_WARNING("GLTF fallback loader: no buffer data available. Use Assimp for full GLTF/GLB support.");
+        return E_NOTIMPL;
+    }
+
+    auto meshObjs = extractJsonObjects(meshesJson);
+    if (meshObjs.empty())
+    {
+        LOG_WARNING("GLTF fallback loader: no meshes found in file.");
+        return E_FAIL;
+    }
+
+    for (size_t meshIdx = 0; meshIdx < meshObjs.size(); ++meshIdx)
+    {
+        const auto& meshObj = meshObjs[meshIdx];
+        std::string primsJson = findJsonArray(meshObj, "primitives");
+        auto prims = extractJsonObjects(primsJson);
+        if (prims.empty()) continue;
+
+        for (const auto& prim : prims)
+        {
+            auto extractAttrAccessor = [&](const std::string& attrName) -> int32 {
+                size_t pos = prim.find("\"" + attrName + "\"");
+                if (pos == std::string::npos) return -1;
+                size_t colonPos = prim.find(':', pos);
+                if (colonPos == std::string::npos) return -1;
+                std::string after = prim.substr(colonPos + 1);
+                size_t nonSpace = after.find_first_not_of(" \t\r\n");
+                if (nonSpace == std::string::npos) return -1;
+                try { return std::stoi(after.substr(nonSpace)); } catch (...) { return -1; }
+            };
+
+            int32 posAccIdx = extractAttrAccessor("POSITION");
+            int32 normAccIdx = extractAttrAccessor("NORMAL");
+            int32 uvAccIdx = extractAttrAccessor("TEXCOORD_0");
+            int32 idxAccIdx = getInteger(prim, "indices", -1);
+
+            if (posAccIdx < 0) continue;
+
+            auto posData = readAccessorData(posAccIdx);
+            auto normData = readAccessorData(normAccIdx);
+            auto uvData = readAccessorData(uvAccIdx);
+            auto idxData = readAccessorIndices(idxAccIdx);
+
+            uint32 vertexCount = static_cast<uint32>(posData.size() / 3);
+            if (vertexCount == 0) continue;
+
+            static constexpr uint32 MaxVertices = 5000000;
+            if (vertexCount > MaxVertices)
+            {
+                LOG_ERROR("GLTF: vertex count exceeds limit (" + std::to_string(vertexCount) + ")");
+                return E_FAIL;
+            }
+
+            std::vector<FVertex> vertices;
+            vertices.reserve(vertexCount);
+            for (uint32 i = 0; i < vertexCount; ++i)
+            {
+                FVertex v;
+                float scale = Options.Scale;
+                v.Position = XMFLOAT3(posData[i * 3] * scale, posData[i * 3 + 1] * scale, posData[i * 3 + 2] * scale);
+                if (normData.size() >= (i + 1) * 3)
+                    v.Normal = XMFLOAT3(normData[i * 3], normData[i * 3 + 1], normData[i * 3 + 2]);
+                else
+                    v.Normal = XMFLOAT3(0, 1, 0);
+                v.Color = XMFLOAT4(1, 1, 1, 1);
+                if (uvData.size() >= (i + 1) * 2)
+                {
+                    float u = uvData[i * 2];
+                    float vv = uvData[i * 2 + 1];
+                    if (Options.bFlipUVs) vv = 1.0f - vv;
+                    v.TexCoord = XMFLOAT2(u, vv);
+                }
+                else
+                {
+                    v.TexCoord = XMFLOAT2(0, 0);
+                }
+                vertices.push_back(v);
+            }
+
+            std::vector<uint32> indices;
+            if (!idxData.empty())
+            {
+                indices = std::move(idxData);
+            }
+            else
+            {
+                indices.resize(vertexCount);
+                for (uint32 i = 0; i < vertexCount; ++i) indices[i] = i;
+            }
+
+            auto staticMesh = std::make_shared<KStaticMesh>();
+            staticMesh->SetName(OutModel->Name + (meshIdx > 0 ? "_mesh" + std::to_string(meshIdx) : "_Mesh"));
+
+            if (Device)
+            {
+                HRESULT hr = staticMesh->CreateFromMeshData(Device, vertices, indices);
+                if (FAILED(hr))
+                {
+                    LOG_ERROR("Failed to initialize static mesh from GLTF data");
+                    continue;
+                }
+            }
+            else
+            {
+                staticMesh->AddLOD(vertices, indices);
+            }
+
+            if (!OutModel->StaticMesh)
+            {
+                OutModel->StaticMesh = staticMesh;
+            }
+            else
+            {
+                OutModel->SubMeshes.push_back(staticMesh);
+            }
+
+            LOG_INFO("GLTF fallback: loaded mesh '" + staticMesh->GetName() + "' with " +
+                     std::to_string(vertices.size()) + " vertices, " +
+                     std::to_string(indices.size()) + " indices");
+        }
+    }
+
+    if (!OutModel->StaticMesh)
+    {
+        LOG_WARNING("GLTF fallback loader: failed to extract any mesh geometry.");
+        return E_FAIL;
+    }
+
+    LOG_INFO("GLTF fallback: successfully loaded model '" + OutModel->Name + "'");
+    return S_OK;
 }
 
 void KModelLoader::ProcessNode(void* AssimpNode, void* AssimpScene, FLoadedModel* OutModel, const FModelLoadOptions& Options)

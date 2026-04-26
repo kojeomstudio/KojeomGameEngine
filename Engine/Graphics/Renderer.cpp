@@ -1294,6 +1294,10 @@ void KRenderer::SetTAAEnabled(bool bEnabled)
         LOG_WARNING("Cannot enable TAA: TAA system not initialized");
         return;
     }
+    if (bEnabled && !bTAAEnabled)
+    {
+        bFirstTAAFrame = true;
+    }
     bTAAEnabled = bEnabled;
 }
 

@@ -110,6 +110,24 @@ jobs:
           msbuild KojeomEngine.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /t:BasicRenderingSample;LightingSample;PBRSample;PostProcessingSample;DebugRenderingSample;TerrainSample;WaterSample;SkySample;ParticlesSample;SkeletalMeshSample;AnimationStateMachineSample;GameplaySample;PhysicsSample;UISample;LayoutSample;LODSample;CLITestRunner /v:minimal
         shell: cmd
 
+      - name: Run CLI tests
+        shell: pwsh
+        run: |
+          $config = "${{ matrix.configuration }}"
+          $testExe = "samples/CLITestRunner/bin/x64/$config/CLITestRunner.exe"
+          if (Test-Path $testExe) {
+            Write-Host "Running CLI tests..."
+            & $testExe all
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -ne 0) {
+              Write-Error "CLI tests failed with exit code $exitCode"
+              exit 1
+            }
+            Write-Host "CLI tests passed"
+          } else {
+            Write-Warning "CLITestRunner not found at $testExe"
+          }
+
   build-csharp:
     name: Build C# Editor (${{ matrix.configuration }})
     runs-on: windows-2022
