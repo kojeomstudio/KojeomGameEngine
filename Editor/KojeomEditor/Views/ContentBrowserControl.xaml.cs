@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -203,7 +204,8 @@ public partial class ContentBrowserControl : UserControl
     private bool IsPathWithinProject(string path)
     {
         var fullPath = Path.GetFullPath(path);
-        var projectRoot = Path.GetFullPath("Assets");
+        var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+        var projectRoot = Path.GetFullPath(Path.Combine(exeDir, "Assets"));
         return fullPath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase);
     }
 

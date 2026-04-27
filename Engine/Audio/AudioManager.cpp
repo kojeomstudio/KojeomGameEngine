@@ -19,6 +19,8 @@ public:
     FVoiceCallback(KAudioManager* InManager, uint32_t InVoiceId)
         : Manager(InManager), VoiceId(InVoiceId) {}
 
+    void Invalidate() { Manager = nullptr; }
+
     STDMETHOD_(void, OnBufferStart)(void*) override {}
     STDMETHOD_(void, OnBufferEnd)(void*) override {}
     STDMETHOD_(void, OnLoopEnd)(void*) override {}
@@ -103,6 +105,10 @@ void KAudioManager::Shutdown()
     for (auto& Pair : ActiveVoices)
     {
         FActiveVoice& Voice = Pair.second;
+        if (Voice.Callback)
+        {
+            Voice.Callback->Invalidate();
+        }
         if (Voice.SourceVoice)
         {
             Voice.SourceVoice->Stop();
@@ -375,6 +381,10 @@ void KAudioManager::StopAllSounds()
 {
     for (auto& Pair : ActiveVoices)
     {
+        if (Pair.second.Callback)
+        {
+            Pair.second.Callback->Invalidate();
+        }
         if (Pair.second.SourceVoice)
         {
             Pair.second.SourceVoice->Stop();
@@ -469,6 +479,10 @@ bool KAudioManager::IsSoundPlaying(uint32_t VoiceId) const
     auto It = ActiveVoices.find(VoiceId);
     if (It != ActiveVoices.end())
     {
+        if (!It->second.SourceVoice)
+        {
+            return false;
+        }
         XAUDIO2_VOICE_STATE State;
         It->second.SourceVoice->GetState(&State);
         return State.BuffersQueued > 0 || It->second.Params.bLooping;
@@ -482,6 +496,10 @@ bool KAudioManager::IsSoundPlaying(const std::string& Name) const
     {
         if (Pair.second.Sound && Pair.second.Sound->GetName() == Name)
         {
+            if (!Pair.second.SourceVoice)
+            {
+                return false;
+            }
             XAUDIO2_VOICE_STATE State;
             Pair.second.SourceVoice->GetState(&State);
             return State.BuffersQueued > 0 || Pair.second.Params.bLooping;
