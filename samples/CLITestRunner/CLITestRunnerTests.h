@@ -23,6 +23,8 @@
 #include "../../Engine/Assets/Skeleton.h"
 #include "../../Engine/Assets/Animation.h"
 #include "../../Engine/Assets/AnimationInstance.h"
+#include "../../Engine/Graphics/RenderModule.h"
+#include "../../Engine/Input/InputManager.h"
 
 namespace CLITest
 {
@@ -863,6 +865,136 @@ namespace CLITest
 
             Result.bPassed = true;
             Result.Message = "CLI parser: command, flags, key=value, help, short opts, empty input OK";
+        }
+        catch (const std::exception& e)
+        {
+            Result.Message = std::string("Exception: ") + e.what();
+        }
+
+        return Result;
+    }
+
+    inline FTestResult TestRenderModuleRegistry()
+    {
+        FTestResult Result;
+        Result.Name = "render-modules";
+        Result.bPassed = false;
+
+        try
+        {
+            std::cout << "  [INFO] Testing render module registry...\n";
+
+            KRenderModuleRegistry Registry;
+
+            struct FTestModule : public IRenderModule
+            {
+                HRESULT Initialize(KGraphicsDevice* InDevice) override { bInitialized = true; return S_OK; }
+                void Shutdown() override { bInitialized = false; }
+                void OnResize(ID3D11Device* Device, UINT32 NewWidth, UINT32 NewHeight) override {}
+                const std::string& GetName() const override { static const std::string name = "Test"; return name; }
+                ERenderModulePhase GetPhase() const override { return ERenderModulePhase::PostProcess; }
+            };
+
+            auto Mod = Registry.RegisterModule<FTestModule>();
+            if (!Mod)
+            {
+                Result.Message = "Failed to register module";
+                return Result;
+            }
+
+            if (Registry.GetModuleCount() != 1)
+            {
+                Result.Message = "Module count mismatch after registration";
+                return Result;
+            }
+
+            auto Retrieved = Registry.GetModule<FTestModule>();
+            if (Retrieved != Mod.get())
+            {
+                Result.Message = "Retrieved module pointer mismatch";
+                return Result;
+            }
+
+            if (!Registry.HasModule<FTestModule>())
+            {
+                Result.Message = "HasModule returned false for registered module";
+                return Result;
+            }
+
+            auto ByPhase = Registry.GetModulesByPhase(ERenderModulePhase::PostProcess);
+            if (ByPhase.size() != 1 || ByPhase[0] != Mod.get())
+            {
+                Result.Message = "GetModulesByPhase returned unexpected results";
+                return Result;
+            }
+
+            auto ShadowModules = Registry.GetModulesByPhase(ERenderModulePhase::Shadow);
+            if (!ShadowModules.empty())
+            {
+                Result.Message = "GetModulesByPhase(Shadow) should be empty";
+                return Result;
+            }
+
+            Registry.ForEachModule([](IRenderModule* M) {
+                M->SetEnabled(true);
+            });
+            if (!Mod->IsEnabled())
+            {
+                Result.Message = "ForEachModule SetEnabled failed";
+                return Result;
+            }
+
+            Registry.ShutdownAll();
+            if (Registry.GetModuleCount() != 0)
+            {
+                Result.Message = "Module count should be 0 after shutdown";
+                return Result;
+            }
+
+            Result.bPassed = true;
+            Result.Message = "Register, retrieve, phase query, iteration, shutdown OK";
+        }
+        catch (const std::exception& e)
+        {
+            Result.Message = std::string("Exception: ") + e.what();
+        }
+
+        return Result;
+    }
+
+    inline FTestResult TestInputSystem()
+    {
+        FTestResult Result;
+        Result.Name = "input";
+        Result.bPassed = false;
+
+        try
+        {
+            std::cout << "  [INFO] Testing input manager...\n";
+
+            KInputManager InputMgr;
+
+            bool bKeyPressed = InputMgr.IsKeyDown(static_cast<uint32_t>('W'));
+            (void)bKeyPressed;
+
+            int32_t mouseX = 0, mouseY = 0;
+            InputMgr.GetMousePosition(mouseX, mouseY);
+            (void)mouseX;
+            (void)mouseY;
+
+            InputMgr.RegisterAction("MoveForward", static_cast<uint32_t>('W'));
+            InputMgr.RegisterAction("MoveBackward", static_cast<uint32_t>('S'));
+
+            bool bForwardDown = InputMgr.IsActionDown("MoveForward");
+            bool bBackwardDown = InputMgr.IsActionDown("MoveBackward");
+            (void)bForwardDown;
+            (void)bBackwardDown;
+
+            InputMgr.FlushInput();
+            InputMgr.ClearState();
+
+            Result.bPassed = true;
+            Result.Message = "Input manager, key queries, action registration, state OK";
         }
         catch (const std::exception& e)
         {

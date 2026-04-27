@@ -18,9 +18,8 @@ public:
 
         m_cubeMesh = renderer->CreateCubeMesh();
         m_sphereMesh = renderer->CreateSphereMesh(32, 16);
-        m_triangleMesh = renderer->CreateTriangleMesh();
 
-        if (!m_cubeMesh || !m_sphereMesh || !m_triangleMesh)
+        if (!m_cubeMesh || !m_sphereMesh)
         {
             LOG_ERROR("Failed to create meshes");
             return E_FAIL;
@@ -93,7 +92,6 @@ protected:
 private:
     std::shared_ptr<KMesh> m_cubeMesh;
     std::shared_ptr<KMesh> m_sphereMesh;
-    std::shared_ptr<KMesh> m_triangleMesh;
     float m_rotationAngle = 0.0f;
     float m_cameraAngle = 0.0f;
 };

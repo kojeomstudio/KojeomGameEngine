@@ -113,6 +113,18 @@ public:
         m_lodMeshes.resize(lodChain.size());
         for (size_t i = 0; i < lodChain.size(); ++i)
         {
+            XMFLOAT4 lodColors[4] = {
+                XMFLOAT4(0.2f, 0.8f, 0.2f, 1.0f),
+                XMFLOAT4(0.8f, 0.8f, 0.2f, 1.0f),
+                XMFLOAT4(0.8f, 0.4f, 0.2f, 1.0f),
+                XMFLOAT4(0.8f, 0.2f, 0.2f, 1.0f)
+            };
+
+            for (auto& v : lodChain[i].Vertices)
+            {
+                v.Color = lodColors[std::min(i, static_cast<size_t>(3))];
+            }
+
             m_lodMeshes[i] = std::make_shared<KMesh>();
             m_lodMeshes[i]->Initialize(
                 GetGraphicsDevice()->GetDevice(),
@@ -207,13 +219,6 @@ protected:
                     sphere.Position.z
                 );
 
-                XMFLOAT4 lodColors[4] = {
-                    XMFLOAT4(0.2f, 0.8f, 0.2f, 1.0f),
-                    XMFLOAT4(0.8f, 0.8f, 0.2f, 1.0f),
-                    XMFLOAT4(0.8f, 0.4f, 0.2f, 1.0f),
-                    XMFLOAT4(0.8f, 0.2f, 0.2f, 1.0f)
-                };
-                
                 renderer->RenderMeshLit(m_lodMeshes[lodIndex], world);
             }
         }

@@ -850,6 +850,9 @@ HRESULT KRenderer::InitializeDefaultResources()
     }
 
     LOG_INFO("Default resources initialized successfully");
+
+    RegisterRenderModules();
+
     return S_OK;
 }
 
@@ -1663,4 +1666,20 @@ HRESULT KRenderer::LoadEnvironmentMap(const std::wstring& HDRPath)
         hr = IBLSystem.GenerateIBLTextures();
     }
     return hr;
+}
+
+void KRenderer::RegisterRenderModules()
+{
+    ModuleRegistry.RegisterModule<KShadowRenderModule>(ShadowRenderer, CascadedShadowRenderer);
+    ModuleRegistry.RegisterModule<KDeferredRenderModule>(DeferredRenderer);
+    ModuleRegistry.RegisterModule<KPostProcessRenderModule>(PostProcessor, MotionBlur, DepthOfField, LensEffects);
+    ModuleRegistry.RegisterModule<KSSAORenderModule>(SSAO);
+    ModuleRegistry.RegisterModule<KSSRRenderModule>(SSR);
+    ModuleRegistry.RegisterModule<KTAARenderModule>(TAA);
+    ModuleRegistry.RegisterModule<KSSGIRenderModule>(SSGI);
+    ModuleRegistry.RegisterModule<KVolumetricFogRenderModule>(VolumetricFog);
+    ModuleRegistry.RegisterModule<KSkyRenderModule>(SkySystem);
+    ModuleRegistry.RegisterModule<KIBLRenderModule>(IBLSystem);
+
+    LOG_INFO("Registered " + std::to_string(ModuleRegistry.GetModuleCount()) + " render modules");
 }

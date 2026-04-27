@@ -35,7 +35,7 @@ public:
     virtual const std::string& GetName() const = 0;
     virtual ERenderModulePhase GetPhase() const = 0;
 
-    bool IsInitialized() const { return bInitialized; }
+    virtual bool IsInitialized() const { return bInitialized; }
     void SetEnabled(bool bInEnabled) { bEnabled = bInEnabled; }
     bool IsEnabled() const { return bEnabled; }
 

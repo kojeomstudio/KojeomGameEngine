@@ -17,6 +17,12 @@ public partial class App : Application
 
     private const uint LOAD_LIBRARY_SEARCH_DEFAULT_DIRS = 0x00001000;
 
+    public App()
+    {
+        DispatcherUnhandledException += App_DispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -27,5 +33,27 @@ public partial class App : Application
 
         var mainWindow = new MainWindow();
         mainWindow.Show();
+    }
+
+    private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    {
+        MessageBox.Show(
+            $"An unexpected error occurred:\n\n{e.Exception.Message}\n\n{e.Exception.GetType().Name}",
+            "Kojeom Engine Editor - Error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+        e.Handled = true;
+    }
+
+    private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
+        {
+            MessageBox.Show(
+                $"A fatal error occurred:\n\n{ex.Message}\n\n{ex.GetType().Name}",
+                "Kojeom Engine Editor - Fatal Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 }

@@ -34,6 +34,8 @@ int main(int argc, char* argv[])
     Runner.AddTest("animation", CLITest::TestAnimationSubsystem);
     Runner.AddTest("path-utils", CLITest::TestPathUtils);
     Runner.AddTest("cli-parser", CLITest::TestCLIParser);
+    Runner.AddTest("render-modules", CLITest::TestRenderModuleRegistry);
+    Runner.AddTest("input", CLITest::TestInputSystem);
 
     std::string Command = Args.Command;
     if (Command.empty())

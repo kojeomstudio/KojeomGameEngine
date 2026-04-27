@@ -136,6 +136,8 @@ namespace CLIUtils
             "  animation          Test animation (skeleton, clip, instance)\n"
             "  path-utils         Test path traversal detection utilities\n"
             "  cli-parser         Test CLI argument parser\n"
+            "  render-modules     Test render module registry\n"
+            "  input              Test input manager\n"
             "  list               List available tests\n"
             "\n"
             "Options:\n"

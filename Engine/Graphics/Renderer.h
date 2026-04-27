@@ -10,6 +10,7 @@
 #include "Light.h"
 #include "Material.h"
 #include "RenderModule.h"
+#include "RenderModules.h"
 #include "Shadow/ShadowRenderer.h"
 #include "Shadow/CascadedShadowRenderer.h"
 #include "Deferred/DeferredRenderer.h"
@@ -243,6 +244,7 @@ public:
 private:
     HRESULT InitializeDefaultResources();
     HRESULT InitializeShadowSystem();
+    void RegisterRenderModules();
     void UpdateLightBuffer();
     void UpdateShadowBuffer();
     HRESULT CreateDebugResources();
