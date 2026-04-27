@@ -116,10 +116,9 @@ public:
         return nullptr;
     }
 
-    /** @brief Initialize all registered subsystems in registration order */
+    /** @brief Initialize all registered subsystems in registration order. Stops on first failure. */
     HRESULT InitializeAll()
     {
-        HRESULT result = S_OK;
         for (const auto& key : SubsystemOrder)
         {
             auto it = SubsystemMap.find(key);
@@ -129,11 +128,11 @@ public:
                 if (FAILED(hr))
                 {
                     LOG_ERROR("Failed to initialize subsystem: " + it->second->GetName());
-                    result = hr;
+                    return hr;
                 }
             }
         }
-        return result;
+        return S_OK;
     }
 
     /** @brief Tick all registered subsystems */

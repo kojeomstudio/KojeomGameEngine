@@ -247,7 +247,7 @@ private:
     void UpdateShadowBuffer();
     HRESULT CreateDebugResources();
     void SyncLightsToDeferred();
-private:
+
     KGraphicsDevice* GraphicsDevice = nullptr;
     KCamera* CurrentCamera = nullptr;
 

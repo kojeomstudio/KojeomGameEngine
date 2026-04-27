@@ -33,6 +33,7 @@ int main(int argc, char* argv[])
     Runner.AddTest("subsystem-registry", CLITest::TestSubsystemRegistry);
     Runner.AddTest("animation", CLITest::TestAnimationSubsystem);
     Runner.AddTest("path-utils", CLITest::TestPathUtils);
+    Runner.AddTest("cli-parser", CLITest::TestCLIParser);
 
     std::string Command = Args.Command;
     if (Command.empty())

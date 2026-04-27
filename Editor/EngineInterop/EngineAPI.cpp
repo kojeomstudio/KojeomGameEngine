@@ -910,21 +910,27 @@ extern "C"
     {
         if (!renderer) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
-        krenderer->GetDirectionalLightMutable().Direction = XMFLOAT3(x, y, z);
+        FDirectionalLight light = krenderer->GetDirectionalLight();
+        light.Direction = XMFLOAT3(x, y, z);
+        krenderer->SetDirectionalLight(light);
     }
 
     ENGINEAPI void Renderer_SetDirectionalLightColor(void* renderer, float r, float g, float b, float a)
     {
         if (!renderer) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
-        krenderer->GetDirectionalLightMutable().Color = XMFLOAT4(r, g, b, a);
+        FDirectionalLight light = krenderer->GetDirectionalLight();
+        light.Color = XMFLOAT4(r, g, b, a);
+        krenderer->SetDirectionalLight(light);
     }
 
     ENGINEAPI void Renderer_SetDirectionalLightAmbient(void* renderer, float r, float g, float b, float a)
     {
         if (!renderer) return;
         KRenderer* krenderer = static_cast<KRenderer*>(renderer);
-        krenderer->GetDirectionalLightMutable().AmbientColor = XMFLOAT4(r, g, b, a);
+        FDirectionalLight light = krenderer->GetDirectionalLight();
+        light.AmbientColor = XMFLOAT4(r, g, b, a);
+        krenderer->SetDirectionalLight(light);
     }
 
     ENGINEAPI void Renderer_AddPointLight(void* renderer, float posX, float posY, float posZ,

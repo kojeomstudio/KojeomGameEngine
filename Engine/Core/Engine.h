@@ -1,10 +1,5 @@
 ﻿#pragma once
 
-#define NOMINMAX
-#include <windows.h>
-#include <string>
-#include <memory>
-#include <functional>
 #include "../Utils/Common.h"
 #include "../Utils/Logger.h"
 #include "Subsystem.h"
@@ -26,7 +21,7 @@ class KEngine
 {
 public:
     KEngine();
-    ~KEngine();
+    virtual ~KEngine();
 
     // Prevent copy and move
     KEngine(const KEngine&) = delete;
@@ -187,9 +182,9 @@ protected:
      */
     void RegisterSubsystems();
 
-    /// <summary>
-	/// render frame implementation
-    /// </summary>
+    /**
+     * @brief Render frame implementation
+     */
     virtual void RenderFrame_Internal() {};
 
     /**

@@ -762,4 +762,113 @@ namespace CLITest
 
         return Result;
     }
+
+    inline FTestResult TestCLIParser()
+    {
+        FTestResult Result;
+        Result.Name = "cli-parser";
+        Result.bPassed = false;
+
+        try
+        {
+            std::cout << "  [INFO] Testing CLI argument parser...\n";
+
+            {
+                auto Args = CLIUtils::ParseCommandLine("rendering --verbose");
+                if (Args.Command != "rendering" || !CLIUtils::HasOption(Args, "verbose"))
+                {
+                    Result.Message = "Basic command + flag parse failed";
+                    return Result;
+                }
+            }
+
+            {
+                auto Args = CLIUtils::ParseCommandLine("model-loading --file=test.obj --iterations=5");
+                if (Args.Command != "model-loading")
+                {
+                    Result.Message = "Command with options: command parse failed";
+                    return Result;
+                }
+                if (CLIUtils::GetOption(Args, "file") != "test.obj")
+                {
+                    Result.Message = "Command with options: --file parse failed";
+                    return Result;
+                }
+                if (CLIUtils::GetOption(Args, "iterations") != "5")
+                {
+                    Result.Message = "Command with options: --iterations parse failed";
+                    return Result;
+                }
+            }
+
+            {
+                auto Args = CLIUtils::ParseCommandLine("--help");
+                if (!Args.bHelpRequested)
+                {
+                    Result.Message = "--help not detected";
+                    return Result;
+                }
+            }
+
+            {
+                auto Args = CLIUtils::ParseCommandLine("-h");
+                if (!Args.bHelpRequested)
+                {
+                    Result.Message = "-h not detected as help";
+                    return Result;
+                }
+            }
+
+            {
+                auto Args = CLIUtils::ParseCommandLine("");
+                if (!Args.Command.empty() || Args.bHelpRequested)
+                {
+                    Result.Message = "Empty command line should produce empty result";
+                    return Result;
+                }
+            }
+
+            {
+                auto Args = CLIUtils::ParseCommandLine("all");
+                if (Args.Command != "all")
+                {
+                    Result.Message = "Single command 'all' parse failed";
+                    return Result;
+                }
+                if (!Args.Options.empty())
+                {
+                    Result.Message = "Single command should have no options";
+                    return Result;
+                }
+            }
+
+            {
+                auto Args = CLIUtils::ParseCommandLine("rendering -v --width=1920 --height=1080");
+                if (!CLIUtils::HasOption(Args, "v") ||
+                    CLIUtils::GetOption(Args, "width") != "1920" ||
+                    CLIUtils::GetOption(Args, "height") != "1080")
+                {
+                    Result.Message = "Mixed short/long options parse failed";
+                    return Result;
+                }
+            }
+
+            std::cout << "  [INFO] Testing help text output...\n";
+            std::string HelpText = CLIUtils::GetHelpText();
+            if (HelpText.empty() || HelpText.find("all") == std::string::npos)
+            {
+                Result.Message = "Help text is empty or missing command list";
+                return Result;
+            }
+
+            Result.bPassed = true;
+            Result.Message = "CLI parser: command, flags, key=value, help, short opts, empty input OK";
+        }
+        catch (const std::exception& e)
+        {
+            Result.Message = std::string("Exception: ") + e.what();
+        }
+
+        return Result;
+    }
 }
