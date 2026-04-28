@@ -161,6 +161,11 @@ bool KSound::LoadFromWavFile(const std::wstring& FilePath)
         }
         else
         {
+            if (ChunkSize > MaxAudioDataSize)
+            {
+                LOG_ERROR("WAV chunk too large: " + std::to_string(ChunkSize));
+                return false;
+            }
             File.seekg(ChunkSize, std::ios::cur);
         }
     }
