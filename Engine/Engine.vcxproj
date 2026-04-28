@@ -174,6 +174,11 @@
     <ClInclude Include="Utils\Common.h" />
     <ClInclude Include="Utils\Logger.h" />
     <ClInclude Include="Utils\Math.h" />
+    <ClInclude Include="Utils\CLI.h" />
+    <ClInclude Include="Graphics\RenderModule.h" />
+    <ClInclude Include="Graphics\RenderModules.h" />
+    <ClInclude Include="Graphics\RenderSubsystem.h" />
+    <ClInclude Include="Input\InputSubsystem.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Assets\StaticMesh.cpp" />

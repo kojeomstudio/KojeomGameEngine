@@ -11,6 +11,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <mutex>
 
 struct FLoadedModel
 {
@@ -72,6 +73,7 @@ private:
     void ProcessAnimations(void* AssimpScene, FLoadedModel* OutModel);
 
     std::unordered_map<std::wstring, std::shared_ptr<FLoadedModel>> LoadedModels;
+    mutable std::mutex LoadedModelsMutex;
     ID3D11Device* Device = nullptr;
     bool bInitialized = false;
     bool bAssimpAvailable = false;

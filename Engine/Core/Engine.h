@@ -6,8 +6,10 @@
 #include "../Graphics/GraphicsDevice.h"
 #include "../Graphics/Camera.h"
 #include "../Graphics/Renderer.h"
+#include "../Graphics/RenderSubsystem.h"
 #include "../Scene/SceneManager.h"
 #include "../Input/InputManager.h"
+#include "../Input/InputSubsystem.h"
 #include "../Audio/AudioSubsystem.h"
 #include "../Physics/PhysicsSubsystem.h"
 
@@ -78,6 +80,8 @@ public:
     KInputManager* GetInputManager() const { return InputManager.get(); }
     KSceneManager& GetSceneManager() { return SceneManager; }
     const KSceneManager& GetSceneManager() const { return SceneManager; }
+    KRenderSubsystem* GetRenderSubsystem() const { return RenderSubsystem.get(); }
+    KInputSubsystem* GetInputSubsystem() const { return InputSubsystem.get(); }
     KAudioSubsystem* GetAudioSubsystem() const { return AudioSubsystem.get(); }
     KPhysicsSubsystem* GetPhysicsSubsystem() const { return PhysicsSubsystem.get(); }
     HWND GetWindowHandle() const { return WindowHandle; }
@@ -218,7 +222,8 @@ private:
     std::unique_ptr<KInputManager> InputManager;
     KSceneManager SceneManager;
 
-    // Modular subsystems
+    std::shared_ptr<KRenderSubsystem> RenderSubsystem;
+    std::shared_ptr<KInputSubsystem> InputSubsystem;
     std::shared_ptr<KAudioSubsystem> AudioSubsystem;
     std::shared_ptr<KPhysicsSubsystem> PhysicsSubsystem;
 

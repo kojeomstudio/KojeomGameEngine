@@ -93,15 +93,21 @@ public:
     void SetName(const std::string& InName) { Name = InName; }
     const std::string& GetName() const { return Name; }
 
-    void SetWorldTransform(const FTransform& InTransform) { WorldTransform = InTransform; }
+    void SetWorldTransform(const FTransform& InTransform) { WorldTransform = InTransform; bTransformDirty = true; }
     const FTransform& GetWorldTransform() const { return WorldTransform; }
     FTransform& GetWorldTransformMutable() { return WorldTransform; }
 
-    void SetWorldPosition(const XMFLOAT3& Position) { WorldTransform.Position = Position; }
-    void SetWorldRotation(const XMFLOAT4& Rotation) { WorldTransform.Rotation = Rotation; }
-    void SetWorldScale(const XMFLOAT3& Scale) { WorldTransform.Scale = Scale; }
+    void SetWorldPosition(const XMFLOAT3& Position);
+    void SetWorldRotation(const XMFLOAT4& Rotation);
+    void SetWorldScale(const XMFLOAT3& Scale);
 
-    XMMATRIX GetWorldMatrix() const { return WorldTransform.ToMatrix(); }
+    XMMATRIX GetWorldMatrix() const;
+
+    void SetLocalPosition(const XMFLOAT3& Position) { LocalTransform.Position = Position; bTransformDirty = true; }
+    void SetLocalRotation(const XMFLOAT4& Rotation) { LocalTransform.Rotation = Rotation; bTransformDirty = true; }
+    void SetLocalScale(const XMFLOAT3& Scale) { LocalTransform.Scale = Scale; bTransformDirty = true; }
+
+    const FTransform& GetLocalTransform() const { return LocalTransform; }
 
     void SetParent(KActor* InParent);
     KActor* GetParent() const { return Parent; }
@@ -120,6 +126,8 @@ public:
 protected:
     std::string Name;
     FTransform WorldTransform;
+    FTransform LocalTransform;
+    bool bTransformDirty = false;
     std::vector<ComponentPtr> Components;
     KActor* Parent = nullptr;
     std::vector<ActorPtr> Children;

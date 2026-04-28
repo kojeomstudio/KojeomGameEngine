@@ -63,6 +63,50 @@ void KActor::Render(KRenderer* Renderer)
     }
 }
 
+void KActor::SetWorldPosition(const XMFLOAT3& Position)
+{
+    if (Parent)
+    {
+        XMMATRIX parentWorld = Parent->GetWorldMatrix();
+        XMMATRIX parentInv = XMMatrixInverse(nullptr, parentWorld);
+        XMMATRIX worldMat = XMMatrixTranslation(Position.x, Position.y, Position.z);
+        XMMATRIX localMat = worldMat * parentInv;
+        XMVECTOR scale, rotQuat, trans;
+        XMMatrixDecompose(&scale, &rotQuat, &trans, localMat);
+        XMStoreFloat3(&LocalTransform.Position, trans);
+    }
+    else
+    {
+        LocalTransform.Position = Position;
+    }
+    WorldTransform.Position = Position;
+    bTransformDirty = true;
+}
+
+void KActor::SetWorldRotation(const XMFLOAT4& Rotation)
+{
+    LocalTransform.Rotation = Rotation;
+    WorldTransform.Rotation = Rotation;
+    bTransformDirty = true;
+}
+
+void KActor::SetWorldScale(const XMFLOAT3& Scale)
+{
+    LocalTransform.Scale = Scale;
+    WorldTransform.Scale = Scale;
+    bTransformDirty = true;
+}
+
+XMMATRIX KActor::GetWorldMatrix() const
+{
+    XMMATRIX localMatrix = LocalTransform.ToMatrix();
+    if (Parent)
+    {
+        return localMatrix * Parent->GetWorldMatrix();
+    }
+    return localMatrix;
+}
+
 void KActor::AddComponent(ComponentPtr Component)
 {
     if (Component)
@@ -359,77 +403,77 @@ ActorPtr KScene::CreateActor(const std::string& ActorName)
     return actor;
 }
 
-    void KScene::AddActor(ActorPtr Actor)
-    {
-        if (!Actor) return;
+void KScene::AddActor(ActorPtr Actor)
+{
+    if (!Actor) return;
 
-        const std::string& actorName = Actor->GetName();
-        auto it = ActorMap.find(actorName);
-        if (it != ActorMap.end())
+    const std::string& actorName = Actor->GetName();
+    auto it = ActorMap.find(actorName);
+    if (it != ActorMap.end())
+    {
+        ActorMap.erase(it);
+        for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
         {
-            ActorMap.erase(it);
+            if ((*ait)->GetName() == actorName)
+            {
+                Actors.erase(ait);
+                break;
+            }
+        }
+    }
+
+    ActorMap[actorName] = Actor;
+    Actor->BeginPlay();
+    Actors.push_back(std::move(Actor));
+}
+
+void KScene::RemoveActor(const std::string& ActorName)
+{
+    auto it = ActorMap.find(ActorName);
+    if (it != ActorMap.end())
+    {
+        ActorPtr actor = it->second;
+
+        if (actor->GetParent())
+        {
+            actor->GetParent()->RemoveChild(actor.get());
+        }
+
+        auto childrenCopy = actor->GetChildren();
+        for (auto& child : childrenCopy)
+        {
+            child->SetParent(nullptr);
+            const std::string& childName = child->GetName();
+            if (!childName.empty())
+            {
+                auto childIt = ActorMap.find(childName);
+                if (childIt != ActorMap.end() && childIt->second == child)
+                {
+                    ActorMap.erase(childIt);
+                }
+            }
             for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
             {
-                if ((*ait)->GetName() == actorName)
+                if (*ait == child)
                 {
-                    Actors.erase(ait);
+                    ait = Actors.erase(ait);
                     break;
                 }
             }
         }
 
-        ActorMap[actorName] = Actor;
-        Actor->BeginPlay();
-        Actors.push_back(std::move(Actor));
-    }
+        ActorMap.erase(it);
 
-    void KScene::RemoveActor(const std::string& ActorName)
-    {
-        auto it = ActorMap.find(ActorName);
-        if (it != ActorMap.end())
+        for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
         {
-            ActorPtr actor = it->second;
-
-            if (actor->GetParent())
+            if (*ait == actor)
             {
-                actor->GetParent()->RemoveChild(actor.get());
-            }
-
-            auto childrenCopy = actor->GetChildren();
-            for (auto& child : childrenCopy)
-            {
-                child->SetParent(nullptr);
-                const std::string& childName = child->GetName();
-                if (!childName.empty())
-                {
-                    auto childIt = ActorMap.find(childName);
-                    if (childIt != ActorMap.end() && childIt->second == child)
-                    {
-                        ActorMap.erase(childIt);
-                    }
-                }
-                for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
-                {
-                    if (*ait == child)
-                    {
-                        ait = Actors.erase(ait);
-                        break;
-                    }
-                }
-            }
-
-            ActorMap.erase(it);
-
-            for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
-            {
-                if (*ait == actor)
-                {
-                    Actors.erase(ait);
-                    break;
-                }
+                Actors.erase(ait);
+                break;
             }
         }
     }
+}
 
 void KScene::RemoveActor(KActor* Actor)
 {

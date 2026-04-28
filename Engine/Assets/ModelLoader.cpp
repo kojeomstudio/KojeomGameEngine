@@ -117,7 +117,10 @@ std::shared_ptr<FLoadedModel> KModelLoader::LoadModel(const std::wstring& Path, 
         return nullptr;
     }
 
-    LoadedModels[Path] = model;
+    {
+        std::lock_guard<std::mutex> Lock(LoadedModelsMutex);
+        LoadedModels[Path] = model;
+    }
     LOG_INFO("Loaded model: " + model->Name);
     return model;
 }
@@ -153,11 +156,13 @@ std::future<std::shared_ptr<FLoadedModel>> KModelLoader::LoadModelAsync(const st
 
 bool KModelLoader::IsModelLoaded(const std::wstring& Path) const
 {
+    std::lock_guard<std::mutex> Lock(LoadedModelsMutex);
     return LoadedModels.find(Path) != LoadedModels.end();
 }
 
 std::shared_ptr<FLoadedModel> KModelLoader::GetLoadedModel(const std::wstring& Path)
 {
+    std::lock_guard<std::mutex> Lock(LoadedModelsMutex);
     auto it = LoadedModels.find(Path);
     if (it != LoadedModels.end())
     {
@@ -168,6 +173,7 @@ std::shared_ptr<FLoadedModel> KModelLoader::GetLoadedModel(const std::wstring& P
 
 void KModelLoader::UnloadModel(const std::wstring& Path)
 {
+    std::lock_guard<std::mutex> Lock(LoadedModelsMutex);
     auto it = LoadedModels.find(Path);
     if (it != LoadedModels.end())
     {
@@ -178,6 +184,7 @@ void KModelLoader::UnloadModel(const std::wstring& Path)
 
 void KModelLoader::UnloadAllModels()
 {
+    std::lock_guard<std::mutex> Lock(LoadedModelsMutex);
     LoadedModels.clear();
     LOG_INFO("Unloaded all models");
 }

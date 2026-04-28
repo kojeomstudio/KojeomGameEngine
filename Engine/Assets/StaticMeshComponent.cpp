@@ -1,6 +1,6 @@
 #include "StaticMeshComponent.h"
 #include "../Graphics/Renderer.h"
-#include <algorithm>
+#include "../Utils/Common.h"
 
 KStaticMeshComponent::KStaticMeshComponent()
 {
@@ -44,9 +44,7 @@ void KStaticMeshComponent::Serialize(KBinaryArchive& Archive)
     if (StaticMesh)
     {
         meshPath = StaticMesh->GetName();
-        std::wstring ws = StaticMesh->GetSourcePath();
-        meshSourcePath.resize(ws.size());
-        std::transform(ws.begin(), ws.end(), meshSourcePath.begin(), [](wchar_t c) { return static_cast<char>(c); });
+        meshSourcePath = StringUtils::WideToMultiByte(StaticMesh->GetSourcePath());
     }
     Archive << meshPath;
     Archive << meshSourcePath;
@@ -106,10 +104,7 @@ void KStaticMeshComponent::Deserialize(KBinaryArchive& Archive)
         mesh->SetName(meshPath);
         if (!meshSourcePath.empty())
         {
-            std::wstring ws;
-            ws.resize(meshSourcePath.size());
-            std::transform(meshSourcePath.begin(), meshSourcePath.end(), ws.begin(), [](char c) { return static_cast<wchar_t>(c); });
-            mesh->SetSourcePath(ws);
+            mesh->SetSourcePath(StringUtils::MultiByteToWide(meshSourcePath));
         }
         StaticMesh = mesh;
     }

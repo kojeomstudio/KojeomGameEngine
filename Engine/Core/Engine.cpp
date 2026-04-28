@@ -219,7 +219,8 @@ void KEngine::Shutdown()
     // Shutdown all registered subsystems (in reverse order)
     SubsystemRegistry.ShutdownAll();
 
-    // Release subsystem shared pointers
+    RenderSubsystem.reset();
+    InputSubsystem.reset();
     AudioSubsystem.reset();
     PhysicsSubsystem.reset();
 
@@ -663,11 +664,15 @@ void KEngine::CleanupDebugEnvironment()
 
 void KEngine::RegisterSubsystems()
 {
-    // Create and register Audio subsystem
+    RenderSubsystem = std::make_shared<KRenderSubsystem>();
+    SubsystemRegistry.Register<KRenderSubsystem>(RenderSubsystem);
+
+    InputSubsystem = std::make_shared<KInputSubsystem>();
+    SubsystemRegistry.Register<KInputSubsystem>(InputSubsystem);
+
     AudioSubsystem = std::make_shared<KAudioSubsystem>();
     SubsystemRegistry.Register<KAudioSubsystem>(AudioSubsystem);
 
-    // Create and register Physics subsystem
     PhysicsSubsystem = std::make_shared<KPhysicsSubsystem>();
     SubsystemRegistry.Register<KPhysicsSubsystem>(PhysicsSubsystem);
 
