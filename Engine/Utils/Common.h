@@ -77,9 +77,23 @@ namespace StringUtils
 
 namespace PathUtils
 {
+    inline bool ContainsPercentEncoding(const std::wstring& Path)
+    {
+        for (size_t i = 0; i + 2 < Path.size(); ++i)
+        {
+            if (Path[i] == L'%' && isxdigit(Path[i + 1]) && isxdigit(Path[i + 2]))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     inline bool ContainsTraversal(const std::wstring& Path)
     {
         if (Path.empty()) return true;
+
+        if (ContainsPercentEncoding(Path)) return true;
 
         std::wstring normalized = Path;
         for (auto& c : normalized)
@@ -145,15 +159,25 @@ namespace PathUtils
 
         if (BaseDir.empty()) return true;
 
-        wchar_t fullPath[MAX_PATH] = {};
-        wchar_t resolvedBase[MAX_PATH] = {};
+        std::wstring fullPath(_MAX_PATH, L'\0');
+        if (!_wfullpath(&fullPath[0], Path.c_str(), fullPath.size()))
+        {
+            fullPath.resize(32768, L'\0');
+            if (!_wfullpath(&fullPath[0], Path.c_str(), fullPath.size())) return false;
+        }
+        fullPath.resize(wcslen(fullPath.c_str()));
 
-        if (!_wfullpath(fullPath, Path.c_str(), MAX_PATH)) return false;
-        if (!_wfullpath(resolvedBase, BaseDir.c_str(), MAX_PATH)) return false;
+        std::wstring resolvedBase(_MAX_PATH, L'\0');
+        if (!_wfullpath(&resolvedBase[0], BaseDir.c_str(), resolvedBase.size()))
+        {
+            resolvedBase.resize(32768, L'\0');
+            if (!_wfullpath(&resolvedBase[0], BaseDir.c_str(), resolvedBase.size())) return false;
+        }
+        resolvedBase.resize(wcslen(resolvedBase.c_str()));
 
-        size_t basePathLen = wcslen(resolvedBase);
-        if (wcsncmp(fullPath, resolvedBase, basePathLen) != 0) return false;
-        if (basePathLen > 0 && fullPath[basePathLen] != L'\\' && fullPath[basePathLen] != L'\0') return false;
+        if (fullPath.compare(0, resolvedBase.size(), resolvedBase) != 0) return false;
+        if (resolvedBase.size() > 0 && fullPath.size() > resolvedBase.size() &&
+            fullPath[resolvedBase.size()] != L'\\') return false;
 
         return true;
     }
