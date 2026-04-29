@@ -65,8 +65,8 @@ public class MainViewModel : ViewModelBase
         if (dialog.ShowDialog() == true)
         {
             var fullPath = System.IO.Path.GetFullPath(dialog.FileName);
-            var projectRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
-            if (!fullPath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase))
+            var projectRoot = GetProjectRoot();
+            if (!IsPathWithinDirectory(fullPath, projectRoot))
             {
                 System.Windows.MessageBox.Show("Scene file must be within the project directory.", "Security Warning",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
@@ -87,8 +87,8 @@ public class MainViewModel : ViewModelBase
         if (dialog.ShowDialog() == true)
         {
             var fullPath = System.IO.Path.GetFullPath(dialog.FileName);
-            var projectRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
-            if (!fullPath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase))
+            var projectRoot = GetProjectRoot();
+            if (!IsPathWithinDirectory(fullPath, projectRoot))
             {
                 System.Windows.MessageBox.Show("Scene file must be saved within the project directory.", "Security Warning",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
@@ -96,6 +96,28 @@ public class MainViewModel : ViewModelBase
             }
             _sceneViewModel.SaveScene(dialog.FileName);
         }
+    }
+
+    private static string GetProjectRoot()
+    {
+        var dir = AppDomain.CurrentDomain.BaseDirectory;
+        for (int i = 0; i < 6 && dir != null; i++)
+        {
+            var test = System.IO.Path.Combine(dir, "KojeomEngine.sln");
+            if (System.IO.File.Exists(test))
+                return dir;
+            dir = System.IO.Path.GetDirectoryName(dir);
+        }
+        return AppDomain.CurrentDomain.BaseDirectory;
+    }
+
+    private static bool IsPathWithinDirectory(string path, string directory)
+    {
+        var normalizedDir = directory.TrimEnd(System.IO.Path.DirectorySeparatorChar,
+            System.IO.Path.AltDirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
+        return path.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(path, directory.TrimEnd(System.IO.Path.DirectorySeparatorChar,
+                System.IO.Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
     }
 }
 

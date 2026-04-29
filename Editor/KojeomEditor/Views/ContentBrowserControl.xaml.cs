@@ -206,7 +206,10 @@ public partial class ContentBrowserControl : UserControl
         var fullPath = Path.GetFullPath(path);
         var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
         var projectRoot = Path.GetFullPath(Path.Combine(exeDir, "Assets"));
-        return fullPath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase);
+        if (!projectRoot.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            projectRoot += Path.DirectorySeparatorChar;
+        return fullPath.StartsWith(projectRoot, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(fullPath, projectRoot.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
     }
 
     private void Import_Click(object sender, RoutedEventArgs e)
