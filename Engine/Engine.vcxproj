@@ -100,6 +100,7 @@
     <ClInclude Include="Assets\Animation.h" />
     <ClInclude Include="Assets\AnimationInstance.h" />
     <ClInclude Include="Assets\AnimationStateMachine.h" />
+    <ClInclude Include="Assets\BlendTree.h" />
     <ClInclude Include="Assets\ModelLoader.h" />
     <ClInclude Include="Assets\SkeletalMeshComponent.h" />
     <ClInclude Include="Assets\LightComponent.h" />
@@ -187,6 +188,7 @@
     <ClCompile Include="Assets\Animation.cpp" />
     <ClCompile Include="Assets\AnimationInstance.cpp" />
     <ClCompile Include="Assets\AnimationStateMachine.cpp" />
+    <ClCompile Include="Assets\BlendTree.cpp" />
     <ClCompile Include="Assets\ModelLoader.cpp" />
     <ClCompile Include="Assets\SkeletalMeshComponent.cpp" />
     <ClCompile Include="Assets\LightComponent.cpp" />

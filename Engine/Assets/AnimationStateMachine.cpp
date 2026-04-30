@@ -52,26 +52,26 @@ void KAnimationState::CheckNotifies(float CurrentTime, float PreviousTime, float
 
         float NotifyTime = Notify.TriggerTime * Duration;
         
+        bool bShouldTrigger = false;
         if (PreviousTime < CurrentTime)
         {
-            if (PreviousTime <= NotifyTime && NotifyTime < CurrentTime)
-            {
-                Notify.bTriggered = true;
-                if (Notify.Callback)
-                {
-                    Notify.Callback();
-                }
-            }
+            bShouldTrigger = (PreviousTime <= NotifyTime && NotifyTime <= CurrentTime);
         }
         else if (bIsLooping)
         {
-            if (PreviousTime <= NotifyTime || NotifyTime < CurrentTime)
+            bShouldTrigger = (PreviousTime <= NotifyTime || NotifyTime <= CurrentTime);
+        }
+
+        if (bShouldTrigger)
+        {
+            Notify.bTriggered = true;
+            if (Notify.CallbackWithPayload)
             {
-                Notify.bTriggered = true;
-                if (Notify.Callback)
-                {
-                    Notify.Callback();
-                }
+                Notify.CallbackWithPayload(Notify.Payload);
+            }
+            else if (Notify.Callback)
+            {
+                Notify.Callback();
             }
         }
     }

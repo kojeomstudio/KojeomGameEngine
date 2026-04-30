@@ -300,6 +300,73 @@ std::shared_ptr<KAnimation> KAnimationInstance::GetAnimation(const std::string& 
     return nullptr;
 }
 
+const FRootMotionData& KAnimationInstance::ExtractRootMotion()
+{
+    LastRootMotion = FRootMotionData();
+
+    if (RootMotionMode == ERootMotionMode::NoRootMotion || !Skeleton || BoneMatrices.empty())
+    {
+        return LastRootMotion;
+    }
+
+    int32 RootBone = RootMotionBoneIndex;
+    if (RootBone < 0 || RootBone >= static_cast<int32>(BoneMatrices.size()))
+    {
+        return LastRootMotion;
+    }
+
+    XMMATRIX RootMatrix = BoneMatrices[RootBone];
+    XMVECTOR RootScale, RootRot, RootTrans;
+    if (!XMMatrixDecompose(&RootScale, &RootRot, &RootTrans, RootMatrix))
+    {
+        return LastRootMotion;
+    }
+
+    XMFLOAT3 CurrentPosition;
+    XMFLOAT4 CurrentRotation;
+    XMStoreFloat3(&CurrentPosition, RootTrans);
+    XMStoreFloat4(&CurrentRotation, RootRot);
+
+    if (bRootMotionInitialized)
+    {
+        LastRootMotion.PositionDelta.x = CurrentPosition.x - PreviousRootPosition.x;
+        LastRootMotion.PositionDelta.y = CurrentPosition.y - PreviousRootPosition.y;
+        LastRootMotion.PositionDelta.z = CurrentPosition.z - PreviousRootPosition.z;
+
+        XMVECTOR PrevRot = XMLoadFloat4(&PreviousRootRotation);
+        XMVECTOR CurrRot = XMLoadFloat4(&CurrentRotation);
+        if (XMVectorGetX(XMVector4Dot(PrevRot, CurrRot)) < 0.0f)
+        {
+            CurrRot = XMVectorNegate(CurrRot);
+        }
+        XMVECTOR InvPrevRot = XMQuaternionInverse(PrevRot);
+        XMVECTOR DeltaRot = XMQuaternionMultiply(InvPrevRot, CurrRot);
+        XMStoreFloat4(&LastRootMotion.RotationDelta, DeltaRot);
+
+        bool bHasPositionDelta = (std::abs(LastRootMotion.PositionDelta.x) > 0.0001f ||
+                                  std::abs(LastRootMotion.PositionDelta.y) > 0.0001f ||
+                                  std::abs(LastRootMotion.PositionDelta.z) > 0.0001f);
+        float RotAngle = 2.0f * acosf(std::min(1.0f, std::abs(XMVectorGetW(DeltaRot))));
+        bool bHasRotationDelta = (RotAngle > 0.0001f);
+
+        LastRootMotion.bHasRootMotion = bHasPositionDelta || bHasRotationDelta;
+    }
+
+    PreviousRootPosition = CurrentPosition;
+    PreviousRootRotation = CurrentRotation;
+    bRootMotionInitialized = true;
+
+    return LastRootMotion;
+}
+
+void KAnimationInstance::ResetRootMotion()
+{
+    LastRootMotion = FRootMotionData();
+    PreviousRootPosition = XMFLOAT3(0, 0, 0);
+    PreviousRootRotation = XMFLOAT4(0, 0, 0, 1);
+    bRootMotionInitialized = false;
+}
+
 void KAnimationInstance::ClearAnimations()
 {
     Animations.clear();

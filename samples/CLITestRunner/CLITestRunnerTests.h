@@ -23,6 +23,8 @@
 #include "../../Engine/Assets/Skeleton.h"
 #include "../../Engine/Assets/Animation.h"
 #include "../../Engine/Assets/AnimationInstance.h"
+#include "../../Engine/Assets/AnimationStateMachine.h"
+#include "../../Engine/Assets/BlendTree.h"
 #include "../../Engine/Graphics/RenderModule.h"
 #include "../../Engine/Input/InputManager.h"
 
@@ -995,6 +997,342 @@ namespace CLITest
 
             Result.bPassed = true;
             Result.Message = "Input manager, key queries, action registration, state OK";
+        }
+        catch (const std::exception& e)
+        {
+            Result.Message = std::string("Exception: ") + e.what();
+        }
+
+        return Result;
+    }
+
+    inline FTestResult TestBlendTree()
+    {
+        FTestResult Result;
+        Result.Name = "blend-tree";
+        Result.bPassed = false;
+
+        try
+        {
+            std::cout << "  [INFO] Testing blend tree...\n";
+
+            KSkeleton Skeleton;
+            FBone RootBone;
+            RootBone.Name = "Root";
+            RootBone.ParentIndex = INVALID_BONE_INDEX;
+            Skeleton.AddBone(RootBone);
+
+            FBone ChildBone;
+            ChildBone.Name = "Child";
+            ChildBone.ParentIndex = 0;
+            Skeleton.AddBone(ChildBone);
+
+            Skeleton.CalculateBindPoses();
+            Skeleton.CalculateInverseBindPoses();
+
+            auto AnimIdle = std::make_shared<KAnimation>();
+            AnimIdle->SetName("Idle");
+            AnimIdle->SetDuration(24.0f);
+            AnimIdle->SetTicksPerSecond(24.0f);
+            FAnimationChannel IdleRootChannel;
+            IdleRootChannel.BoneName = "Root";
+            FTransformKey IdleKey0;
+            IdleKey0.Time = 0.0f;
+            IdleRootChannel.PositionKeys.push_back(IdleKey0);
+            AnimIdle->AddChannel(IdleRootChannel);
+            AnimIdle->BuildBoneIndexMap(&Skeleton);
+
+            auto AnimWalk = std::make_shared<KAnimation>();
+            AnimWalk->SetName("Walk");
+            AnimWalk->SetDuration(24.0f);
+            AnimWalk->SetTicksPerSecond(24.0f);
+            FAnimationChannel WalkRootChannel;
+            WalkRootChannel.BoneName = "Root";
+            FTransformKey WalkKey0;
+            WalkKey0.Time = 0.0f;
+            WalkKey0.Position = XMFLOAT3(0, 0, 0);
+            FTransformKey WalkKey1;
+            WalkKey1.Time = 24.0f;
+            WalkKey1.Position = XMFLOAT3(1, 0, 0);
+            WalkRootChannel.PositionKeys.push_back(WalkKey0);
+            WalkRootChannel.PositionKeys.push_back(WalkKey1);
+            AnimWalk->AddChannel(WalkRootChannel);
+            AnimWalk->BuildBoneIndexMap(&Skeleton);
+
+            auto AnimRun = std::make_shared<KAnimation>();
+            AnimRun->SetName("Run");
+            AnimRun->SetDuration(24.0f);
+            AnimRun->SetTicksPerSecond(24.0f);
+            FAnimationChannel RunRootChannel;
+            RunRootChannel.BoneName = "Root";
+            FTransformKey RunKey0;
+            RunKey0.Time = 0.0f;
+            RunKey0.Position = XMFLOAT3(0, 0, 0);
+            FTransformKey RunKey1;
+            RunKey1.Time = 24.0f;
+            RunKey1.Position = XMFLOAT3(2, 0, 0);
+            RunRootChannel.PositionKeys.push_back(RunKey0);
+            RunRootChannel.PositionKeys.push_back(RunKey1);
+            AnimRun->AddChannel(RunRootChannel);
+            AnimRun->BuildBoneIndexMap(&Skeleton);
+
+            KBlendTree BlendTree;
+            BlendTree.SetSkeleton(&Skeleton);
+            BlendTree.SetParameterName("Speed");
+            BlendTree.AddChild(AnimIdle, 0.0f);
+            BlendTree.AddChild(AnimWalk, 5.0f);
+            BlendTree.AddChild(AnimRun, 10.0f);
+
+            bool bHasCorrectCount = (BlendTree.GetChildCount() == 3);
+            if (!bHasCorrectCount)
+            {
+                Result.Message = "Expected 3 children, got " + std::to_string(BlendTree.GetChildCount());
+                return Result;
+            }
+
+            BlendTree.Update(0.01f, 0.0f);
+            bool bIdleWeight = (std::abs(BlendTree.GetChildWeight(0) - 1.0f) < 0.001f &&
+                               std::abs(BlendTree.GetChildWeight(1) - 0.0f) < 0.001f &&
+                               std::abs(BlendTree.GetChildWeight(2) - 0.0f) < 0.001f);
+            if (!bIdleWeight)
+            {
+                Result.Message = "Idle weight check failed at param=0.0";
+                return Result;
+            }
+
+            BlendTree.Update(0.01f, 10.0f);
+            bool bRunWeight = (std::abs(BlendTree.GetChildWeight(2) - 1.0f) < 0.001f);
+            if (!bRunWeight)
+            {
+                Result.Message = "Run weight check failed at param=10.0";
+                return Result;
+            }
+
+            BlendTree.Update(0.01f, 7.5f);
+            bool bBlendWeight = (std::abs(BlendTree.GetChildWeight(1) - 0.5f) < 0.001f &&
+                                std::abs(BlendTree.GetChildWeight(2) - 0.5f) < 0.001f);
+            if (!bBlendWeight)
+            {
+                Result.Message = "Blend weight check failed at param=7.5";
+                return Result;
+            }
+
+            BlendTree.Update(0.01f, -1.0f);
+            bool bClampedLow = (std::abs(BlendTree.GetChildWeight(0) - 1.0f) < 0.001f);
+
+            BlendTree.Update(0.01f, 15.0f);
+            bool bClampedHigh = (std::abs(BlendTree.GetChildWeight(2) - 1.0f) < 0.001f);
+
+            uint32 BoneMatrixCount = BlendTree.GetBoneMatrixCount();
+            bool bBoneMatrices = (BoneMatrixCount == 2);
+
+            BlendTree.RemoveChild(2);
+            bool bRemoveChild = (BlendTree.GetChildCount() == 2);
+
+            BlendTree.Reset();
+            bool bReset = (BlendTree.GetChildWeight(0) == 0.0f && BlendTree.GetBoneMatrixCount() == 0);
+
+            Result.bPassed = bHasCorrectCount && bIdleWeight && bRunWeight && bBlendWeight &&
+                             bClampedLow && bClampedHigh && bBoneMatrices && bRemoveChild && bReset;
+            Result.Message = "Blend tree: create, weights, clamping, bone matrices, reset OK";
+        }
+        catch (const std::exception& e)
+        {
+            Result.Message = std::string("Exception: ") + e.what();
+        }
+
+        return Result;
+    }
+
+    inline FTestResult TestRootMotion()
+    {
+        FTestResult Result;
+        Result.Name = "root-motion";
+        Result.bPassed = false;
+
+        try
+        {
+            std::cout << "  [INFO] Testing root motion extraction...\n";
+
+            KSkeleton Skeleton;
+            FBone RootBone;
+            RootBone.Name = "Root";
+            RootBone.ParentIndex = INVALID_BONE_INDEX;
+            RootBone.LocalPosition = XMFLOAT3(0, 0, 0);
+            Skeleton.AddBone(RootBone);
+            Skeleton.CalculateBindPoses();
+            Skeleton.CalculateInverseBindPoses();
+
+            auto Anim = std::make_shared<KAnimation>();
+            Anim->SetName("WalkForward");
+            Anim->SetDuration(48.0f);
+            Anim->SetTicksPerSecond(24.0f);
+
+            FAnimationChannel RootChannel;
+            RootChannel.BoneName = "Root";
+
+            FTransformKey Key0;
+            Key0.Time = 0.0f;
+            Key0.Position = XMFLOAT3(0, 0, 0);
+
+            FTransformKey Key1;
+            Key1.Time = 24.0f;
+            Key1.Position = XMFLOAT3(1, 0, 0);
+
+            FTransformKey Key2;
+            Key2.Time = 48.0f;
+            Key2.Position = XMFLOAT3(2, 0, 0);
+
+            RootChannel.PositionKeys.push_back(Key0);
+            RootChannel.PositionKeys.push_back(Key1);
+            RootChannel.PositionKeys.push_back(Key2);
+            Anim->AddChannel(RootChannel);
+            Anim->BuildBoneIndexMap(&Skeleton);
+
+            KAnimationInstance Instance;
+            Instance.SetSkeleton(&Skeleton);
+            Instance.PlayAnimation("WalkForward", Anim, EAnimationPlayMode::Once);
+            Instance.SetRootMotionMode(ERootMotionMode::RootMotionFromRootBoneOnly);
+            Instance.SetRootMotionBoneIndex(0);
+
+            const FRootMotionData& RM0 = Instance.ExtractRootMotion();
+            bool bNoMotionInit = !RM0.bHasRootMotion;
+
+            Instance.Update(1.0f);
+            Instance.UpdateBoneMatrices();
+            const FRootMotionData& RM1 = Instance.ExtractRootMotion();
+            bool bHasMotionAfterUpdate = RM1.bHasRootMotion;
+
+            float TotalDeltaZ = 0.0f;
+            for (int i = 0; i < 10; ++i)
+            {
+                Instance.Update(0.1f);
+                Instance.UpdateBoneMatrices();
+                const FRootMotionData& RM = Instance.ExtractRootMotion();
+                if (RM.bHasRootMotion)
+                {
+                    TotalDeltaZ += RM.PositionDelta.x;
+                }
+            }
+            bool bAccumulatesMotion = (TotalDeltaZ > 0.0f);
+
+            Instance.StopAnimation();
+            const FRootMotionData& RMStop = Instance.ExtractRootMotion();
+            bool bNoMotionAfterStop = !RMStop.bHasRootMotion;
+
+            KAnimationInstance NoRootInstance;
+            NoRootInstance.SetSkeleton(&Skeleton);
+            NoRootInstance.PlayAnimation("WalkForward", Anim, EAnimationPlayMode::Once);
+            NoRootInstance.SetRootMotionMode(ERootMotionMode::NoRootMotion);
+            NoRootInstance.Update(1.0f);
+            NoRootInstance.UpdateBoneMatrices();
+            const FRootMotionData& RMNoRoot = NoRootInstance.ExtractRootMotion();
+            bool bNoRootMode = !RMNoRoot.bHasRootMotion;
+
+            Result.bPassed = bNoMotionInit && bHasMotionAfterUpdate && bAccumulatesMotion &&
+                             bNoMotionAfterStop && bNoRootMode;
+            Result.Message = "Root motion: extraction, accumulation, mode control OK";
+        }
+        catch (const std::exception& e)
+        {
+            Result.Message = std::string("Exception: ") + e.what();
+        }
+
+        return Result;
+    }
+
+    inline FTestResult TestAnimationEvents()
+    {
+        FTestResult Result;
+        Result.Name = "animation-events";
+        Result.bPassed = false;
+
+        try
+        {
+            std::cout << "  [INFO] Testing animation events with payload...\n";
+
+            KSkeleton Skeleton;
+            FBone RootBone;
+            RootBone.Name = "Root";
+            RootBone.ParentIndex = INVALID_BONE_INDEX;
+            Skeleton.AddBone(RootBone);
+            Skeleton.CalculateBindPoses();
+            Skeleton.CalculateInverseBindPoses();
+
+            auto Anim = std::make_shared<KAnimation>();
+            Anim->SetName("EventTest");
+            Anim->SetDuration(48.0f);
+            Anim->SetTicksPerSecond(24.0f);
+            FAnimationChannel Channel;
+            Channel.BoneName = "Root";
+            FTransformKey K0;
+            K0.Time = 0.0f;
+            Channel.PositionKeys.push_back(K0);
+            Anim->AddChannel(Channel);
+            Anim->BuildBoneIndexMap(&Skeleton);
+
+            KAnimationStateMachine StateMachine;
+            StateMachine.SetSkeleton(&Skeleton);
+            KAnimationState* State = StateMachine.AddState("EventState", Anim);
+            State->SetLooping(true);
+
+            FAnimNotify Notify;
+            Notify.Name = "FootStep";
+            Notify.TriggerTime = 0.5f;
+            Notify.Duration = 0.0f;
+
+            int CallbackTriggerCount = 0;
+            Notify.Callback = [&CallbackTriggerCount]() { CallbackTriggerCount++; };
+            State->AddNotify(Notify);
+
+            FAnimNotify NotifyWithPayload;
+            NotifyWithPayload.Name = "SoundEvent";
+            NotifyWithPayload.TriggerTime = 0.75f;
+            NotifyWithPayload.Duration = 0.0f;
+            NotifyWithPayload.Payload.FloatParams["Volume"] = 0.8f;
+            NotifyWithPayload.Payload.StringParams["SoundName"] = "footstep_grass";
+
+            std::string ReceivedSoundName;
+            float ReceivedVolume = 0.0f;
+            NotifyWithPayload.CallbackWithPayload = [&ReceivedSoundName, &ReceivedVolume](const FAnimNotifyPayload& Payload) {
+                ReceivedSoundName = Payload.GetString("SoundName");
+                ReceivedVolume = Payload.GetFloat("Volume", 0.0f);
+            };
+            State->AddNotify(NotifyWithPayload);
+
+            StateMachine.SetDefaultState("EventState");
+
+            for (int i = 0; i < 3; ++i)
+            {
+                StateMachine.Update(0.5f);
+            }
+
+            bool bBasicCallback = (CallbackTriggerCount >= 1);
+
+            for (int i = 0; i < 3; ++i)
+            {
+                StateMachine.Update(0.5f);
+            }
+
+            bool bMultipleTriggers = (CallbackTriggerCount >= 3);
+            bool bPayloadReceived = (ReceivedSoundName == "footstep_grass" &&
+                                     std::abs(ReceivedVolume - 0.8f) < 0.001f);
+
+            State->ClearNotifies();
+            bool bClearNotifies = State->GetNotifies().empty();
+
+            FAnimNotify NotifyEdge;
+            NotifyEdge.Name = "EdgeTest";
+            NotifyEdge.TriggerTime = 0.0f;
+            int EdgeCount = 0;
+            NotifyEdge.Callback = [&EdgeCount]() { EdgeCount++; };
+            State->AddNotify(NotifyEdge);
+            StateMachine.Update(1.0f);
+            bool bEdgeTrigger = (EdgeCount >= 1);
+
+            Result.bPassed = bBasicCallback && bMultipleTriggers && bPayloadReceived &&
+                             bClearNotifies && bEdgeTrigger;
+            Result.Message = "Animation events: basic callback, payload, clear, edge trigger OK";
         }
         catch (const std::exception& e)
         {

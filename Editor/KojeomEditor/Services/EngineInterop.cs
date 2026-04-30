@@ -1100,6 +1100,68 @@ public class EngineInterop : IDisposable
     [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool Renderer_IsSSGIEnabled(IntPtr renderer);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr BlendTree_Create();
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void BlendTree_Destroy(IntPtr blendTree);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void BlendTree_SetSkeleton(IntPtr blendTree, IntPtr skeleton);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void BlendTree_SetParameterName(IntPtr blendTree, [MarshalAs(UnmanagedType.LPStr)] string name);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int BlendTree_AddChild(IntPtr blendTree, IntPtr animation, float parameterValue);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void BlendTree_RemoveChild(IntPtr blendTree, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int BlendTree_GetChildCount(IntPtr blendTree);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void BlendTree_Update(IntPtr blendTree, float deltaTime, float parameterValue);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int BlendTree_GetBoneMatrixCount(IntPtr blendTree);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr BlendTree_GetBoneMatrixData(IntPtr blendTree);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float BlendTree_GetChildWeight(IntPtr blendTree, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimationInstance_SetRootMotionBoneIndex(IntPtr component, int boneIndex);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AnimationInstance_GetRootMotionBoneIndex(IntPtr component);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimationInstance_SetRootMotionMode(IntPtr component, int mode);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AnimationInstance_GetRootMotionMode(IntPtr component);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimationInstance_ExtractRootMotion(IntPtr component, out float posX, out float posY, out float posZ,
+                                                                     out float rotX, out float rotY, out float rotZ, out float rotW);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void BlendTree_SetChildSpeed(IntPtr blendTree, int index, float speed);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float BlendTree_GetChildSpeed(IntPtr blendTree, int index);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void BlendTree_SetChildLooping(IntPtr blendTree, int index, [MarshalAs(UnmanagedType.I1)] bool looping);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool BlendTree_IsChildLooping(IntPtr blendTree, int index);
+
     #endregion
 
     public void SetActorName(IntPtr actor, string name)
@@ -1301,5 +1363,106 @@ public class EngineInterop : IDisposable
     public void SetMaterialTexture(IntPtr material, int textureSlot, string texturePath)
     {
         if (material != IntPtr.Zero) Material_SetTexture(material, textureSlot, texturePath);
+    }
+
+    public IntPtr CreateBlendTree() => BlendTree_Create();
+
+    public void DestroyBlendTree(IntPtr blendTree)
+    {
+        if (blendTree != IntPtr.Zero) BlendTree_Destroy(blendTree);
+    }
+
+    public void BlendTreeSetSkeleton(IntPtr blendTree, IntPtr skeleton)
+    {
+        if (blendTree != IntPtr.Zero && skeleton != IntPtr.Zero) BlendTree_SetSkeleton(blendTree, skeleton);
+    }
+
+    public void BlendTreeSetParameterName(IntPtr blendTree, string name)
+    {
+        if (blendTree != IntPtr.Zero) BlendTree_SetParameterName(blendTree, name);
+    }
+
+    public int BlendTreeAddChild(IntPtr blendTree, IntPtr animation, float parameterValue)
+    {
+        if (blendTree == IntPtr.Zero || animation == IntPtr.Zero) return -1;
+        return BlendTree_AddChild(blendTree, animation, parameterValue);
+    }
+
+    public void BlendTreeRemoveChild(IntPtr blendTree, int index)
+    {
+        if (blendTree != IntPtr.Zero) BlendTree_RemoveChild(blendTree, index);
+    }
+
+    public int BlendTreeGetChildCount(IntPtr blendTree)
+    {
+        return blendTree != IntPtr.Zero ? BlendTree_GetChildCount(blendTree) : 0;
+    }
+
+    public void BlendTreeUpdate(IntPtr blendTree, float deltaTime, float parameterValue)
+    {
+        if (blendTree != IntPtr.Zero) BlendTree_Update(blendTree, deltaTime, parameterValue);
+    }
+
+    public int BlendTreeGetBoneMatrixCount(IntPtr blendTree)
+    {
+        return blendTree != IntPtr.Zero ? BlendTree_GetBoneMatrixCount(blendTree) : 0;
+    }
+
+    public IntPtr BlendTreeGetBoneMatrixData(IntPtr blendTree)
+    {
+        return blendTree != IntPtr.Zero ? BlendTree_GetBoneMatrixData(blendTree) : IntPtr.Zero;
+    }
+
+    public float BlendTreeGetChildWeight(IntPtr blendTree, int index)
+    {
+        return blendTree != IntPtr.Zero ? BlendTree_GetChildWeight(blendTree, index) : 0.0f;
+    }
+
+    public void AnimationInstanceSetRootMotionBoneIndex(IntPtr component, int boneIndex)
+    {
+        if (component != IntPtr.Zero) AnimationInstance_SetRootMotionBoneIndex(component, boneIndex);
+    }
+
+    public int AnimationInstanceGetRootMotionBoneIndex(IntPtr component)
+    {
+        return component != IntPtr.Zero ? AnimationInstance_GetRootMotionBoneIndex(component) : 0;
+    }
+
+    public void AnimationInstanceSetRootMotionMode(IntPtr component, int mode)
+    {
+        if (component != IntPtr.Zero) AnimationInstance_SetRootMotionMode(component, mode);
+    }
+
+    public int AnimationInstanceGetRootMotionMode(IntPtr component)
+    {
+        return component != IntPtr.Zero ? AnimationInstance_GetRootMotionMode(component) : 0;
+    }
+
+    public (float posX, float posY, float posZ, float rotX, float rotY, float rotZ, float rotW) AnimationInstanceExtractRootMotion(IntPtr component)
+    {
+        if (component == IntPtr.Zero) return (0, 0, 0, 0, 0, 0, 1);
+        AnimationInstance_ExtractRootMotion(component, out float posX, out float posY, out float posZ,
+                                             out float rotX, out float rotY, out float rotZ, out float rotW);
+        return (posX, posY, posZ, rotX, rotY, rotZ, rotW);
+    }
+
+    public void BlendTreeSetChildSpeed(IntPtr blendTree, int index, float speed)
+    {
+        if (blendTree != IntPtr.Zero) BlendTree_SetChildSpeed(blendTree, index, speed);
+    }
+
+    public float BlendTreeGetChildSpeed(IntPtr blendTree, int index)
+    {
+        return blendTree != IntPtr.Zero ? BlendTree_GetChildSpeed(blendTree, index) : 0.0f;
+    }
+
+    public void BlendTreeSetChildLooping(IntPtr blendTree, int index, bool looping)
+    {
+        if (blendTree != IntPtr.Zero) BlendTree_SetChildLooping(blendTree, index, looping);
+    }
+
+    public bool BlendTreeIsChildLooping(IntPtr blendTree, int index)
+    {
+        return blendTree != IntPtr.Zero && BlendTree_IsChildLooping(blendTree, index);
     }
 }

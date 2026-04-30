@@ -166,4 +166,28 @@ extern "C"
     ENGINEAPI void Material_SetTexture(void* component, int textureSlot, const wchar_t* texturePath);
     ENGINEAPI void Renderer_SetSSGIEnabled(void* renderer, bool enabled);
     ENGINEAPI bool Renderer_IsSSGIEnabled(void* renderer);
+
+    ENGINEAPI void* BlendTree_Create();
+    ENGINEAPI void BlendTree_Destroy(void* blendTree);
+    ENGINEAPI void BlendTree_SetSkeleton(void* blendTree, void* skeleton);
+    ENGINEAPI void BlendTree_SetParameterName(void* blendTree, const char* name);
+    ENGINEAPI int BlendTree_AddChild(void* blendTree, void* animation, float parameterValue);
+    ENGINEAPI void BlendTree_RemoveChild(void* blendTree, int index);
+    ENGINEAPI int BlendTree_GetChildCount(void* blendTree);
+    ENGINEAPI void BlendTree_Update(void* blendTree, float deltaTime, float parameterValue);
+    ENGINEAPI int BlendTree_GetBoneMatrixCount(void* blendTree);
+    ENGINEAPI const float* BlendTree_GetBoneMatrixData(void* blendTree);
+    ENGINEAPI float BlendTree_GetChildWeight(void* blendTree, int index);
+
+    ENGINEAPI void AnimationInstance_SetRootMotionBoneIndex(void* component, int boneIndex);
+    ENGINEAPI int AnimationInstance_GetRootMotionBoneIndex(void* component);
+    ENGINEAPI void AnimationInstance_SetRootMotionMode(void* component, int mode);
+    ENGINEAPI int AnimationInstance_GetRootMotionMode(void* component);
+    ENGINEAPI void AnimationInstance_ExtractRootMotion(void* component, float* posX, float* posY, float* posZ,
+                                                          float* rotX, float* rotY, float* rotZ, float* rotW);
+
+    ENGINEAPI void BlendTree_SetChildSpeed(void* blendTree, int index, float speed);
+    ENGINEAPI float BlendTree_GetChildSpeed(void* blendTree, int index);
+    ENGINEAPI void BlendTree_SetChildLooping(void* blendTree, int index, bool looping);
+    ENGINEAPI bool BlendTree_IsChildLooping(void* blendTree, int index);
 }

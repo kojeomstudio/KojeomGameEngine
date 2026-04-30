@@ -19,12 +19,32 @@ enum class EAnimStateStatus
     TransitioningIn
 };
 
+struct FAnimNotifyPayload
+{
+    std::unordered_map<std::string, float> FloatParams;
+    std::unordered_map<std::string, std::string> StringParams;
+
+    float GetFloat(const std::string& Key, float Default = 0.0f) const
+    {
+        auto It = FloatParams.find(Key);
+        return It != FloatParams.end() ? It->second : Default;
+    }
+
+    const std::string& GetString(const std::string& Key, const std::string& Default = "") const
+    {
+        auto It = StringParams.find(Key);
+        return It != StringParams.end() ? It->second : Default;
+    }
+};
+
 struct FAnimNotify
 {
     std::string Name;
     float TriggerTime;
     float Duration;
     std::function<void()> Callback;
+    std::function<void(const FAnimNotifyPayload&)> CallbackWithPayload;
+    FAnimNotifyPayload Payload;
     bool bTriggered;
 
     FAnimNotify()

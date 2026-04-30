@@ -14,6 +14,11 @@
 #include <Engine/Assets/StaticMeshComponent.h>
 #include <Engine/Assets/SkeletalMeshComponent.h>
 #include <Engine/Assets/LightComponent.h>
+#include <Engine/Assets/AnimationInstance.h>
+#include <Engine/Assets/AnimationStateMachine.h>
+#include <Engine/Assets/BlendTree.h>
+#include <Engine/Assets/Skeleton.h>
+#include <Engine/Assets/Animation.h>
 #include <Engine/Graphics/Water/Water.h>
 #include <Engine/Graphics/Terrain/Terrain.h>
 #include <Engine/Graphics/Debug/DebugRenderer.h>
@@ -1320,5 +1325,155 @@ extern "C"
     {
         if (!renderer) return false;
         return static_cast<KRenderer*>(renderer)->IsSSGIEnabled();
+    }
+
+    ENGINEAPI void* BlendTree_Create()
+    {
+        return new KBlendTree();
+    }
+
+    ENGINEAPI void BlendTree_Destroy(void* blendTree)
+    {
+        delete static_cast<KBlendTree*>(blendTree);
+    }
+
+    ENGINEAPI void BlendTree_SetSkeleton(void* blendTree, void* skeleton)
+    {
+        if (!blendTree || !skeleton) return;
+        static_cast<KBlendTree*>(blendTree)->SetSkeleton(static_cast<KSkeleton*>(skeleton));
+    }
+
+    ENGINEAPI void BlendTree_SetParameterName(void* blendTree, const char* name)
+    {
+        if (!blendTree || !name) return;
+        static_cast<KBlendTree*>(blendTree)->SetParameterName(std::string(name));
+    }
+
+    ENGINEAPI int BlendTree_AddChild(void* blendTree, void* animation, float parameterValue)
+    {
+        if (!blendTree || !animation) return -1;
+        auto* anim = static_cast<KAnimation*>(animation);
+        auto sharedAnim = std::shared_ptr<KAnimation>(anim, [](KAnimation*) {});
+        return static_cast<KBlendTree*>(blendTree)->AddChild(sharedAnim, parameterValue);
+    }
+
+    ENGINEAPI void BlendTree_RemoveChild(void* blendTree, int index)
+    {
+        if (!blendTree) return;
+        static_cast<KBlendTree*>(blendTree)->RemoveChild(index);
+    }
+
+    ENGINEAPI int BlendTree_GetChildCount(void* blendTree)
+    {
+        if (!blendTree) return 0;
+        return static_cast<KBlendTree*>(blendTree)->GetChildCount();
+    }
+
+    ENGINEAPI void BlendTree_Update(void* blendTree, float deltaTime, float parameterValue)
+    {
+        if (!blendTree) return;
+        static_cast<KBlendTree*>(blendTree)->Update(deltaTime, parameterValue);
+    }
+
+    ENGINEAPI int BlendTree_GetBoneMatrixCount(void* blendTree)
+    {
+        if (!blendTree) return 0;
+        return static_cast<int>(static_cast<KBlendTree*>(blendTree)->GetBoneMatrixCount());
+    }
+
+    ENGINEAPI const float* BlendTree_GetBoneMatrixData(void* blendTree)
+    {
+        if (!blendTree) return nullptr;
+        return reinterpret_cast<const float*>(static_cast<KBlendTree*>(blendTree)->GetBoneMatrixData());
+    }
+
+    ENGINEAPI float BlendTree_GetChildWeight(void* blendTree, int index)
+    {
+        if (!blendTree) return 0.0f;
+        return static_cast<KBlendTree*>(blendTree)->GetChildWeight(index);
+    }
+
+    ENGINEAPI void AnimationInstance_SetRootMotionBoneIndex(void* component, int boneIndex)
+    {
+        if (!component) return;
+        KSkeletalMeshComponent* smc = static_cast<KSkeletalMeshComponent*>(component);
+        auto animInstance = smc->GetAnimationInstance();
+        if (!animInstance) return;
+        animInstance->SetRootMotionBoneIndex(boneIndex);
+    }
+
+    ENGINEAPI int AnimationInstance_GetRootMotionBoneIndex(void* component)
+    {
+        if (!component) return 0;
+        KSkeletalMeshComponent* smc = static_cast<KSkeletalMeshComponent*>(component);
+        auto animInstance = smc->GetAnimationInstance();
+        if (!animInstance) return 0;
+        return animInstance->GetRootMotionBoneIndex();
+    }
+
+    ENGINEAPI void AnimationInstance_SetRootMotionMode(void* component, int mode)
+    {
+        if (!component) return;
+        KSkeletalMeshComponent* smc = static_cast<KSkeletalMeshComponent*>(component);
+        auto animInstance = smc->GetAnimationInstance();
+        if (!animInstance) return;
+        animInstance->SetRootMotionMode(static_cast<ERootMotionMode>(mode));
+    }
+
+    ENGINEAPI int AnimationInstance_GetRootMotionMode(void* component)
+    {
+        if (!component) return 0;
+        KSkeletalMeshComponent* smc = static_cast<KSkeletalMeshComponent*>(component);
+        auto animInstance = smc->GetAnimationInstance();
+        if (!animInstance) return 0;
+        return static_cast<int>(animInstance->GetRootMotionMode());
+    }
+
+    ENGINEAPI void AnimationInstance_ExtractRootMotion(void* component, float* posX, float* posY, float* posZ,
+                                                          float* rotX, float* rotY, float* rotZ, float* rotW)
+    {
+        if (!component) return;
+        KSkeletalMeshComponent* smc = static_cast<KSkeletalMeshComponent*>(component);
+        auto animInstance = smc->GetAnimationInstance();
+        if (!animInstance) return;
+
+        const FRootMotionData& RootMotion = animInstance->ExtractRootMotion();
+        if (posX) *posX = RootMotion.PositionDelta.x;
+        if (posY) *posY = RootMotion.PositionDelta.y;
+        if (posZ) *posZ = RootMotion.PositionDelta.z;
+        if (rotX) *rotX = RootMotion.RotationDelta.x;
+        if (rotY) *rotY = RootMotion.RotationDelta.y;
+        if (rotZ) *rotZ = RootMotion.RotationDelta.z;
+        if (rotW) *rotW = RootMotion.RotationDelta.w;
+    }
+
+    ENGINEAPI void BlendTree_SetChildSpeed(void* blendTree, int index, float speed)
+    {
+        if (!blendTree) return;
+        auto* child = static_cast<KBlendTree*>(blendTree)->GetChildMutable(index);
+        if (!child) return;
+        child->Speed = speed;
+    }
+
+    ENGINEAPI float BlendTree_GetChildSpeed(void* blendTree, int index)
+    {
+        if (!blendTree) return 0.0f;
+        auto* child = static_cast<KBlendTree*>(blendTree)->GetChild(index);
+        return child ? child->Speed : 0.0f;
+    }
+
+    ENGINEAPI void BlendTree_SetChildLooping(void* blendTree, int index, bool looping)
+    {
+        if (!blendTree) return;
+        auto* child = static_cast<KBlendTree*>(blendTree)->GetChildMutable(index);
+        if (!child) return;
+        child->bLooping = looping;
+    }
+
+    ENGINEAPI bool BlendTree_IsChildLooping(void* blendTree, int index)
+    {
+        if (!blendTree) return false;
+        auto* child = static_cast<KBlendTree*>(blendTree)->GetChild(index);
+        return child ? child->bLooping : false;
     }
 }

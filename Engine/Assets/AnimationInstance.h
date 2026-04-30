@@ -22,6 +22,26 @@ enum class EAnimationState
     Paused
 };
 
+enum class ERootMotionMode
+{
+    NoRootMotion,
+    RootMotionFromEverything,
+    RootMotionFromRootBoneOnly
+};
+
+struct FRootMotionData
+{
+    XMFLOAT3 PositionDelta;
+    XMFLOAT4 RotationDelta;
+    bool bHasRootMotion;
+
+    FRootMotionData()
+        : PositionDelta(0, 0, 0)
+        , RotationDelta(0, 0, 0, 1)
+        , bHasRootMotion(false)
+    {}
+};
+
 struct FAnimationInstanceState
 {
     std::shared_ptr<KAnimation> Animation;
@@ -92,6 +112,15 @@ public:
 
     void ClearAnimations();
 
+    void SetRootMotionBoneIndex(int32 InBoneIndex) { RootMotionBoneIndex = InBoneIndex; }
+    int32 GetRootMotionBoneIndex() const { return RootMotionBoneIndex; }
+
+    void SetRootMotionMode(ERootMotionMode InMode) { RootMotionMode = InMode; }
+    ERootMotionMode GetRootMotionMode() const { return RootMotionMode; }
+
+    const FRootMotionData& ExtractRootMotion();
+    void ResetRootMotion();
+
 private:
     void EvaluateAnimation();
     void CalculateFinalBoneTransforms();
@@ -105,4 +134,11 @@ private:
     float BlendWeight = 1.0f;
 
     std::unordered_map<std::string, std::shared_ptr<KAnimation>> Animations;
+
+    int32 RootMotionBoneIndex = 0;
+    ERootMotionMode RootMotionMode = ERootMotionMode::NoRootMotion;
+    FRootMotionData LastRootMotion;
+    XMFLOAT3 PreviousRootPosition;
+    XMFLOAT4 PreviousRootRotation;
+    bool bRootMotionInitialized = false;
 };

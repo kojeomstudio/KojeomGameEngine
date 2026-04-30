@@ -157,6 +157,8 @@ public:
     ID3D11Buffer* GetBoneMatrixBuffer() const { return BoneMatrixBuffer.Get(); }
     void UpdateBoneMatrices(ID3D11DeviceContext* Context);
 
+    std::shared_ptr<KAnimationInstance> GetAnimationInstance() const { return AnimationInstance; }
+
 private:
     HRESULT CreateBoneMatrixBuffer(ID3D11Device* Device);
     void ComputeBoneMatrices();
