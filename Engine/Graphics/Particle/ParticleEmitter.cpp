@@ -499,9 +499,11 @@ void KParticleEmitter::UpdateParticleBuffer(ID3D11DeviceContext* Context)
     }
 
     D3D11_MAPPED_SUBRESOURCE mapped;
-    if (SUCCEEDED(Context->Map(ParticleVertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    size_t requiredSize = sizeof(FParticleVertex) * vertices.size();
+    size_t bufferSize = sizeof(FParticleVertex) * Parameters.MaxParticles * 6;
+    if (vertices.size() <= Parameters.MaxParticles * 6 && SUCCEEDED(Context->Map(ParticleVertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
     {
-        memcpy(mapped.pData, vertices.data(), sizeof(FParticleVertex) * vertices.size());
+        memcpy(mapped.pData, vertices.data(), requiredSize);
         Context->Unmap(ParticleVertexBuffer.Get(), 0);
     }
 }

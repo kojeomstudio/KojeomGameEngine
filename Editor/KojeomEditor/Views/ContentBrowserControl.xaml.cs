@@ -263,7 +263,7 @@ public partial class ContentBrowserControl : UserControl
         {
             if (Window.GetWindow(this)?.DataContext is ViewModels.MainViewModel mainVm)
             {
-                mainVm.SceneViewModel.LoadScene(SelectedAsset.Path);
+                mainVm.LoadSceneValidated(SelectedAsset.Path);
             }
         }
     }

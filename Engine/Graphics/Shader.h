@@ -136,6 +136,8 @@ public:
 
     HRESULT CreateSkinnedShader(ID3D11Device* Device);
 
+    HRESULT CreateSkinnedPBRShader(ID3D11Device* Device);
+
     HRESULT CreateWaterShader(ID3D11Device* Device);
 
     HRESULT CompileFromSource(ID3D11Device* Device, const std::string& VSSource,

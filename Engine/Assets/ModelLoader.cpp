@@ -813,8 +813,15 @@ HRESULT KModelLoader::ParseGLTFJson(const std::string& JsonContent, const std::w
         std::vector<uint8> data;
         if (!uri.empty() && uri.find("data:application/octet-stream;base64,") == 0)
         {
-            static const std::string b64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+            static const uint32 MaxBase64DecodeSize = 64 * 1024 * 1024;
             std::string b64 = uri.substr(37);
+            if (b64.size() > MaxBase64DecodeSize)
+            {
+                LOG_ERROR("GLTF base64 buffer exceeds max decode size: " + std::to_string(b64.size()));
+                bufferData.push_back(std::move(data));
+                continue;
+            }
+            static const std::string b64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
             data.reserve(b64.size() * 3 / 4);
             uint32 accum = 0;
             int bits = 0;

@@ -1537,6 +1537,354 @@ HRESULT KShaderProgram::CreateSkinnedShader(ID3D11Device* Device)
     return S_OK;
 }
 
+HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
+{
+    const std::string ShaderSource = R"(
+        cbuffer TransformBuffer : register(b0)
+        {
+            matrix World;
+            matrix View;
+            matrix Projection;
+        }
+
+        #define MAX_BONES 256
+        cbuffer BoneBuffer : register(b5)
+        {
+            matrix BoneMatrices[MAX_BONES];
+        }
+
+        #define MAX_POINT_LIGHTS 8
+        #define MAX_SPOT_LIGHTS 4
+
+        struct FPointLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float4 Color;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+            float  Padding1;
+        };
+
+        struct FSpotLightData
+        {
+            float3 Position;
+            float  Intensity;
+            float3 Direction;
+            float  InnerCone;
+            float4 Color;
+            float  OuterCone;
+            float  Radius;
+            float  Falloff;
+            float  Padding0;
+        };
+
+        cbuffer LightBuffer : register(b1)
+        {
+            float3 CameraPosition;
+            int    NumPointLights;
+            float3 DirLightDirection;
+            int    NumSpotLights;
+            float4 DirLightColor;
+            float4 AmbientColor;
+            FPointLightData PointLights[MAX_POINT_LIGHTS];
+            FSpotLightData  SpotLights[MAX_SPOT_LIGHTS];
+        }
+
+        cbuffer MaterialBuffer : register(b2)
+        {
+            float4 AlbedoColor;
+            float  Metallic;
+            float  Roughness;
+            float  AO;
+            float  EmissiveIntensity;
+            float4 EmissiveColor;
+            float  NormalIntensity;
+            int    bUseAlbedoMap;
+            int    bUseNormalMap;
+            int    bUseMetallicMap;
+            int    bUseRoughnessMap;
+            int    bUseAOMap;
+            int    bUseEmissiveMap;
+        };
+
+        Texture2D AlbedoMap    : register(t0);
+        Texture2D NormalMap    : register(t1);
+        Texture2D MetallicMap  : register(t2);
+        Texture2D RoughnessMap : register(t3);
+        Texture2D AOMap        : register(t4);
+        Texture2D EmissiveMap  : register(t5);
+        SamplerState MaterialSampler : register(s0);
+
+        struct VS_INPUT
+        {
+            float3 Pos       : POSITION;
+            float4 Color     : COLOR;
+            float3 Normal    : NORMAL;
+            float2 TexCoord  : TEXCOORD0;
+            float3 Tangent   : TANGENT;
+            float3 Bitangent : BINORMAL;
+            uint4  BoneIndices : BONEINDICES;
+            float4 BoneWeights : BONEWEIGHTS;
+        };
+
+        struct PS_INPUT
+        {
+            float4 Pos       : SV_POSITION;
+            float4 Color     : COLOR;
+            float3 Normal    : NORMAL;
+            float2 TexCoord  : TEXCOORD0;
+            float3 WorldPos  : TEXCOORD1;
+            float3 Tangent   : TANGENT;
+            float3 Bitangent : BINORMAL;
+        };
+
+        float3 SkinPosition(float3 pos, uint4 boneIndices, float4 boneWeights)
+        {
+            float3 skinnedPos = float3(0, 0, 0);
+            [unroll]
+            for (int i = 0; i < 4; ++i)
+            {
+                if (boneWeights[i] > 0.0f)
+                    skinnedPos += mul(float4(pos, 1.0f), BoneMatrices[boneIndices[i]]).xyz * boneWeights[i];
+            }
+            return skinnedPos;
+        }
+
+        float3 SkinNormal(float3 normal, uint4 boneIndices, float4 boneWeights)
+        {
+            float3 skinnedNormal = float3(0, 0, 0);
+            [unroll]
+            for (int i = 0; i < 4; ++i)
+            {
+                if (boneWeights[i] > 0.0f)
+                    skinnedNormal += mul(normal, (float3x3)BoneMatrices[boneIndices[i]]) * boneWeights[i];
+            }
+            return skinnedNormal;
+        }
+
+        float3 SkinTangent(float3 tangent, uint4 boneIndices, float4 boneWeights)
+        {
+            float3 skinnedTangent = float3(0, 0, 0);
+            [unroll]
+            for (int i = 0; i < 4; ++i)
+            {
+                if (boneWeights[i] > 0.0f)
+                    skinnedTangent += mul(tangent, (float3x3)BoneMatrices[boneIndices[i]]) * boneWeights[i];
+            }
+            return skinnedTangent;
+        }
+
+        static const float PI = 3.14159265359f;
+
+        float DistributionGGX(float3 N, float3 H, float roughness)
+        {
+            float a = roughness * roughness;
+            float a2 = a * a;
+            float NdotH = max(dot(N, H), 0.0f);
+            float NdotH2 = NdotH * NdotH;
+            float nom = a2;
+            float denom = (NdotH2 * (a2 - 1.0f) + 1.0f);
+            denom = PI * denom * denom;
+            return nom / max(denom, 0.0001f);
+        }
+
+        float GeometrySchlickGGX(float NdotV, float roughness)
+        {
+            float r = (roughness + 1.0f);
+            float k = (r * r) / 8.0f;
+            float nom = NdotV;
+            float denom = NdotV * (1.0f - k) + k;
+            return nom / max(denom, 0.0001f);
+        }
+
+        float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+        {
+            float NdotV = max(dot(N, V), 0.0f);
+            float NdotL = max(dot(N, L), 0.0f);
+            return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
+        }
+
+        float3 fresnelSchlick(float cosTheta, float3 F0)
+        {
+            return F0 + (1.0f - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+        }
+
+        float3 GetNormalFromMap(PS_INPUT input, float3 normal)
+        {
+            float3 tangentNormal = NormalMap.Sample(MaterialSampler, input.TexCoord).xyz * 2.0f - 1.0f;
+            tangentNormal.xy *= NormalIntensity;
+            float3 N = normalize(normal);
+            float3 T = normalize(input.Tangent);
+            float3 B = normalize(input.Bitangent);
+            float3x3 TBN = float3x3(T, B, N);
+            return normalize(mul(tangentNormal, TBN));
+        }
+
+        float3 CalculatePBRLighting(float3 N, float3 V, float3 worldPos, float3 albedo, float metallic, float roughness, float ao)
+        {
+            float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+            float3 Lo = float3(0.0f, 0.0f, 0.0f);
+
+            float3 L = normalize(-DirLightDirection);
+            float3 H = normalize(V + L);
+            float NdotL = max(dot(N, L), 0.0f);
+            float NDF = DistributionGGX(N, H, roughness);
+            float G = GeometrySmith(N, V, L, roughness);
+            float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+            float3 numerator = NDF * G * F;
+            float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+            float3 specular = numerator / denominator;
+            float3 kS = F;
+            float3 kD = (1.0f - kS) * (1.0f - metallic);
+            float3 radiance = DirLightColor.rgb;
+            Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+
+            [unroll]
+            for (int i = 0; i < MAX_POINT_LIGHTS; ++i)
+            {
+                if (i >= NumPointLights) break;
+                float3 lightDir = PointLights[i].Position - worldPos;
+                float distance = length(lightDir);
+                if (distance > PointLights[i].Radius) continue;
+                L = normalize(lightDir);
+                H = normalize(V + L);
+                float attenuation = 1.0f / (1.0f + PointLights[i].Falloff * distance * distance);
+                attenuation *= PointLights[i].Intensity;
+                NdotL = max(dot(N, L), 0.0f);
+                NDF = DistributionGGX(N, H, roughness);
+                G = GeometrySmith(N, V, L, roughness);
+                F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+                numerator = NDF * G * F;
+                denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+                specular = numerator / denominator;
+                kS = F;
+                kD = (1.0f - kS) * (1.0f - metallic);
+                radiance = PointLights[i].Color.rgb * attenuation;
+                Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+            }
+
+            [unroll]
+            for (int j = 0; j < MAX_SPOT_LIGHTS; ++j)
+            {
+                if (j >= NumSpotLights) break;
+                float3 lightDir = SpotLights[j].Position - worldPos;
+                float distance = length(lightDir);
+                if (distance > SpotLights[j].Radius) continue;
+                L = normalize(lightDir);
+                float3 spotDir = normalize(-SpotLights[j].Direction);
+                float cosAngle = dot(L, spotDir);
+                float cosInner = cos(SpotLights[j].InnerCone);
+                float cosOuter = cos(SpotLights[j].OuterCone);
+                if (cosAngle < cosOuter) continue;
+                float spotFactor = saturate((cosAngle - cosOuter) / (cosInner - cosOuter));
+                float attenuation = 1.0f / (1.0f + SpotLights[j].Falloff * distance * distance);
+                attenuation *= SpotLights[j].Intensity * spotFactor;
+                H = normalize(V + L);
+                NdotL = max(dot(N, L), 0.0f);
+                NDF = DistributionGGX(N, H, roughness);
+                G = GeometrySmith(N, V, L, roughness);
+                F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+                numerator = NDF * G * F;
+                denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+                specular = numerator / denominator;
+                kS = F;
+                kD = (1.0f - kS) * (1.0f - metallic);
+                radiance = SpotLights[j].Color.rgb * attenuation;
+                Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+            }
+
+            float3 ambient = AmbientColor.rgb * albedo * ao;
+            float3 color = ambient + Lo;
+            color = color / (color + float3(1.0f, 1.0f, 1.0f));
+            color = pow(color, float3(1.0f / 2.2f, 1.0f / 2.2f, 1.0f / 2.2f));
+            return color;
+        }
+
+        PS_INPUT VS(VS_INPUT input)
+        {
+            PS_INPUT output = (PS_INPUT)0;
+            float3 skinnedPos = SkinPosition(input.Pos, input.BoneIndices, input.BoneWeights);
+            float3 skinnedNormal = SkinNormal(input.Normal, input.BoneIndices, input.BoneWeights);
+            float3 skinnedTangent = SkinTangent(input.Tangent, input.BoneIndices, input.BoneWeights);
+            float3 skinnedBitangent = SkinTangent(input.Bitangent, input.BoneIndices, input.BoneWeights);
+            float4 worldPos = mul(float4(skinnedPos, 1.0f), World);
+            float4 viewPos = mul(worldPos, View);
+            output.Pos = mul(viewPos, Projection);
+            output.Color = input.Color;
+            output.Normal = mul(skinnedNormal, (float3x3)World);
+            output.TexCoord = input.TexCoord;
+            output.WorldPos = worldPos.xyz;
+            output.Tangent = mul(skinnedTangent, (float3x3)World);
+            output.Bitangent = mul(skinnedBitangent, (float3x3)World);
+            return output;
+        }
+
+        float4 PS(PS_INPUT input) : SV_Target
+        {
+            float3 albedo = AlbedoColor.rgb;
+            if (bUseAlbedoMap)
+                albedo = AlbedoMap.Sample(MaterialSampler, input.TexCoord).rgb * AlbedoColor.rgb;
+            albedo = pow(albedo, float3(2.2f, 2.2f, 2.2f));
+
+            float metallic = Metallic;
+            if (bUseMetallicMap)
+                metallic = MetallicMap.Sample(MaterialSampler, input.TexCoord).r * Metallic;
+            float roughness = Roughness;
+            if (bUseRoughnessMap)
+                roughness = RoughnessMap.Sample(MaterialSampler, input.TexCoord).r * Roughness;
+            float ao = AO;
+            if (bUseAOMap)
+                ao = AOMap.Sample(MaterialSampler, input.TexCoord).r * AO;
+
+            float3 normal = normalize(input.Normal);
+            if (bUseNormalMap)
+                normal = GetNormalFromMap(input, normal);
+
+            float3 V = normalize(CameraPosition - input.WorldPos);
+            float3 color = CalculatePBRLighting(normal, V, input.WorldPos, albedo, metallic, roughness, ao);
+
+            if (bUseEmissiveMap)
+            {
+                float3 emissive = EmissiveMap.Sample(MaterialSampler, input.TexCoord).rgb * EmissiveColor.rgb * EmissiveIntensity;
+                color += emissive;
+            }
+
+            return float4(color, AlbedoColor.a);
+        }
+    )";
+
+    auto VS = std::make_shared<KShader>();
+    HRESULT hr = VS->CompileFromString(Device, ShaderSource, "VS", EShaderType::Vertex);
+    if (FAILED(hr)) return hr;
+
+    auto PS = std::make_shared<KShader>();
+    hr = PS->CompileFromString(Device, ShaderSource, "PS", EShaderType::Pixel);
+    if (FAILED(hr)) return hr;
+
+    AddShader(VS);
+    AddShader(PS);
+
+    D3D11_INPUT_ELEMENT_DESC Layout[] =
+    {
+        { "POSITION",     0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL",       0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TANGENT",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "BINORMAL",     0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 60, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "BONEINDICES",  0, DXGI_FORMAT_R32G32B32A32_UINT,  0, 72, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "BONEWEIGHTS",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 88, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    hr = CreateInputLayout(Device, Layout, ARRAYSIZE(Layout));
+    if (FAILED(hr)) return hr;
+
+    LOG_INFO("Skinned PBR shader creation completed");
+    return S_OK;
+}
+
 HRESULT KShaderProgram::CreateWaterShader(ID3D11Device* Device)
 {
     const std::string ShaderSource = R"(

@@ -98,7 +98,22 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private static string GetProjectRoot()
+    public void LoadSceneValidated(string scenePath)
+    {
+        if (string.IsNullOrEmpty(scenePath)) return;
+
+        var fullPath = System.IO.Path.GetFullPath(scenePath);
+        var projectRoot = GetProjectRoot();
+        if (!IsPathWithinDirectory(fullPath, projectRoot))
+        {
+            System.Windows.MessageBox.Show("Scene file must be within the project directory.", "Security Warning",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+        _sceneViewModel.LoadScene(scenePath);
+    }
+
+    public static string GetProjectRoot()
     {
         var dir = AppDomain.CurrentDomain.BaseDirectory;
         for (int i = 0; i < 6 && dir != null; i++)
@@ -111,7 +126,7 @@ public class MainViewModel : ViewModelBase
         return AppDomain.CurrentDomain.BaseDirectory;
     }
 
-    private static bool IsPathWithinDirectory(string path, string directory)
+    public static bool IsPathWithinDirectory(string path, string directory)
     {
         var normalizedDir = directory.TrimEnd(System.IO.Path.DirectorySeparatorChar,
             System.IO.Path.AltDirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
