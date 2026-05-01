@@ -371,6 +371,11 @@ HRESULT KModelLoader::LoadWithAssimp(const std::wstring& Path, FLoadedModel* Out
 
     ProcessNode(scene->mRootNode, scene, OutModel, Options);
 
+    if (scene->HasMaterials())
+    {
+        ProcessMaterials(scene, OutModel, Path);
+    }
+
     if (Options.bLoadAnimations && scene->HasAnimations())
     {
         ProcessAnimations(scene, OutModel);
@@ -1499,6 +1504,122 @@ void KModelLoader::ProcessAnimations(void* AssimpScene, FLoadedModel* OutModel)
     }
 
     LOG_INFO("Processed " + std::to_string(OutModel->Animations.size()) + " animations");
+#endif
+}
+
+void KModelLoader::ProcessMaterials(void* AssimpScene, FLoadedModel* OutModel, const std::wstring& ModelPath)
+{
+#ifdef USE_ASSIMP
+    const aiScene* scene = static_cast<const aiScene*>(AssimpScene);
+    if (!scene) return;
+
+    auto modelDir = ModelPath;
+    auto lastSlash = modelDir.find_last_of(L'\\');
+    if (lastSlash == std::wstring::npos)
+    {
+        lastSlash = modelDir.find_last_of(L'/');
+    }
+    if (lastSlash != std::wstring::npos)
+    {
+        modelDir = modelDir.substr(0, lastSlash + 1);
+    }
+    else
+    {
+        modelDir.clear();
+    }
+
+    OutModel->Materials.clear();
+    OutModel->MeshMaterialIndices.clear();
+
+    for (uint32 matIdx = 0; matIdx < scene->mNumMaterials; ++matIdx)
+    {
+        aiMaterial* aiMat = scene->mMaterials[matIdx];
+
+        auto material = std::make_shared<KMaterial>();
+        if (Device)
+        {
+            material->Initialize(Device);
+        }
+
+        std::string matName = "Material_" + std::to_string(matIdx);
+        aiString aiName;
+        if (aiMat->Get(AI_MATKEY_NAME, aiName) == AI_SUCCESS)
+        {
+            matName = aiName.C_Str();
+        }
+        material->SetName(matName);
+
+        FPBRMaterialParams params = FPBRMaterialParams::Default();
+
+        aiColor4D diffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
+        if (aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor) == AI_SUCCESS)
+        {
+            params.AlbedoColor = XMFLOAT4(diffuseColor.r, diffuseColor.g, diffuseColor.b, diffuseColor.a);
+        }
+
+        float metallic = 0.0f;
+        if (aiMat->Get(AI_MATKEY_REFLECTIVITY, metallic) == AI_SUCCESS)
+        {
+            params.Metallic = std::clamp(metallic, 0.0f, 1.0f);
+        }
+
+        float roughness = 0.5f;
+        if (aiMat->Get(AI_MATKEY_SHININESS, roughness) == AI_SUCCESS)
+        {
+            float shininess = std::clamp(roughness, 1.0f, 1000.0f);
+            params.Roughness = 1.0f - (std::log(shininess) / std::log(1000.0f));
+            params.Roughness = std::clamp(params.Roughness, 0.0f, 1.0f);
+        }
+
+        aiColor4D emissiveColor(0.0f, 0.0f, 0.0f, 1.0f);
+        if (aiMat->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveColor) == AI_SUCCESS)
+        {
+            params.EmissiveColor = XMFLOAT4(emissiveColor.r, emissiveColor.g, emissiveColor.b, emissiveColor.a);
+        }
+
+        float opacity = 1.0f;
+        if (aiMat->Get(AI_MATKEY_OPACITY, opacity) == AI_SUCCESS)
+        {
+            params.AlbedoColor.w = opacity;
+        }
+
+        material->SetParams(params);
+
+        auto tryLoadTexture = [&](aiTextureType type, EMaterialTextureSlot slot) -> bool {
+            aiString texPath;
+            if (aiMat->GetTexture(type, 0, &texPath) == AI_SUCCESS && texPath.length > 0)
+            {
+                std::string texPathStr = texPath.C_Str();
+                std::wstring wideTexPath(modelDir + StringUtils::MultiByteToWide(texPathStr));
+
+                auto texture = std::make_shared<KTexture>();
+                HRESULT texHR = texture->LoadFromFile(Device, wideTexPath.c_str());
+                if (SUCCEEDED(texHR))
+                {
+                    material->SetTexture(slot, texture);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        tryLoadTexture(aiTextureType_DIFFUSE, EMaterialTextureSlot::Albedo);
+        tryLoadTexture(aiTextureType_NORMALS, EMaterialTextureSlot::Normal);
+        tryLoadTexture(aiTextureType_SPECULAR, EMaterialTextureSlot::Roughness);
+        tryLoadTexture(aiTextureType_METALNESS, EMaterialTextureSlot::Metallic);
+        tryLoadTexture(aiTextureType_AMBIENT_OCCLUSION, EMaterialTextureSlot::AO);
+        tryLoadTexture(aiTextureType_EMISSIVE, EMaterialTextureSlot::Emissive);
+
+        OutModel->Materials.push_back(material);
+    }
+
+    for (uint32 meshIdx = 0; meshIdx < scene->mNumMeshes; ++meshIdx)
+    {
+        aiMesh* mesh = scene->mMeshes[meshIdx];
+        OutModel->MeshMaterialIndices.push_back(static_cast<int32>(mesh->mMaterialIndex));
+    }
+
+    LOG_INFO("Processed " + std::to_string(OutModel->Materials.size()) + " materials");
 #endif
 }
 

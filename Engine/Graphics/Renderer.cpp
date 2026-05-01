@@ -348,6 +348,127 @@ void KRenderer::RenderSkeletalMesh(KSkeletalMesh* InMesh, const XMMATRIX& WorldM
     SkinnedShader->Unbind(Context);
 }
 
+void KRenderer::RenderSkeletalMeshPBR(KSkeletalMesh* InMesh, const XMMATRIX& WorldMatrix,
+                                       ID3D11Buffer* BoneMatrixBuffer, KMaterial* Material)
+{
+    if (!GraphicsDevice || !CurrentCamera || !bInFrame)
+    {
+        return;
+    }
+
+    if (!InMesh || !SkinnedPBRShader || !BoneMatrixBuffer)
+    {
+        RenderSkeletalMesh(InMesh, WorldMatrix, BoneMatrixBuffer);
+        return;
+    }
+
+    ID3D11DeviceContext* Context = GraphicsDevice->GetContext();
+
+    if (bShadowsEnabled && ShadowRenderer.IsInitialized())
+    {
+        FShadowCaster Caster;
+        Caster.bIsSkeletal = true;
+        Caster.SkeletalVertexBuffer = InMesh->GetVertexBuffer();
+        Caster.SkeletalIndexBuffer = InMesh->GetIndexBuffer();
+        Caster.SkeletalIndexCount = InMesh->GetIndexCount();
+        Caster.BoneMatrixBuffer = BoneMatrixBuffer;
+        Caster.WorldMatrix = WorldMatrix;
+        ShadowRenderer.AddShadowCaster(Caster);
+    }
+
+    SkinnedPBRShader->Bind(Context);
+
+    FConstantBuffer TransformData;
+    TransformData.WorldMatrix = XMMatrixTranspose(WorldMatrix);
+    TransformData.ViewMatrix = XMMatrixTranspose(CurrentCamera->GetViewMatrix());
+    TransformData.ProjectionMatrix = XMMatrixTranspose(CurrentCamera->GetProjectionMatrix());
+
+    if (!SkeletalTransformBuffer)
+    {
+        D3D11_BUFFER_DESC bd = {};
+        bd.Usage = D3D11_USAGE_DYNAMIC;
+        bd.ByteWidth = sizeof(FConstantBuffer);
+        bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        HRESULT createHR = GraphicsDevice->GetDevice()->CreateBuffer(&bd, nullptr, &SkeletalTransformBuffer);
+        if (FAILED(createHR) || !SkeletalTransformBuffer)
+        {
+            LOG_ERROR("Failed to create skeletal transform buffer");
+            SkinnedPBRShader->Unbind(Context);
+            return;
+        }
+    }
+
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    HRESULT hr = Context->Map(SkeletalTransformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    if (SUCCEEDED(hr))
+    {
+        memcpy(mappedResource.pData, &TransformData, sizeof(FConstantBuffer));
+        Context->Unmap(SkeletalTransformBuffer.Get(), 0);
+    }
+
+    Context->VSSetConstantBuffers(0, 1, SkeletalTransformBuffer.GetAddressOf());
+    Context->PSSetConstantBuffers(1, 1, LightConstantBuffer.GetAddressOf());
+    Context->VSSetConstantBuffers(5, 1, &BoneMatrixBuffer);
+
+    if (bShadowsEnabled)
+    {
+        Context->PSSetConstantBuffers(2, 1, ShadowConstantBuffer.GetAddressOf());
+        if (ShadowSamplerState)
+        {
+            Context->PSSetSamplers(0, 1, ShadowSamplerState.GetAddressOf());
+        }
+        ShadowRenderer.BindShadowMap(Context, 3);
+    }
+
+    if (MaterialSamplerState)
+    {
+        Context->PSSetSamplers(1, 1, MaterialSamplerState.GetAddressOf());
+    }
+
+    if (Material)
+    {
+        Material->UpdateConstantBuffer(Context);
+        Context->PSSetConstantBuffers(4, 1, Material->GetConstantBufferAddress());
+        Material->BindTextures(Context);
+    }
+    else
+    {
+        if (!DefaultMaterialBuffer)
+        {
+            FPBRMaterialParams DefaultParams;
+            D3D11_BUFFER_DESC desc = {};
+            desc.ByteWidth = sizeof(FPBRMaterialParams);
+            desc.Usage = D3D11_USAGE_IMMUTABLE;
+            desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+            D3D11_SUBRESOURCE_DATA initData = {};
+            initData.pSysMem = &DefaultParams;
+
+            HRESULT bufHR = GraphicsDevice->GetDevice()->CreateBuffer(&desc, &initData, &DefaultMaterialBuffer);
+            if (FAILED(bufHR))
+            {
+                LOG_ERROR("Failed to create default material buffer");
+            }
+        }
+        if (DefaultMaterialBuffer)
+        {
+            Context->PSSetConstantBuffers(4, 1, DefaultMaterialBuffer.GetAddressOf());
+        }
+    }
+
+    InMesh->Render(Context);
+
+    DrawCallCount++;
+    VertexCount += static_cast<int32>(InMesh->GetVertexCount());
+    TriangleCount += static_cast<int32>(InMesh->GetIndexCount()) / 3;
+
+    ID3D11ShaderResourceView* nullSRVs[10] = {};
+    Context->PSSetShaderResources(0, 10, nullSRVs);
+
+    SkinnedPBRShader->Unbind(Context);
+}
+
 void KRenderer::AddPointLight(const FPointLight& Light)
 {
     if (PointLights.size() < MAX_POINT_LIGHTS)
@@ -493,6 +614,7 @@ void KRenderer::Cleanup()
     DebugSphereMesh.reset();
     PBRShader.reset();
     SkinnedShader.reset();
+    SkinnedPBRShader.reset();
     ShadowLitShader.reset();
     LightShader.reset();
     BasicShader.reset();
@@ -634,6 +756,14 @@ HRESULT KRenderer::InitializeDefaultResources()
     {
         LOG_WARNING("Skinned shader creation failed, skeletal mesh rendering will be disabled");
         SkinnedShader.reset();
+    }
+
+    SkinnedPBRShader = std::make_shared<KShaderProgram>();
+    hr = SkinnedPBRShader->CreateSkinnedPBRShader(Device);
+    if (FAILED(hr))
+    {
+        LOG_WARNING("Skinned PBR shader creation failed, skeletal PBR rendering will be disabled");
+        SkinnedPBRShader.reset();
     }
 
     D3D11_SAMPLER_DESC MaterialSamplerDesc = {};

@@ -83,9 +83,6 @@ extern "C"
     ENGINEAPI void Actor_SetVisibility(void* actor, bool visible);
     ENGINEAPI bool Actor_IsVisible(void* actor);
     ENGINEAPI void* Model_LoadAndGetStaticMesh(void* engine, const wchar_t* path);
-    ENGINEAPI void Renderer_SetSSAOEnabled(void* renderer, bool enabled);
-    ENGINEAPI void Renderer_SetPostProcessEnabled(void* renderer, bool enabled);
-    ENGINEAPI void Renderer_SetShadowEnabled(void* renderer, bool enabled);
 
     ENGINEAPI void Renderer_SetSkyEnabled(void* renderer, bool enabled);
     ENGINEAPI bool Renderer_IsSkyEnabled(void* renderer);
@@ -208,4 +205,50 @@ extern "C"
     ENGINEAPI float BlendTree_GetChildSpeed(void* blendTree, int index);
     ENGINEAPI void BlendTree_SetChildLooping(void* blendTree, int index, bool looping);
     ENGINEAPI bool BlendTree_IsChildLooping(void* blendTree, int index);
+
+    ENGINEAPI void* AnimStateMachine_Create();
+    ENGINEAPI void AnimStateMachine_Destroy(void* stateMachine);
+    ENGINEAPI void AnimStateMachine_SetSkeleton(void* stateMachine, void* skeleton);
+    ENGINEAPI void* AnimStateMachine_AddState(void* stateMachine, const char* name, void* animation);
+    ENGINEAPI void* AnimStateMachine_AddBlendTreeState(void* stateMachine, const char* name, void* blendTree);
+    ENGINEAPI void AnimStateMachine_RemoveState(void* stateMachine, const char* name);
+    ENGINEAPI const char* AnimStateMachine_GetCurrentStateName(void* stateMachine);
+    ENGINEAPI int AnimStateMachine_GetStateCount(void* stateMachine);
+    ENGINEAPI const char* AnimStateMachine_GetStateName(void* stateMachine, int index);
+    ENGINEAPI void AnimStateMachine_SetDefaultState(void* stateMachine, const char* name);
+    ENGINEAPI void* AnimStateMachine_AddTransition(void* stateMachine, const char* fromState, const char* toState,
+                                                     float blendDuration, int hasExitTime, float exitTime);
+    ENGINEAPI void AnimStateMachine_RemoveTransition(void* stateMachine, const char* fromState, const char* toState);
+    ENGINEAPI int AnimStateMachine_GetTransitionCount(void* stateMachine);
+    ENGINEAPI void AnimStateMachine_SetFloatParameter(void* stateMachine, const char* name, float value);
+    ENGINEAPI float AnimStateMachine_GetFloatParameter(void* stateMachine, const char* name);
+    ENGINEAPI void AnimStateMachine_SetBoolParameter(void* stateMachine, const char* name, int value);
+    ENGINEAPI int AnimStateMachine_GetBoolParameter(void* stateMachine, const char* name);
+    ENGINEAPI void AnimStateMachine_TriggerTransition(void* stateMachine, const char* targetState);
+    ENGINEAPI void AnimStateMachine_ForceState(void* stateMachine, const char* stateName, float blendDuration);
+    ENGINEAPI void AnimStateMachine_Update(void* stateMachine, float deltaTime);
+    ENGINEAPI int AnimStateMachine_GetBoneMatrixCount(void* stateMachine);
+    ENGINEAPI const float* AnimStateMachine_GetBoneMatrixData(void* stateMachine);
+    ENGINEAPI int AnimStateMachine_IsTransitioning(void* stateMachine);
+    ENGINEAPI float AnimStateMachine_GetBlendProgress(void* stateMachine);
+    ENGINEAPI const char* AnimStateMachine_GetPreviousStateName(void* stateMachine);
+    ENGINEAPI void AnimStateMachine_AddFloatCondition(void* stateMachine, const char* fromState, const char* toState,
+                                                        const char* paramName, int comparisonType, float compareValue);
+    ENGINEAPI void AnimStateMachine_AddBoolCondition(void* stateMachine, const char* fromState, const char* toState,
+                                                      const char* paramName, int comparisonType);
+    ENGINEAPI void AnimStateMachine_SetBlendTreeParameter(void* stateMachine, const char* stateName, float value);
+    ENGINEAPI float AnimStateMachine_GetBlendTreeParameter(void* stateMachine, const char* stateName);
+
+    ENGINEAPI void* Terrain_Create(void* graphicsDevice, int resolution, float scale, float heightScale, int lodCount);
+    ENGINEAPI void Terrain_Destroy(void* terrain);
+    ENGINEAPI void Terrain_SetHeightMapFromRaw(void* terrain, const wchar_t* path, int width, int height);
+    ENGINEAPI void Terrain_GeneratePerlinNoise(void* terrain, int width, int height, float scale, int octaves, float persistence);
+    ENGINEAPI void Terrain_GenerateFlat(void* terrain, int width, int height, float flatHeight);
+    ENGINEAPI float Terrain_GetHeightAtWorldPosition(void* terrain, float worldX, float worldZ);
+    ENGINEAPI void Terrain_SetWorldPosition(void* terrain, float x, float y, float z);
+    ENGINEAPI void Terrain_GetWorldPosition(void* terrain, float* x, float* y, float* z);
+    ENGINEAPI void Terrain_SetWorldScale(void* terrain, float x, float y, float z);
+    ENGINEAPI void Terrain_GetWorldScale(void* terrain, float* x, float* y, float* z);
+    ENGINEAPI int Terrain_IsInitialized(void* terrain);
+    ENGINEAPI int Terrain_GetResolution(void* terrain);
 }

@@ -5,6 +5,7 @@
 #include "../Assets/Animation.h"
 #include "../Assets/AnimationInstance.h"
 #include "../Graphics/Shader.h"
+#include "../Graphics/Material.h"
 #include <memory>
 #include <vector>
 
@@ -143,6 +144,12 @@ public:
     void SetCastShadow(bool bCast) { bCastShadow = bCast; }
     bool GetCastShadow() const { return bCastShadow; }
 
+    void SetMaterial(std::shared_ptr<KMaterial> InMaterial) { Material = InMaterial; }
+    std::shared_ptr<KMaterial> GetMaterial() const { return Material; }
+
+    void SetUsePBR(bool bInUsePBR) { bUsePBR = bInUsePBR; }
+    bool GetUsePBR() const { return bUsePBR; }
+
     virtual EComponentType GetComponentTypeID() const override { return EComponentType::SkeletalMesh; }
 
     void AddAnimation(const std::string& Name, std::shared_ptr<KAnimation> Animation);
@@ -167,6 +174,7 @@ private:
     std::shared_ptr<KSkeletalMesh> SkeletalMesh;
     std::shared_ptr<KSkeleton> Skeleton;
     std::shared_ptr<KShaderProgram> Shader;
+    std::shared_ptr<KMaterial> Material;
     
     std::unordered_map<std::string, std::shared_ptr<KAnimation>> Animations;
     std::shared_ptr<KAnimationInstance> AnimationInstance;
@@ -177,4 +185,5 @@ private:
     std::string CurrentAnimationName;
     bool bAnimationPlaying = false;
     bool bCastShadow = true;
+    bool bUsePBR = false;
 };

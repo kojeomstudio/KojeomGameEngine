@@ -79,7 +79,10 @@ public:
                        class KMaterial* Material);
 
     void RenderSkeletalMesh(class KSkeletalMesh* InMesh, const XMMATRIX& WorldMatrix,
-                            ID3D11Buffer* BoneMatrixBuffer);
+                             ID3D11Buffer* BoneMatrixBuffer);
+
+    void RenderSkeletalMeshPBR(class KSkeletalMesh* InMesh, const XMMATRIX& WorldMatrix,
+                                ID3D11Buffer* BoneMatrixBuffer, KMaterial* Material);
 
     void SetDirectionalLight(const FDirectionalLight& Light) { DirectionalLight = Light; SyncLightsToDeferred(); }
     const FDirectionalLight& GetDirectionalLight() const { return DirectionalLight; }
@@ -132,6 +135,7 @@ public:
     KShaderProgram* GetLightShader() const { return LightShader.get(); }
     KShaderProgram* GetPBRShader() const { return PBRShader.get(); }
     KShaderProgram* GetSkinnedShader() const { return SkinnedShader.get(); }
+    KShaderProgram* GetSkinnedPBRShader() const { return SkinnedPBRShader.get(); }
     void Cleanup();
 
     KGraphicsDevice* GetGraphicsDevice() const { return GraphicsDevice; }
@@ -258,6 +262,7 @@ private:
     std::shared_ptr<KShaderProgram> ShadowLitShader;
     std::shared_ptr<KShaderProgram> PBRShader;
     std::shared_ptr<KShaderProgram> SkinnedShader;
+    std::shared_ptr<KShaderProgram> SkinnedPBRShader;
     KTextureManager TextureManager;
 
     FDirectionalLight DirectionalLight;

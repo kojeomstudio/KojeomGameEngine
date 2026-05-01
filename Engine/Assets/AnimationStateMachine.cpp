@@ -247,6 +247,28 @@ KAnimationState* KAnimationStateMachine::AddState(const std::string& Name, std::
     return StatePtr;
 }
 
+KAnimationState* KAnimationStateMachine::AddBlendTreeState(const std::string& Name, std::shared_ptr<KBlendTree> InBlendTree)
+{
+    if (Name.empty() || !InBlendTree)
+    {
+        return nullptr;
+    }
+
+    auto State = std::make_unique<KAnimationState>(Name);
+    InBlendTree->SetSkeleton(Skeleton);
+    State->SetBlendTree(InBlendTree);
+
+    KAnimationState* StatePtr = State.get();
+    States[Name] = std::move(State);
+
+    if (States.size() == 1)
+    {
+        DefaultStateName = Name;
+    }
+
+    return StatePtr;
+}
+
 void KAnimationStateMachine::RemoveState(const std::string& Name)
 {
     if (BlendState.bIsActive)
@@ -491,16 +513,31 @@ void KAnimationStateMachine::Update(float DeltaTime)
     if (!BlendState.bIsActive)
     {
         CurrentState->Update(DeltaTime);
+
+        if (CurrentState->HasBlendTree())
+        {
+            auto BlendTree = CurrentState->GetBlendTree();
+            float ParamValue = GetFloatParameter(BlendTree->GetParameterName());
+            BlendTree->Update(DeltaTime, ParamValue);
+        }
+
         CheckTransitions();
     }
     else
     {
         UpdateBlending(DeltaTime);
+
+        if (BlendState.TargetState && BlendState.TargetState->HasBlendTree())
+        {
+            auto TargetBlendTree = BlendState.TargetState->GetBlendTree();
+            float ParamValue = GetFloatParameter(TargetBlendTree->GetParameterName());
+            TargetBlendTree->Update(DeltaTime, ParamValue);
+        }
     }
 
-    if (CurrentState && CurrentState->GetAnimation())
+    if (CurrentState && (CurrentState->GetAnimation() || CurrentState->HasBlendTree()))
     {
-        if (BlendState.bIsActive && BlendState.SourceState && BlendState.SourceState->GetAnimation())
+        if (BlendState.bIsActive && BlendState.SourceState && (BlendState.SourceState->GetAnimation() || BlendState.SourceState->HasBlendTree()))
         {
             EvaluateState(BlendState.SourceState, 1.0f - BlendState.BlendProgress, TempBoneMatricesA);
             EvaluateState(BlendState.TargetState, BlendState.BlendProgress, TempBoneMatricesB);
@@ -515,7 +552,22 @@ void KAnimationStateMachine::Update(float DeltaTime)
 
 void KAnimationStateMachine::EvaluateState(KAnimationState* State, float Weight, std::vector<XMMATRIX>& OutMatrices)
 {
-    if (!State || !State->GetAnimation() || !Skeleton)
+    if (!State || !Skeleton)
+    {
+        return;
+    }
+
+    if (State->HasBlendTree())
+    {
+        const auto& BTMatrices = State->GetBlendTree()->GetBoneMatrices();
+        if (!BTMatrices.empty())
+        {
+            OutMatrices = BTMatrices;
+        }
+        return;
+    }
+
+    if (!State->GetAnimation())
     {
         return;
     }
@@ -681,14 +733,33 @@ void KAnimationStateMachine::CheckTransitions()
         if (Transition->HasExitTime())
         {
             auto Animation = CurrentState->GetAnimation();
-            if (!Animation)
+            float Duration = 0.0f;
+            float NormalizedTime = 0.0f;
+
+            if (Animation)
+            {
+                Duration = Animation->GetDurationInSeconds();
+                float CurrentTime = CurrentState->GetCurrentTime();
+                NormalizedTime = Duration > 0.0f ? CurrentTime / Duration : 0.0f;
+            }
+            else if (CurrentState->HasBlendTree())
+            {
+                auto BlendTree = CurrentState->GetBlendTree();
+                int ChildCount = BlendTree->GetChildCount();
+                if (ChildCount > 0)
+                {
+                    const FBlendTreeChild* Child = BlendTree->GetChild(0);
+                    if (Child && Child->Animation)
+                    {
+                        Duration = Child->Animation->GetDurationInSeconds();
+                        NormalizedTime = Duration > 0.0f ? Child->CurrentTime / Duration : 0.0f;
+                    }
+                }
+            }
+            else
             {
                 continue;
             }
-
-            float Duration = Animation->GetDurationInSeconds();
-            float CurrentTime = CurrentState->GetCurrentTime();
-            float NormalizedTime = Duration > 0.0f ? CurrentTime / Duration : 0.0f;
 
             if (bConditionsMet && NormalizedTime >= Transition->GetExitTime())
             {
@@ -815,6 +886,25 @@ void KAnimationStateMachine::Reset()
     {
         SetDefaultState(DefaultStateName);
     }
+}
+
+void KAnimationStateMachine::SetBlendTreeParameter(const std::string& StateName, float Value)
+{
+    KAnimationState* State = GetState(StateName);
+    if (State && State->HasBlendTree())
+    {
+        FloatParameters[State->GetBlendTree()->GetParameterName()] = Value;
+    }
+}
+
+float KAnimationStateMachine::GetBlendTreeParameter(const std::string& StateName) const
+{
+    const KAnimationState* State = GetState(StateName);
+    if (State && State->HasBlendTree())
+    {
+        return GetFloatParameter(State->GetBlendTree()->GetParameterName());
+    }
+    return 0.0f;
 }
 
 size_t KAnimationStateMachine::GetTransitionCount() const

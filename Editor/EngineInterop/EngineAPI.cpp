@@ -1565,4 +1565,314 @@ extern "C"
         auto* child = static_cast<KBlendTree*>(blendTree)->GetChild(index);
         return child ? child->bLooping : false;
     }
+
+    static thread_local std::string tl_animSMStateName;
+    static thread_local std::string tl_animSMPrevStateName;
+
+    ENGINEAPI void* AnimStateMachine_Create()
+    {
+        return new KAnimationStateMachine();
+    }
+
+    ENGINEAPI void AnimStateMachine_Destroy(void* stateMachine)
+    {
+        delete static_cast<KAnimationStateMachine*>(stateMachine);
+    }
+
+    ENGINEAPI void AnimStateMachine_SetSkeleton(void* stateMachine, void* skeleton)
+    {
+        if (!stateMachine) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->SetSkeleton(static_cast<KSkeleton*>(skeleton));
+    }
+
+    ENGINEAPI void* AnimStateMachine_AddState(void* stateMachine, const char* name, void* animation)
+    {
+        if (!stateMachine || !name || !animation) return nullptr;
+        return static_cast<KAnimationStateMachine*>(stateMachine)->AddState(
+            name, std::shared_ptr<KAnimation>(static_cast<KAnimation*>(animation), [](KAnimation*) {}));
+    }
+
+    ENGINEAPI void* AnimStateMachine_AddBlendTreeState(void* stateMachine, const char* name, void* blendTree)
+    {
+        if (!stateMachine || !name || !blendTree) return nullptr;
+        auto btPtr = static_cast<KBlendTree*>(blendTree);
+        auto sharedBT = std::shared_ptr<KBlendTree>(btPtr, [](KBlendTree*) {});
+        return static_cast<KAnimationStateMachine*>(stateMachine)->AddBlendTreeState(name, sharedBT);
+    }
+
+    ENGINEAPI void AnimStateMachine_RemoveState(void* stateMachine, const char* name)
+    {
+        if (!stateMachine || !name) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->RemoveState(name);
+    }
+
+    ENGINEAPI const char* AnimStateMachine_GetCurrentStateName(void* stateMachine)
+    {
+        if (!stateMachine) return "";
+        tl_animSMStateName = static_cast<KAnimationStateMachine*>(stateMachine)->GetCurrentStateName();
+        return tl_animSMStateName.c_str();
+    }
+
+    ENGINEAPI int AnimStateMachine_GetStateCount(void* stateMachine)
+    {
+        if (!stateMachine) return 0;
+        return static_cast<int>(static_cast<KAnimationStateMachine*>(stateMachine)->GetStateCount());
+    }
+
+    ENGINEAPI const char* AnimStateMachine_GetStateName(void* stateMachine, int index)
+    {
+        if (!stateMachine) return "";
+        int i = 0;
+        for (const auto& [name, state] : static_cast<KAnimationStateMachine*>(stateMachine)->GetStates())
+        {
+            if (i == index)
+            {
+                tl_animSMStateName = name;
+                return tl_animSMStateName.c_str();
+            }
+            ++i;
+        }
+        return "";
+    }
+
+    ENGINEAPI void AnimStateMachine_SetDefaultState(void* stateMachine, const char* name)
+    {
+        if (!stateMachine || !name) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->SetDefaultState(name);
+    }
+
+    ENGINEAPI void* AnimStateMachine_AddTransition(void* stateMachine, const char* fromState, const char* toState,
+                                                     float blendDuration, int hasExitTime, float exitTime)
+    {
+        if (!stateMachine || !fromState || !toState) return nullptr;
+        return static_cast<KAnimationStateMachine*>(stateMachine)->AddTransition(
+            fromState, toState, blendDuration, hasExitTime != 0, exitTime);
+    }
+
+    ENGINEAPI void AnimStateMachine_RemoveTransition(void* stateMachine, const char* fromState, const char* toState)
+    {
+        if (!stateMachine || !fromState || !toState) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->RemoveTransition(fromState, toState);
+    }
+
+    ENGINEAPI int AnimStateMachine_GetTransitionCount(void* stateMachine)
+    {
+        if (!stateMachine) return 0;
+        return static_cast<int>(static_cast<KAnimationStateMachine*>(stateMachine)->GetTransitionCount());
+    }
+
+    ENGINEAPI void AnimStateMachine_SetFloatParameter(void* stateMachine, const char* name, float value)
+    {
+        if (!stateMachine || !name) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->SetFloatParameter(name, value);
+    }
+
+    ENGINEAPI float AnimStateMachine_GetFloatParameter(void* stateMachine, const char* name)
+    {
+        if (!stateMachine || !name) return 0.0f;
+        return static_cast<KAnimationStateMachine*>(stateMachine)->GetFloatParameter(name);
+    }
+
+    ENGINEAPI void AnimStateMachine_SetBoolParameter(void* stateMachine, const char* name, int value)
+    {
+        if (!stateMachine || !name) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->SetBoolParameter(name, value != 0);
+    }
+
+    ENGINEAPI int AnimStateMachine_GetBoolParameter(void* stateMachine, const char* name)
+    {
+        if (!stateMachine || !name) return 0;
+        return static_cast<KAnimationStateMachine*>(stateMachine)->GetBoolParameter(name) ? 1 : 0;
+    }
+
+    ENGINEAPI void AnimStateMachine_TriggerTransition(void* stateMachine, const char* targetState)
+    {
+        if (!stateMachine || !targetState) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->TriggerTransition(targetState);
+    }
+
+    ENGINEAPI void AnimStateMachine_ForceState(void* stateMachine, const char* stateName, float blendDuration)
+    {
+        if (!stateMachine || !stateName) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->ForceState(stateName, blendDuration);
+    }
+
+    ENGINEAPI void AnimStateMachine_Update(void* stateMachine, float deltaTime)
+    {
+        if (!stateMachine) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->Update(deltaTime);
+    }
+
+    ENGINEAPI int AnimStateMachine_GetBoneMatrixCount(void* stateMachine)
+    {
+        if (!stateMachine) return 0;
+        return static_cast<KAnimationStateMachine*>(stateMachine)->GetBoneMatrixCount();
+    }
+
+    ENGINEAPI const float* AnimStateMachine_GetBoneMatrixData(void* stateMachine)
+    {
+        if (!stateMachine) return nullptr;
+        return reinterpret_cast<const float*>(static_cast<KAnimationStateMachine*>(stateMachine)->GetBoneMatrixData());
+    }
+
+    ENGINEAPI int AnimStateMachine_IsTransitioning(void* stateMachine)
+    {
+        if (!stateMachine) return 0;
+        return static_cast<KAnimationStateMachine*>(stateMachine)->IsTransitioning() ? 1 : 0;
+    }
+
+    ENGINEAPI float AnimStateMachine_GetBlendProgress(void* stateMachine)
+    {
+        if (!stateMachine) return 0.0f;
+        return static_cast<KAnimationStateMachine*>(stateMachine)->GetBlendProgress();
+    }
+
+    ENGINEAPI const char* AnimStateMachine_GetPreviousStateName(void* stateMachine)
+    {
+        if (!stateMachine) return "";
+        tl_animSMPrevStateName = static_cast<KAnimationStateMachine*>(stateMachine)->GetPreviousStateName();
+        return tl_animSMPrevStateName.c_str();
+    }
+
+    ENGINEAPI void AnimStateMachine_AddFloatCondition(void* stateMachine, const char* fromState, const char* toState,
+                                                        const char* paramName, int comparisonType, float compareValue)
+    {
+        if (!stateMachine || !fromState || !toState || !paramName) return;
+        auto* sm = static_cast<KAnimationStateMachine*>(stateMachine);
+        auto* transition = sm->GetTransition(fromState, toState);
+        if (!transition) return;
+        FAnimTransitionCondition Condition;
+        Condition.ParameterName = paramName;
+        Condition.bIsBool = false;
+        Condition.ComparisonType = static_cast<FAnimTransitionCondition::EComparisonType>(comparisonType);
+        Condition.CompareValue = compareValue;
+        transition->AddCondition(Condition);
+    }
+
+    ENGINEAPI void AnimStateMachine_AddBoolCondition(void* stateMachine, const char* fromState, const char* toState,
+                                                      const char* paramName, int comparisonType)
+    {
+        if (!stateMachine || !fromState || !toState || !paramName) return;
+        auto* sm = static_cast<KAnimationStateMachine*>(stateMachine);
+        auto* transition = sm->GetTransition(fromState, toState);
+        if (!transition) return;
+        FAnimTransitionCondition Condition;
+        Condition.ParameterName = paramName;
+        Condition.bIsBool = true;
+        Condition.ComparisonType = static_cast<FAnimTransitionCondition::EComparisonType>(comparisonType);
+        transition->AddCondition(Condition);
+    }
+
+    ENGINEAPI void AnimStateMachine_SetBlendTreeParameter(void* stateMachine, const char* stateName, float value)
+    {
+        if (!stateMachine || !stateName) return;
+        static_cast<KAnimationStateMachine*>(stateMachine)->SetBlendTreeParameter(stateName, value);
+    }
+
+    ENGINEAPI float AnimStateMachine_GetBlendTreeParameter(void* stateMachine, const char* stateName)
+    {
+        if (!stateMachine || !stateName) return 0.0f;
+        return static_cast<KAnimationStateMachine*>(stateMachine)->GetBlendTreeParameter(stateName);
+    }
+
+    ENGINEAPI void* Terrain_Create(void* graphicsDevice, int resolution, float scale, float heightScale, int lodCount)
+    {
+        if (!graphicsDevice) return nullptr;
+        auto* device = static_cast<KGraphicsDevice*>(graphicsDevice);
+        auto terrain = std::make_unique<KTerrain>();
+        FTerrainConfig config;
+        config.Resolution = static_cast<UINT32>(resolution);
+        config.Scale = scale;
+        config.HeightScale = heightScale;
+        config.LODCount = static_cast<UINT32>(std::clamp(lodCount, 1, 4));
+        HRESULT hr = terrain->Initialize(device, config);
+        if (FAILED(hr)) return nullptr;
+        return terrain.release();
+    }
+
+    ENGINEAPI void Terrain_Destroy(void* terrain)
+    {
+        if (!terrain) return;
+        auto* t = static_cast<KTerrain*>(terrain);
+        t->Cleanup();
+        delete t;
+    }
+
+    ENGINEAPI void Terrain_SetHeightMapFromRaw(void* terrain, const wchar_t* path, int width, int height)
+    {
+        if (!terrain || !path) return;
+        auto* t = static_cast<KTerrain*>(terrain);
+        auto heightMap = std::make_shared<KHeightMap>();
+        HRESULT hr = heightMap->LoadFromRawFile(path, static_cast<UINT32>(width), static_cast<UINT32>(height));
+        if (SUCCEEDED(hr))
+        {
+            t->SetHeightMap(heightMap);
+        }
+    }
+
+    ENGINEAPI void Terrain_GeneratePerlinNoise(void* terrain, int width, int height, float scale, int octaves, float persistence)
+    {
+        if (!terrain) return;
+        auto* t = static_cast<KTerrain*>(terrain);
+        auto heightMap = std::make_shared<KHeightMap>();
+        heightMap->GeneratePerlinNoise(static_cast<UINT32>(width), static_cast<UINT32>(height), scale, octaves, persistence);
+        t->SetHeightMap(heightMap);
+    }
+
+    ENGINEAPI void Terrain_GenerateFlat(void* terrain, int width, int height, float flatHeight)
+    {
+        if (!terrain) return;
+        auto* t = static_cast<KTerrain*>(terrain);
+        auto heightMap = std::make_shared<KHeightMap>();
+        heightMap->GenerateFlat(static_cast<UINT32>(width), static_cast<UINT32>(height), flatHeight);
+        t->SetHeightMap(heightMap);
+    }
+
+    ENGINEAPI float Terrain_GetHeightAtWorldPosition(void* terrain, float worldX, float worldZ)
+    {
+        if (!terrain) return 0.0f;
+        return static_cast<KTerrain*>(terrain)->GetHeightAtWorldPosition(worldX, worldZ);
+    }
+
+    ENGINEAPI void Terrain_SetWorldPosition(void* terrain, float x, float y, float z)
+    {
+        if (!terrain) return;
+        static_cast<KTerrain*>(terrain)->SetWorldPosition(XMFLOAT3(x, y, z));
+    }
+
+    ENGINEAPI void Terrain_GetWorldPosition(void* terrain, float* x, float* y, float* z)
+    {
+        if (!terrain) return;
+        const XMFLOAT3& pos = static_cast<KTerrain*>(terrain)->GetWorldPosition();
+        if (x) *x = pos.x;
+        if (y) *y = pos.y;
+        if (z) *z = pos.z;
+    }
+
+    ENGINEAPI void Terrain_SetWorldScale(void* terrain, float x, float y, float z)
+    {
+        if (!terrain) return;
+        static_cast<KTerrain*>(terrain)->SetWorldScale(XMFLOAT3(x, y, z));
+    }
+
+    ENGINEAPI void Terrain_GetWorldScale(void* terrain, float* x, float* y, float* z)
+    {
+        if (!terrain) return;
+        const XMFLOAT3& s = static_cast<KTerrain*>(terrain)->GetWorldScale();
+        if (x) *x = s.x;
+        if (y) *y = s.y;
+        if (z) *z = s.z;
+    }
+
+    ENGINEAPI int Terrain_IsInitialized(void* terrain)
+    {
+        if (!terrain) return 0;
+        return static_cast<KTerrain*>(terrain)->IsInitialized() ? 1 : 0;
+    }
+
+    ENGINEAPI int Terrain_GetResolution(void* terrain)
+    {
+        if (!terrain) return 0;
+        return static_cast<int>(static_cast<KTerrain*>(terrain)->GetConfig().Resolution);
+    }
 }

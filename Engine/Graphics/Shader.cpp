@@ -1592,7 +1592,20 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             FSpotLightData  SpotLights[MAX_SPOT_LIGHTS];
         }
 
-        cbuffer MaterialBuffer : register(b2)
+        cbuffer ShadowBuffer : register(b2)
+        {
+            matrix LightViewProjection;
+            float2 ShadowMapSize;
+            float  DepthBias;
+            int    PCFKernelSize;
+            int    bShadowEnabled;
+            float3 ShadowPadding;
+        };
+
+        Texture2D ShadowMap : register(t3);
+        SamplerComparisonState ShadowSampler : register(s0);
+
+        cbuffer MaterialBuffer : register(b4)
         {
             float4 AlbedoColor;
             float  Metallic;
@@ -1612,7 +1625,7 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
         Texture2D RoughnessMap : register(t7);
         Texture2D AOMap        : register(t8);
         Texture2D EmissiveMap  : register(t9);
-        SamplerState MaterialSampler : register(s0);
+        SamplerState MaterialSampler : register(s1);
 
         struct VS_INPUT
         {
@@ -1633,6 +1646,7 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             float3 Normal    : NORMAL;
             float2 TexCoord  : TEXCOORD0;
             float3 WorldPos  : TEXCOORD1;
+            float4 ShadowPos : TEXCOORD2;
             float3 Tangent   : TANGENT;
             float3 Bitangent : BINORMAL;
         };
@@ -1708,6 +1722,41 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             return F0 + (1.0f - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
         }
 
+        float CalculateShadow(float4 shadowPos)
+        {
+            if (bShadowEnabled == 0)
+                return 1.0f;
+
+            float3 projCoords = shadowPos.xyz / shadowPos.w;
+            projCoords.x = projCoords.x * 0.5f + 0.5f;
+            projCoords.y = -projCoords.y * 0.5f + 0.5f;
+
+            if (projCoords.x < 0.0f || projCoords.x > 1.0f ||
+                projCoords.y < 0.0f || projCoords.y > 1.0f ||
+                projCoords.z > 1.0f)
+                return 1.0f;
+
+            float currentDepth = projCoords.z;
+            float shadow = 0.0f;
+            float2 texelSize = 1.0f / ShadowMapSize;
+
+            int kernelSize = max(PCFKernelSize, 1);
+            int halfKernel = kernelSize / 2;
+
+            for (int x = -halfKernel; x <= halfKernel; ++x)
+            {
+                for (int y = -halfKernel; y <= halfKernel; ++y)
+                {
+                    float2 offset = float2(x, y) * texelSize;
+                    shadow += ShadowMap.SampleCmpLevelZero(ShadowSampler,
+                        projCoords.xy + offset, currentDepth - DepthBias);
+                }
+            }
+
+            shadow /= (float)(kernelSize * kernelSize);
+            return shadow;
+        }
+
         float3 GetNormalFromMap(PS_INPUT input, float3 normal)
         {
             float3 tangentNormal = NormalMap.Sample(MaterialSampler, input.TexCoord).xyz * 2.0f - 1.0f;
@@ -1719,24 +1768,26 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             return normalize(mul(tangentNormal, TBN));
         }
 
-        float3 CalculatePBRLighting(float3 N, float3 V, float3 worldPos, float3 albedo, float metallic, float roughness, float ao)
+        float3 CalculatePBRLighting(float3 N, float3 V, float3 worldPos, float3 albedo, float metallic, float roughness, float ao, float shadow)
         {
             float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
             float3 Lo = float3(0.0f, 0.0f, 0.0f);
 
-            float3 L = normalize(-DirLightDirection);
-            float3 H = normalize(V + L);
-            float NdotL = max(dot(N, L), 0.0f);
-            float NDF = DistributionGGX(N, H, roughness);
-            float G = GeometrySmith(N, V, L, roughness);
-            float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
-            float3 numerator = NDF * G * F;
-            float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
-            float3 specular = numerator / denominator;
-            float3 kS = F;
-            float3 kD = (1.0f - kS) * (1.0f - metallic);
-            float3 radiance = DirLightColor.rgb;
-            Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+            {
+                float3 L = normalize(-DirLightDirection);
+                float3 H = normalize(V + L);
+                float NdotL = max(dot(N, L), 0.0f);
+                float NDF = DistributionGGX(N, H, roughness);
+                float G = GeometrySmith(N, V, L, roughness);
+                float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+                float3 numerator = NDF * G * F;
+                float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+                float3 specular = numerator / denominator;
+                float3 kS = F;
+                float3 kD = (1.0f - kS) * (1.0f - metallic);
+                float3 radiance = DirLightColor.rgb * shadow;
+                Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+            }
 
             [unroll]
             for (int i = 0; i < MAX_POINT_LIGHTS; ++i)
@@ -1745,20 +1796,20 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
                 float3 lightDir = PointLights[i].Position - worldPos;
                 float distance = length(lightDir);
                 if (distance > PointLights[i].Radius) continue;
-                L = normalize(lightDir);
-                H = normalize(V + L);
+                float3 L = normalize(lightDir);
+                float3 H = normalize(V + L);
                 float attenuation = 1.0f / (1.0f + PointLights[i].Falloff * distance * distance);
                 attenuation *= PointLights[i].Intensity;
-                NdotL = max(dot(N, L), 0.0f);
-                NDF = DistributionGGX(N, H, roughness);
-                G = GeometrySmith(N, V, L, roughness);
-                F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
-                numerator = NDF * G * F;
-                denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
-                specular = numerator / denominator;
-                kS = F;
-                kD = (1.0f - kS) * (1.0f - metallic);
-                radiance = PointLights[i].Color.rgb * attenuation;
+                float NdotL = max(dot(N, L), 0.0f);
+                float NDF = DistributionGGX(N, H, roughness);
+                float G = GeometrySmith(N, V, L, roughness);
+                float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+                float3 numerator = NDF * G * F;
+                float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+                float3 specular = numerator / denominator;
+                float3 kS = F;
+                float3 kD = (1.0f - kS) * (1.0f - metallic);
+                float3 radiance = PointLights[i].Color.rgb * attenuation;
                 Lo += (kD * albedo / PI + specular) * radiance * NdotL;
             }
 
@@ -1769,7 +1820,7 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
                 float3 lightDir = SpotLights[j].Position - worldPos;
                 float distance = length(lightDir);
                 if (distance > SpotLights[j].Radius) continue;
-                L = normalize(lightDir);
+                float3 L = normalize(lightDir);
                 float3 spotDir = normalize(-SpotLights[j].Direction);
                 float cosAngle = dot(L, spotDir);
                 float cosInner = cos(SpotLights[j].InnerCone);
@@ -1778,17 +1829,17 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
                 float spotFactor = saturate((cosAngle - cosOuter) / (cosInner - cosOuter));
                 float attenuation = 1.0f / (1.0f + SpotLights[j].Falloff * distance * distance);
                 attenuation *= SpotLights[j].Intensity * spotFactor;
-                H = normalize(V + L);
-                NdotL = max(dot(N, L), 0.0f);
-                NDF = DistributionGGX(N, H, roughness);
-                G = GeometrySmith(N, V, L, roughness);
-                F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
-                numerator = NDF * G * F;
-                denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
-                specular = numerator / denominator;
-                kS = F;
-                kD = (1.0f - kS) * (1.0f - metallic);
-                radiance = SpotLights[j].Color.rgb * attenuation;
+                float3 H = normalize(V + L);
+                float NdotL = max(dot(N, L), 0.0f);
+                float NDF = DistributionGGX(N, H, roughness);
+                float G = GeometrySmith(N, V, L, roughness);
+                float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+                float3 numerator = NDF * G * F;
+                float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+                float3 specular = numerator / denominator;
+                float3 kS = F;
+                float3 kD = (1.0f - kS) * (1.0f - metallic);
+                float3 radiance = SpotLights[j].Color.rgb * attenuation;
                 Lo += (kD * albedo / PI + specular) * radiance * NdotL;
             }
 
@@ -1813,6 +1864,7 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             output.Normal = mul(skinnedNormal, (float3x3)World);
             output.TexCoord = input.TexCoord;
             output.WorldPos = worldPos.xyz;
+            output.ShadowPos = mul(worldPos, LightViewProjection);
             output.Tangent = mul(skinnedTangent, (float3x3)World);
             output.Bitangent = mul(skinnedBitangent, (float3x3)World);
             return output;
@@ -1831,7 +1883,8 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             normal = GetNormalFromMap(input, normal);
 
             float3 V = normalize(CameraPosition - input.WorldPos);
-            float3 color = CalculatePBRLighting(normal, V, input.WorldPos, albedo, metallic, roughness, ao);
+            float shadow = CalculateShadow(input.ShadowPos);
+            float3 color = CalculatePBRLighting(normal, V, input.WorldPos, albedo, metallic, roughness, ao, shadow);
 
             float3 emissive = EmissiveMap.Sample(MaterialSampler, input.TexCoord).rgb * EmissiveColor.rgb * EmissiveIntensity;
             color += emissive;

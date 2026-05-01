@@ -166,7 +166,15 @@ void KSkeletalMeshComponent::Render(KRenderer* Renderer)
         worldMatrix = Owner->GetWorldMatrix();
     }
 
-    Renderer->RenderSkeletalMesh(SkeletalMesh.get(), worldMatrix, BoneMatrixBuffer.Get());
+    if (bUsePBR)
+    {
+        Renderer->RenderSkeletalMeshPBR(SkeletalMesh.get(), worldMatrix, BoneMatrixBuffer.Get(),
+                                         Material ? Material.get() : nullptr);
+    }
+    else
+    {
+        Renderer->RenderSkeletalMesh(SkeletalMesh.get(), worldMatrix, BoneMatrixBuffer.Get());
+    }
 }
 
 void KSkeletalMeshComponent::SetSkeletalMesh(std::shared_ptr<KSkeletalMesh> InMesh)

@@ -5,6 +5,7 @@
 #include "../Assets/Skeleton.h"
 #include "../Assets/Animation.h"
 #include "../Assets/SkeletalMeshComponent.h"
+#include "../Graphics/Material.h"
 #include <future>
 #include <memory>
 #include <vector>
@@ -20,6 +21,8 @@ struct FLoadedModel
     std::shared_ptr<KSkeletalMesh> SkeletalMesh;
     std::shared_ptr<KSkeleton> Skeleton;
     std::vector<std::shared_ptr<KAnimation>> Animations;
+    std::vector<std::shared_ptr<KMaterial>> Materials;
+    std::vector<int32> MeshMaterialIndices;
     std::string Name;
     std::wstring SourcePath;
 };
@@ -71,6 +74,7 @@ private:
     std::shared_ptr<KStaticMesh> ProcessMesh(void* AssimpMesh, void* AssimpScene, FLoadedModel* OutModel, const FModelLoadOptions& Options);
     void ProcessBones(void* AssimpMesh, FLoadedModel* OutModel, uint32 MeshIndex);
     void ProcessAnimations(void* AssimpScene, FLoadedModel* OutModel);
+    void ProcessMaterials(void* AssimpScene, FLoadedModel* OutModel, const std::wstring& ModelPath);
 
     std::unordered_map<std::wstring, std::shared_ptr<FLoadedModel>> LoadedModels;
     mutable std::mutex LoadedModelsMutex;

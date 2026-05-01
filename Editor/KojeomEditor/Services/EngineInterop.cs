@@ -1584,4 +1584,297 @@ public class EngineInterop : IDisposable
     {
         return blendTree != IntPtr.Zero && BlendTree_IsChildLooping(blendTree, index);
     }
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr AnimStateMachine_Create();
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_Destroy(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_SetSkeleton(IntPtr stateMachine, IntPtr skeleton);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr AnimStateMachine_AddState(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string name, IntPtr animation);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr AnimStateMachine_AddBlendTreeState(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string name, IntPtr blendTree);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_RemoveState(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string name);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.LPStr)]
+    private static extern string AnimStateMachine_GetCurrentStateName(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AnimStateMachine_GetStateCount(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.LPStr)]
+    private static extern string AnimStateMachine_GetStateName(IntPtr stateMachine, int index);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_SetDefaultState(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string name);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr AnimStateMachine_AddTransition(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string fromState, [MarshalAs(UnmanagedType.LPStr)] string toState, float blendDuration, int hasExitTime, float exitTime);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_RemoveTransition(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string fromState, [MarshalAs(UnmanagedType.LPStr)] string toState);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AnimStateMachine_GetTransitionCount(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_SetFloatParameter(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string name, float value);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float AnimStateMachine_GetFloatParameter(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string name);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_SetBoolParameter(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string name, int value);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AnimStateMachine_GetBoolParameter(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string name);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_TriggerTransition(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string targetState);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_ForceState(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string stateName, float blendDuration);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_Update(IntPtr stateMachine, float deltaTime);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AnimStateMachine_GetBoneMatrixCount(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr AnimStateMachine_GetBoneMatrixData(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AnimStateMachine_IsTransitioning(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float AnimStateMachine_GetBlendProgress(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.LPStr)]
+    private static extern string AnimStateMachine_GetPreviousStateName(IntPtr stateMachine);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_AddFloatCondition(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string fromState, [MarshalAs(UnmanagedType.LPStr)] string toState, [MarshalAs(UnmanagedType.LPStr)] string paramName, int comparisonType, float compareValue);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_AddBoolCondition(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string fromState, [MarshalAs(UnmanagedType.LPStr)] string toState, [MarshalAs(UnmanagedType.LPStr)] string paramName, int comparisonType);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void AnimStateMachine_SetBlendTreeParameter(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string stateName, float value);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float AnimStateMachine_GetBlendTreeParameter(IntPtr stateMachine, [MarshalAs(UnmanagedType.LPStr)] string stateName);
+
+    public IntPtr AnimStateMachineCreate() => AnimStateMachine_Create();
+
+    public void AnimStateMachineDestroy(IntPtr stateMachine)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_Destroy(stateMachine);
+    }
+
+    public void AnimStateMachineSetSkeleton(IntPtr stateMachine, IntPtr skeleton)
+    {
+        if (stateMachine != IntPtr.Zero && skeleton != IntPtr.Zero) AnimStateMachine_SetSkeleton(stateMachine, skeleton);
+    }
+
+    public IntPtr AnimStateMachineAddState(IntPtr stateMachine, string name, IntPtr animation)
+    {
+        return AnimStateMachine_AddState(stateMachine, name, animation);
+    }
+
+    public IntPtr AnimStateMachineAddBlendTreeState(IntPtr stateMachine, string name, IntPtr blendTree)
+    {
+        return AnimStateMachine_AddBlendTreeState(stateMachine, name, blendTree);
+    }
+
+    public void AnimStateMachineRemoveState(IntPtr stateMachine, string name)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_RemoveState(stateMachine, name);
+    }
+
+    public string AnimStateMachineGetCurrentStateName(IntPtr stateMachine)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetCurrentStateName(stateMachine) : "";
+    }
+
+    public int AnimStateMachineGetStateCount(IntPtr stateMachine)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetStateCount(stateMachine) : 0;
+    }
+
+    public string AnimStateMachineGetStateName(IntPtr stateMachine, int index)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetStateName(stateMachine, index) : "";
+    }
+
+    public void AnimStateMachineSetDefaultState(IntPtr stateMachine, string name)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_SetDefaultState(stateMachine, name);
+    }
+
+    public IntPtr AnimStateMachineAddTransition(IntPtr stateMachine, string fromState, string toState, float blendDuration, bool hasExitTime, float exitTime)
+    {
+        return AnimStateMachine_AddTransition(stateMachine, fromState, toState, blendDuration, hasExitTime ? 1 : 0, exitTime);
+    }
+
+    public void AnimStateMachineRemoveTransition(IntPtr stateMachine, string fromState, string toState)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_RemoveTransition(stateMachine, fromState, toState);
+    }
+
+    public int AnimStateMachineGetTransitionCount(IntPtr stateMachine)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetTransitionCount(stateMachine) : 0;
+    }
+
+    public void AnimStateMachineSetFloatParameter(IntPtr stateMachine, string name, float value)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_SetFloatParameter(stateMachine, name, value);
+    }
+
+    public float AnimStateMachineGetFloatParameter(IntPtr stateMachine, string name)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetFloatParameter(stateMachine, name) : 0.0f;
+    }
+
+    public void AnimStateMachineSetBoolParameter(IntPtr stateMachine, string name, bool value)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_SetBoolParameter(stateMachine, name, value ? 1 : 0);
+    }
+
+    public bool AnimStateMachineGetBoolParameter(IntPtr stateMachine, string name)
+    {
+        return stateMachine != IntPtr.Zero && AnimStateMachine_GetBoolParameter(stateMachine, name) != 0;
+    }
+
+    public void AnimStateMachineTriggerTransition(IntPtr stateMachine, string targetState)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_TriggerTransition(stateMachine, targetState);
+    }
+
+    public void AnimStateMachineForceState(IntPtr stateMachine, string stateName, float blendDuration)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_ForceState(stateMachine, stateName, blendDuration);
+    }
+
+    public void AnimStateMachineUpdate(IntPtr stateMachine, float deltaTime)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_Update(stateMachine, deltaTime);
+    }
+
+    public int AnimStateMachineGetBoneMatrixCount(IntPtr stateMachine)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetBoneMatrixCount(stateMachine) : 0;
+    }
+
+    public IntPtr AnimStateMachineGetBoneMatrixData(IntPtr stateMachine)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetBoneMatrixData(stateMachine) : IntPtr.Zero;
+    }
+
+    public bool AnimStateMachineIsTransitioning(IntPtr stateMachine)
+    {
+        return stateMachine != IntPtr.Zero && AnimStateMachine_IsTransitioning(stateMachine) != 0;
+    }
+
+    public float AnimStateMachineGetBlendProgress(IntPtr stateMachine)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetBlendProgress(stateMachine) : 0.0f;
+    }
+
+    public string AnimStateMachineGetPreviousStateName(IntPtr stateMachine)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetPreviousStateName(stateMachine) : "";
+    }
+
+    public void AnimStateMachineAddFloatCondition(IntPtr stateMachine, string fromState, string toState, string paramName, int comparisonType, float compareValue)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_AddFloatCondition(stateMachine, fromState, toState, paramName, comparisonType, compareValue);
+    }
+
+    public void AnimStateMachineAddBoolCondition(IntPtr stateMachine, string fromState, string toState, string paramName, int comparisonType)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_AddBoolCondition(stateMachine, fromState, toState, paramName, comparisonType);
+    }
+
+    public void AnimStateMachineSetBlendTreeParameter(IntPtr stateMachine, string stateName, float value)
+    {
+        if (stateMachine != IntPtr.Zero) AnimStateMachine_SetBlendTreeParameter(stateMachine, stateName, value);
+    }
+
+    public float AnimStateMachineGetBlendTreeParameter(IntPtr stateMachine, string stateName)
+    {
+        return stateMachine != IntPtr.Zero ? AnimStateMachine_GetBlendTreeParameter(stateMachine, stateName) : 0.0f;
+    }
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr Terrain_Create(IntPtr graphicsDevice, int resolution, float scale, float heightScale, int lodCount);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Terrain_Destroy(IntPtr terrain);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Terrain_SetHeightMapFromRaw(IntPtr terrain, [MarshalAs(UnmanagedType.LPWStr)] string path, int width, int height);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Terrain_GeneratePerlinNoise(IntPtr terrain, int width, int height, float scale, int octaves, float persistence);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Terrain_GenerateFlat(IntPtr terrain, int width, int height, float flatHeight);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern float Terrain_GetHeightAtWorldPosition(IntPtr terrain, float worldX, float worldZ);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Terrain_SetWorldPosition(IntPtr terrain, float x, float y, float z);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Terrain_GetWorldPosition(IntPtr terrain, out float x, out float y, out float z);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Terrain_SetWorldScale(IntPtr terrain, float x, float y, float z);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Terrain_GetWorldScale(IntPtr terrain, out float x, out float y, out float z);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Terrain_IsInitialized(IntPtr terrain);
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Terrain_GetResolution(IntPtr terrain);
+
+    public IntPtr TerrainCreate(IntPtr graphicsDevice, int resolution, float scale, float heightScale, int lodCount)
+    {
+        return graphicsDevice != IntPtr.Zero ? Terrain_Create(graphicsDevice, resolution, scale, heightScale, lodCount) : IntPtr.Zero;
+    }
+
+    public void TerrainDestroy(IntPtr terrain)
+    {
+        if (terrain != IntPtr.Zero) Terrain_Destroy(terrain);
+    }
+
+    public void TerrainSetHeightMapFromRaw(IntPtr terrain, string path, int width, int height)
+    {
+        if (terrain != IntPtr.Zero) Terrain_SetHeightMapFromRaw(terrain, path, width, height);
+    }
+
+    public void TerrainGeneratePerlinNoise(IntPtr terrain, int width, int height, float scale, int octaves, float persistence)
+    {
+        if (terrain != IntPtr.Zero) Terrain_GeneratePerlinNoise(terrain, width, height, scale, octaves, persistence);
+    }
+
+    public void TerrainGenerateFlat(IntPtr terrain, int width, int height, float flatHeight)
+    {
+        if (terrain != IntPtr.Zero) Terrain_GenerateFlat(terrain, width, height, flatHeight);
+    }
+
+    public float TerrainGetHeightAtWorldPosition(IntPtr terrain, float worldX, float worldZ)
+    {
+        return terrain != IntPtr.Zero ? Terrain_GetHeightAtWorldPosition(terrain, worldX, worldZ) : 0.0f;
+    }
+
+    public void TerrainSetWorldPosition(IntPtr terrain, float x, float y, float z)
+    {
+        if (terrain != IntPtr.Zero) Terrain_SetWorldPosition(terrain, x, y, z);
+    }
+
+    public (float x, float y, float z) TerrainGetWorldPosition(IntPtr terrain)
+    {
+        if (terrain == IntPtr.Zero) return (0f, 0f, 0f);
+        Terrain_GetWorldPosition(terrain, out float x, out float y, out float z);
+        return (x, y, z);
+    }
+
+    public void TerrainSetWorldScale(IntPtr terrain, float x, float y, float z)
+    {
+        if (terrain != IntPtr.Zero) Terrain_SetWorldScale(terrain, x, y, z);
+    }
+
+    public (float x, float y, float z) TerrainGetWorldScale(IntPtr terrain)
+    {
+        if (terrain == IntPtr.Zero) return (0f, 0f, 0f);
+        Terrain_GetWorldScale(terrain, out float x, out float y, out float z);
+        return (x, y, z);
+    }
+
+    public bool TerrainIsInitialized(IntPtr terrain)
+    {
+        return terrain != IntPtr.Zero && Terrain_IsInitialized(terrain) != 0;
+    }
+
+    public int TerrainGetResolution(IntPtr terrain)
+    {
+        return terrain != IntPtr.Zero ? Terrain_GetResolution(terrain) : 0;
+    }
 }

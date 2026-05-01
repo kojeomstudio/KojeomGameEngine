@@ -5,6 +5,7 @@
 #include "Skeleton.h"
 #include "Animation.h"
 #include "AnimationInstance.h"
+#include "BlendTree.h"
 #include <vector>
 #include <string>
 #include <memory>
@@ -95,6 +96,10 @@ public:
     void SetAnimation(std::shared_ptr<KAnimation> InAnimation) { Animation = InAnimation; }
     std::shared_ptr<KAnimation> GetAnimation() const { return Animation; }
 
+    void SetBlendTree(std::shared_ptr<KBlendTree> InBlendTree) { BlendTree = InBlendTree; }
+    std::shared_ptr<KBlendTree> GetBlendTree() const { return BlendTree; }
+    bool HasBlendTree() const { return BlendTree != nullptr; }
+
     void SetLooping(bool bLoop) { bIsLooping = bLoop; }
     bool IsLooping() const { return bIsLooping; }
 
@@ -129,6 +134,7 @@ public:
 private:
     std::string Name;
     std::shared_ptr<KAnimation> Animation;
+    std::shared_ptr<KBlendTree> BlendTree;
     std::vector<std::unique_ptr<KAnimationTransition>> Transitions;
     std::vector<FAnimNotify> Notifies;
 
@@ -213,6 +219,7 @@ public:
     KSkeleton* GetSkeleton() const { return Skeleton; }
 
     KAnimationState* AddState(const std::string& Name, std::shared_ptr<KAnimation> Animation);
+    KAnimationState* AddBlendTreeState(const std::string& Name, std::shared_ptr<KBlendTree> BlendTree);
     void RemoveState(const std::string& Name);
     KAnimationState* GetState(const std::string& Name);
     const KAnimationState* GetState(const std::string& Name) const;
@@ -235,6 +242,9 @@ public:
 
     void TriggerTransition(const std::string& TargetStateName);
     void ForceState(const std::string& StateName, float BlendDuration = 0.25f);
+
+    void SetBlendTreeParameter(const std::string& StateName, float Value);
+    float GetBlendTreeParameter(const std::string& StateName) const;
 
     void Update(float DeltaTime);
 
