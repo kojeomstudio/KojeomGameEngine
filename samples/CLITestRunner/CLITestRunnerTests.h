@@ -37,6 +37,7 @@ namespace CLITest
     {
         std::string Name;
         bool bPassed = false;
+        bool bSkipped = false;
         std::string Message;
         double ElapsedMs = 0.0;
     };
@@ -54,7 +55,9 @@ namespace CLITest
             PrintHeader();
             int32 Passed = 0;
             int32 Failed = 0;
+            int32 Skipped = 0;
             double TotalMs = 0.0;
+            std::vector<FTestResult> AllResults;
 
             for (const auto& Test : Tests)
             {
@@ -65,21 +68,30 @@ namespace CLITest
                 Result.Name = Test.Name;
 
                 PrintResult(Result);
+                AllResults.push_back(Result);
 
-                if (Result.bPassed)
+                if (Result.bSkipped)
+                    Skipped++;
+                else if (Result.bPassed)
                     Passed++;
                 else
                     Failed++;
                 TotalMs += Result.ElapsedMs;
             }
 
-            PrintSummary(Passed, Failed, TotalMs);
-            return Failed;
+            PrintSummary(Passed, Skipped, Failed, TotalMs);
+
+            if (!ResultJsonPath.empty())
+                WriteJsonResult(AllResults, Passed, Skipped, Failed, TotalMs);
+
+            return Failed > 0 ? 5 : (Skipped > 0 && Failed == 0 ? 0 : 0);
         }
 
         int32 RunTest(const std::string& Name)
         {
             PrintHeader();
+            std::vector<FTestResult> AllResults;
+
             for (const auto& Test : Tests)
             {
                 if (Test.Name == Name)
@@ -90,15 +102,25 @@ namespace CLITest
                     Result.ElapsedMs = std::chrono::duration<double, std::milli>(End - Start).count();
                     Result.Name = Test.Name;
                     PrintResult(Result);
-                    int32 Failed = Result.bPassed ? 0 : 1;
-                    PrintSummary(Result.bPassed ? 1 : 0, Failed, Result.ElapsedMs);
-                    return Failed;
+                    AllResults.push_back(Result);
+
+                    int32 Passed = (Result.bPassed && !Result.bSkipped) ? 1 : 0;
+                    int32 Skipped = Result.bSkipped ? 1 : 0;
+                    int32 Failed = (!Result.bPassed && !Result.bSkipped) ? 1 : 0;
+                    PrintSummary(Passed, Skipped, Failed, Result.ElapsedMs);
+
+                    if (!ResultJsonPath.empty())
+                        WriteJsonResult(AllResults, Passed, Skipped, Failed, Result.ElapsedMs);
+
+                    return Failed > 0 ? 5 : 0;
                 }
             }
             std::cout << "[ERROR] Test not found: " << Name << std::endl;
             ListTests();
             return 1;
         }
+
+        void SetResultJsonPath(const std::string& Path) { ResultJsonPath = Path; }
 
         void ListTests()
         {
@@ -118,6 +140,7 @@ namespace CLITest
             std::function<FTestResult()> Func;
         };
         std::vector<FTestEntry> Tests;
+        std::string ResultJsonPath;
 
         void PrintHeader()
         {
@@ -128,7 +151,8 @@ namespace CLITest
 
         void PrintResult(const FTestResult& Result)
         {
-            std::cout << "[" << (Result.bPassed ? "PASS" : "FAIL") << "] "
+            const char* Status = Result.bSkipped ? "SKIP" : (Result.bPassed ? "PASS" : "FAIL");
+            std::cout << "[" << Status << "] "
                 << Result.Name << " (" << std::fixed << std::setprecision(1)
                 << Result.ElapsedMs << "ms)";
             if (!Result.Message.empty())
@@ -138,12 +162,74 @@ namespace CLITest
             std::cout << std::endl;
         }
 
-        void PrintSummary(int32 Passed, int32 Failed, double TotalMs)
+        void PrintSummary(int32 Passed, int32 Skipped, int32 Failed, double TotalMs)
         {
             std::cout << "\n----------------------------------------\n";
-            std::cout << "Results: " << Passed << " passed, " << Failed << " failed";
+            std::cout << "Results: " << Passed << " passed, " << Skipped << " skipped, " << Failed << " failed";
             std::cout << " (" << std::fixed << std::setprecision(1) << TotalMs << "ms total)\n";
             std::cout << "========================================\n\n";
+        }
+
+        void WriteJsonResult(const std::vector<FTestResult>& Results, int32 Passed, int32 Skipped, int32 Failed, double TotalMs)
+        {
+            try
+            {
+                std::ofstream Out(ResultJsonPath);
+                if (!Out.is_open())
+                {
+                    std::cerr << "[ERROR] Failed to write result JSON to: " << ResultJsonPath << std::endl;
+                    return;
+                }
+
+                Out << "{\n";
+                Out << "  \"success\": " << (Failed == 0 ? "true" : "false") << ",\n";
+                Out << "  \"passed\": " << Passed << ",\n";
+                Out << "  \"skipped\": " << Skipped << ",\n";
+                Out << "  \"failed\": " << Failed << ",\n";
+                Out << "  \"totalMs\": " << std::fixed << std::setprecision(1) << TotalMs << ",\n";
+                Out << "  \"tests\": [\n";
+
+                for (size_t i = 0; i < Results.size(); ++i)
+                {
+                    const auto& R = Results[i];
+                    Out << "    {\n";
+                    Out << "      \"name\": \"" << EscapeJson(R.Name) << "\",\n";
+                    Out << "      \"passed\": " << (R.bPassed ? "true" : "false") << ",\n";
+                    Out << "      \"skipped\": " << (R.bSkipped ? "true" : "false") << ",\n";
+                    Out << "      \"elapsedMs\": " << std::fixed << std::setprecision(1) << R.ElapsedMs << ",\n";
+                    Out << "      \"message\": \"" << EscapeJson(R.Message) << "\"\n";
+                    Out << "    }" << (i + 1 < Results.size() ? "," : "") << "\n";
+                }
+
+                Out << "  ]\n";
+                Out << "}\n";
+                Out.close();
+
+                std::cout << "[INFO] Results written to: " << ResultJsonPath << std::endl;
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "[ERROR] Failed to write result JSON: " << e.what() << std::endl;
+            }
+        }
+
+        static std::string EscapeJson(const std::string& s)
+        {
+            std::string Result;
+            Result.reserve(s.size() + 8);
+            for (char c : s)
+            {
+                switch (c)
+                {
+                case '"': Result += "\\\""; break;
+                case '\\': Result += "\\\\"; break;
+                case '\n': Result += "\\n"; break;
+                case '\r': Result += "\\r"; break;
+                case '\t': Result += "\\t"; break;
+                default: Result += c; break;
+                }
+            }
+            return Result;
         }
     };
 
@@ -167,6 +253,7 @@ namespace CLITest
         if (!HiddenWnd)
         {
             Result.bPassed = true;
+            Result.bSkipped = true;
             Result.Message = "SKIPPED: No windowing support (headless CI environment)";
             UnregisterClassW(L"CLITestRunner", GetModuleHandle(nullptr));
             return Result;
@@ -177,6 +264,7 @@ namespace CLITest
         if (FAILED(hr))
         {
             Result.bPassed = true;
+            Result.bSkipped = true;
             Result.Message = "SKIPPED: DX11 device unavailable (headless CI environment)";
             DestroyWindow(HiddenWnd);
             UnregisterClassW(L"CLITestRunner", GetModuleHandle(nullptr));
@@ -1365,6 +1453,7 @@ namespace CLITest
         if (!HiddenWnd)
         {
             Result.bPassed = true;
+            Result.bSkipped = true;
             Result.Message = "SKIPPED: No windowing support (headless CI)";
             UnregisterClassW(L"CLITestRunnerSmoke", GetModuleHandle(nullptr));
             return Result;
@@ -1375,6 +1464,7 @@ namespace CLITest
         if (FAILED(hr))
         {
             Result.bPassed = true;
+            Result.bSkipped = true;
             Result.Message = "SKIPPED: DX11 unavailable (headless CI)";
             DestroyWindow(HiddenWnd);
             UnregisterClassW(L"CLITestRunnerSmoke", GetModuleHandle(nullptr));

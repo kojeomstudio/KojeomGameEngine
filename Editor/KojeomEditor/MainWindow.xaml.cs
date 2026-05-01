@@ -38,6 +38,7 @@ public partial class MainWindow : Window
         RendererSettings.ShowAxisChanged += show => Viewport.ShowAxis = show;
 
         Loaded += OnWindowLoaded;
+        Closing += OnWindowClosing;
         Closed += OnWindowClosed;
 
         _statsTimer = new System.Windows.Threading.DispatcherTimer
@@ -50,13 +51,43 @@ public partial class MainWindow : Window
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => Undo()), new KeyGesture(Key.Z, ModifierKeys.Control)));
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => Redo()), new KeyGesture(Key.Y, ModifierKeys.Control)));
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => DeleteSelected()), new KeyGesture(Key.Delete)));
+        InputBindings.Add(new KeyBinding(new RelayCommand(_ => NewScene()), new KeyGesture(Key.N, ModifierKeys.Control)));
+        InputBindings.Add(new KeyBinding(new RelayCommand(_ => OpenScene()), new KeyGesture(Key.O, ModifierKeys.Control)));
+        InputBindings.Add(new KeyBinding(new RelayCommand(_ => SaveScene()), new KeyGesture(Key.S, ModifierKeys.Control)));
+        InputBindings.Add(new KeyBinding(new RelayCommand(_ => SaveSceneAs()), new KeyGesture(Key.S, ModifierKeys.Control | ModifierKeys.Shift)));
+    }
+
+    private bool _isDirty;
+
+    private void MarkDirty()
+    {
+        if (!_isDirty)
+        {
+            _isDirty = true;
+            Title = $"Kojeom Engine Editor - {_viewModel.SceneViewModel.SceneName}*";
+        }
+    }
+
+    private void ClearDirty()
+    {
+        _isDirty = false;
+        Title = $"Kojeom Engine Editor - {_viewModel.SceneViewModel.SceneName}";
     }
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
         _viewModel.SceneViewModel.Initialize();
         _viewModel.SceneViewModel.UndoRedo = _undoRedo;
+        _viewModel.SceneViewModel.ActorChanged += OnActorPropertyChanged;
         Viewport.Focus();
+    }
+
+    private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (!PromptSaveIfDirty())
+        {
+            e.Cancel = true;
+        }
     }
 
     private void OnWindowClosed(object? sender, EventArgs e)
@@ -71,6 +102,39 @@ public partial class MainWindow : Window
         {
             _viewModel.PropertiesViewModel.SetSelectedActor(_viewModel.SceneViewModel.SelectedActor);
         }
+        else if (e.PropertyName == nameof(SceneViewModel.SceneName))
+        {
+            ClearDirty();
+        }
+    }
+
+    private void OnActorPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ActorViewModel.PositionX) or nameof(ActorViewModel.PositionY) or nameof(ActorViewModel.PositionZ)
+            or nameof(ActorViewModel.RotationX) or nameof(ActorViewModel.RotationY) or nameof(ActorViewModel.RotationZ)
+            or nameof(ActorViewModel.ScaleX) or nameof(ActorViewModel.ScaleY) or nameof(ActorViewModel.ScaleZ)
+            or nameof(ActorViewModel.Name) or nameof(ActorViewModel.IsVisible))
+        {
+            MarkDirty();
+        }
+    }
+
+    private bool PromptSaveIfDirty()
+    {
+        if (!_isDirty) return true;
+
+        var result = MessageBox.Show(
+            $"Save changes to {_viewModel.SceneViewModel.SceneName}?",
+            "Unsaved Changes",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            SaveScene();
+            return true;
+        }
+        return result != MessageBoxResult.Cancel;
     }
 
     private void Viewport_ActorSelected(object? sender, ActorViewModel? actor)
@@ -134,22 +198,49 @@ public partial class MainWindow : Window
 
     private void MenuItem_NewScene_Click(object sender, RoutedEventArgs e)
     {
-        _viewModel.NewScene();
+        if (!PromptSaveIfDirty()) return;
+        NewScene();
     }
 
     private void MenuItem_OpenScene_Click(object sender, RoutedEventArgs e)
     {
-        _viewModel.OpenScene();
+        if (!PromptSaveIfDirty()) return;
+        OpenScene();
     }
 
     private void MenuItem_SaveScene_Click(object sender, RoutedEventArgs e)
     {
+        SaveScene();
+    }
+
+    private void NewScene()
+    {
+        _viewModel.NewScene();
+        ClearDirty();
+    }
+
+    private void OpenScene()
+    {
+        _viewModel.OpenScene();
+        ClearDirty();
+    }
+
+    private void SaveScene()
+    {
         _viewModel.SaveScene();
+        ClearDirty();
+    }
+
+    private void SaveSceneAs()
+    {
+        _viewModel.SaveSceneAs();
+        ClearDirty();
     }
 
     private void MenuItem_Undo_Click(object sender, RoutedEventArgs e) => Undo();
     private void MenuItem_Redo_Click(object sender, RoutedEventArgs e) => Redo();
     private void MenuItem_Delete_Click(object sender, RoutedEventArgs e) => DeleteSelected();
+    private void MenuItem_SaveSceneAs_Click(object sender, RoutedEventArgs e) => SaveSceneAs();
 
     private void Toolbar_Select_Click(object sender, RoutedEventArgs e)
     {

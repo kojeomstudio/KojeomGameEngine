@@ -28,6 +28,7 @@
                 <MenuItem Header="_New Scene" Click="MenuItem_NewScene_Click" InputGestureText="Ctrl+N"/>
                 <MenuItem Header="_Open Scene" Click="MenuItem_OpenScene_Click" InputGestureText="Ctrl+O"/>
                 <MenuItem Header="_Save Scene" Click="MenuItem_SaveScene_Click" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Save Scene _As..." Click="MenuItem_SaveSceneAs_Click" InputGestureText="Ctrl+Shift+S"/>
                 <Separator/>
                 <MenuItem Header="E_xit" Click="MenuItem_Exit_Click"/>
             </MenuItem>

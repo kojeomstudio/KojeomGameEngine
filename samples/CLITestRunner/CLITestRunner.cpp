@@ -43,6 +43,12 @@ int main(int argc, char* argv[])
     Runner.AddTest("validate-assets", CLITest::TestValidateAssets);
     Runner.AddTest("scene-dump", CLITest::TestSceneDump);
 
+    std::string ResultJsonPath = CLIUtils::GetOption(Args, "result-json");
+    if (!ResultJsonPath.empty())
+    {
+        Runner.SetResultJsonPath(ResultJsonPath);
+    }
+
     std::string Command = Args.Command;
     if (Command.empty())
     {
@@ -74,5 +80,7 @@ int main(int argc, char* argv[])
     }
 
     KEngine::CleanupDebugEnvironment();
-    return ExitCode;
+
+    if (ExitCode > 0) return 5;
+    return 0;
 }

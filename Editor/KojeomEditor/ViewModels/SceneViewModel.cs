@@ -7,12 +7,15 @@ namespace KojeomEditor.ViewModels;
 public class SceneViewModel : ViewModelBase
 {
     private string _sceneName = "Untitled Scene";
+    private string? _currentScenePath;
     private ActorViewModel? _selectedActor;
     private EngineInterop? _engine;
     private IntPtr _activeScenePtr = IntPtr.Zero;
     private UndoRedoService? _undoRedo;
     private bool _isUndoRedoInProgress;
     private bool _isEnginePaused;
+
+    public event System.ComponentModel.PropertyChangedEventHandler? ActorChanged;
 
     public bool IsEnginePaused
     {
@@ -79,6 +82,7 @@ public class SceneViewModel : ViewModelBase
     {
         Actors.Clear();
         SceneName = "Untitled Scene";
+        _currentScenePath = null;
         SelectedActor = null;
 
         if (_engine != null && _engine.IsInitialized)
@@ -96,6 +100,7 @@ public class SceneViewModel : ViewModelBase
     {
         Actors.Clear();
         SceneName = System.IO.Path.GetFileNameWithoutExtension(path);
+        _currentScenePath = path;
         SelectedActor = null;
 
         if (_engine != null && _engine.IsInitialized)
@@ -110,15 +115,52 @@ public class SceneViewModel : ViewModelBase
         }
     }
 
-    public void SaveScene(string path)
+    public void SaveScene(string? path = null)
     {
+        if (path == null)
+            path = _currentScenePath;
+
+        if (path == null)
+        {
+            SaveSceneAs();
+            return;
+        }
+
         if (_engine != null && _engine.IsInitialized)
         {
             var scenePtr = _engine.GetActiveScene();
             if (scenePtr != IntPtr.Zero)
             {
-                _engine.SaveScene(path, scenePtr);
+                bool success = _engine.SaveScene(path, scenePtr);
+                if (success)
+                {
+                    _currentScenePath = path;
+                    SceneName = System.IO.Path.GetFileNameWithoutExtension(path);
+                }
             }
+        }
+    }
+
+    public void SaveSceneAs()
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = "Scene Files (*.scene)|*.scene|All Files (*.*)|*.*",
+            Title = "Save Scene As",
+            FileName = SceneName
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            var fullPath = System.IO.Path.GetFullPath(dialog.FileName);
+            var projectRoot = MainViewModel.GetProjectRoot();
+            if (!MainViewModel.IsPathWithinDirectory(fullPath, projectRoot))
+            {
+                System.Windows.MessageBox.Show("Scene file must be saved within the project directory.", "Security Warning",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            SaveScene(dialog.FileName);
         }
     }
 
@@ -160,6 +202,7 @@ public class SceneViewModel : ViewModelBase
             Actors.Add(actor);
         }
         SelectedActor = actor;
+        ActorChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs("Actors"));
     }
 
     public void RemoveActor(ActorViewModel actor)
@@ -179,6 +222,7 @@ public class SceneViewModel : ViewModelBase
         {
             SelectedActor = null;
         }
+        ActorChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs("Actors"));
     }
 
     public void ReorderActors(ActorViewModel draggedActor, ActorViewModel targetActor)

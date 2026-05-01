@@ -48,11 +48,14 @@ public class PropertiesViewModel : ViewModelBase
         SelectedActor = actor;
     }
 
+    private IntPtr _currentComponentPtr = IntPtr.Zero;
+
     private void SyncMaterialFromEngine()
     {
         _material.PropertyChanged -= OnMaterialPropertyChanged;
 
         _currentMaterialPtr = IntPtr.Zero;
+        _currentComponentPtr = IntPtr.Zero;
 
         if (_engine == null || !_engine.IsInitialized || _selectedActor == null || _selectedActor.NativePtr == IntPtr.Zero)
         {
@@ -68,6 +71,8 @@ public class PropertiesViewModel : ViewModelBase
             _material.PropertyChanged += OnMaterialPropertyChanged;
             return;
         }
+
+        _currentComponentPtr = componentPtr;
 
         var materialPtr = _engine.GetStaticMeshComponentMaterial(componentPtr);
         if (materialPtr == IntPtr.Zero)
@@ -103,6 +108,16 @@ public class PropertiesViewModel : ViewModelBase
         _material.Metallic = 0.0f;
         _material.Roughness = 0.5f;
         _material.AO = 1.0f;
+        _material.EmissiveR = 0.0f;
+        _material.EmissiveG = 0.0f;
+        _material.EmissiveB = 0.0f;
+        _material.EmissiveIntensity = 0.0f;
+        _material.AlbedoTexturePath = string.Empty;
+        _material.NormalTexturePath = string.Empty;
+        _material.MetallicTexturePath = string.Empty;
+        _material.RoughnessTexturePath = string.Empty;
+        _material.AOTexturePath = string.Empty;
+        _material.FilePath = null;
         _syncingFromEngine = false;
     }
 
@@ -127,6 +142,27 @@ public class PropertiesViewModel : ViewModelBase
                 break;
             case nameof(MaterialViewModel.AO):
                 _engine.SetMaterialAO(_currentMaterialPtr, _material.AO);
+                break;
+            case nameof(MaterialViewModel.EmissiveR):
+            case nameof(MaterialViewModel.EmissiveG):
+            case nameof(MaterialViewModel.EmissiveB):
+            case nameof(MaterialViewModel.EmissiveIntensity):
+                _engine.SetMaterialEmissive(_currentMaterialPtr, _material.EmissiveR, _material.EmissiveG, _material.EmissiveB, _material.EmissiveIntensity);
+                break;
+            case nameof(MaterialViewModel.AlbedoTexturePath):
+                _engine.SetMaterialTexture(_currentMaterialPtr, 0, _material.AlbedoTexturePath);
+                break;
+            case nameof(MaterialViewModel.NormalTexturePath):
+                _engine.SetMaterialTexture(_currentMaterialPtr, 1, _material.NormalTexturePath);
+                break;
+            case nameof(MaterialViewModel.MetallicTexturePath):
+                _engine.SetMaterialTexture(_currentMaterialPtr, 2, _material.MetallicTexturePath);
+                break;
+            case nameof(MaterialViewModel.RoughnessTexturePath):
+                _engine.SetMaterialTexture(_currentMaterialPtr, 3, _material.RoughnessTexturePath);
+                break;
+            case nameof(MaterialViewModel.AOTexturePath):
+                _engine.SetMaterialTexture(_currentMaterialPtr, 4, _material.AOTexturePath);
                 break;
         }
     }

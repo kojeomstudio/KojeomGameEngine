@@ -78,24 +78,12 @@ public class MainViewModel : ViewModelBase
 
     public void SaveScene()
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog
-        {
-            Filter = "Scene Files (*.scene)|*.scene|All Files (*.*)|*.*",
-            Title = "Save Scene"
-        };
+        _sceneViewModel.SaveScene();
+    }
 
-        if (dialog.ShowDialog() == true)
-        {
-            var fullPath = System.IO.Path.GetFullPath(dialog.FileName);
-            var projectRoot = GetProjectRoot();
-            if (!IsPathWithinDirectory(fullPath, projectRoot))
-            {
-                System.Windows.MessageBox.Show("Scene file must be saved within the project directory.", "Security Warning",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-            _sceneViewModel.SaveScene(dialog.FileName);
-        }
+    public void SaveSceneAs()
+    {
+        _sceneViewModel.SaveSceneAs();
     }
 
     public void LoadSceneValidated(string scenePath)
