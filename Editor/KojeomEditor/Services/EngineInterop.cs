@@ -540,6 +540,80 @@ public class EngineInterop : IDisposable
         if (renderer != IntPtr.Zero) Renderer_SetVolumetricFogEnabled(renderer, enabled);
     }
 
+    public bool IsSkyEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsSkyEnabled(renderer);
+    }
+
+    public bool IsTAAEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsTAAEnabled(renderer);
+    }
+
+    public bool IsDebugUIEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsDebugUIEnabled(renderer);
+    }
+
+    public bool IsSSREnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsSSREnabled(renderer);
+    }
+
+    public bool IsVolumetricFogEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsVolumetricFogEnabled(renderer);
+    }
+
+    public bool IsSSAOEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsSSAOEnabled(renderer);
+    }
+
+    public bool IsPostProcessEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsPostProcessEnabled(renderer);
+    }
+
+    public bool IsShadowEnabled()
+    {
+        var renderer = GetRenderer();
+        return renderer != IntPtr.Zero && Renderer_IsShadowEnabled(renderer);
+    }
+
+    public void SetMaterialEmissive(IntPtr component, float r, float g, float b, float intensity)
+    {
+        if (component != IntPtr.Zero) Material_SetEmissive(component, r, g, b, intensity);
+    }
+
+    public int GetSpotLightCount()
+    {
+        var renderer = GetRenderer();
+        return renderer == IntPtr.Zero ? 0 : Renderer_GetSpotLightCount(renderer);
+    }
+
+    public void GetSpotLight(int index, out float posX, out float posY, out float posZ,
+        out float dirX, out float dirY, out float dirZ,
+        out float colorR, out float colorG, out float colorB, out float intensity,
+        out float innerCone, out float outerCone, out float radius, out float falloff)
+    {
+        posX = posY = posZ = dirX = dirY = dirZ = 0;
+        colorR = colorG = colorB = intensity = 0;
+        innerCone = outerCone = radius = falloff = 0;
+        var renderer = GetRenderer();
+        if (renderer != IntPtr.Zero)
+            Renderer_GetSpotLight(renderer, index, out posX, out posY, out posZ,
+                out dirX, out dirY, out dirZ, out colorR, out colorG, out colorB, out intensity,
+                out innerCone, out outerCone, out radius, out falloff);
+    }
+
     public void SetCameraFOV(float fovY)
     {
         var camera = GetMainCamera();
@@ -899,6 +973,51 @@ public class EngineInterop : IDisposable
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Renderer_SetVolumetricFogEnabled(IntPtr renderer, [MarshalAs(UnmanagedType.I1)] bool enabled);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsSkyEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsTAAEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsDebugUIEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsSSREnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsVolumetricFogEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsSSAOEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsPostProcessEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool Renderer_IsShadowEnabled(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Material_SetEmissive(IntPtr component, float r, float g, float b, float intensity);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Renderer_GetSpotLightCount(IntPtr renderer);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void Renderer_GetSpotLight(IntPtr renderer, int index,
+        out float posX, out float posY, out float posZ,
+        out float dirX, out float dirY, out float dirZ,
+        out float colorR, out float colorG, out float colorB, out float intensity,
+        out float innerCone, out float outerCone, out float radius, out float falloff);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     private static extern void Camera_SetFOV(IntPtr camera, float fovY);

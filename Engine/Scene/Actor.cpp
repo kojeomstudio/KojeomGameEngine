@@ -85,14 +85,40 @@ void KActor::SetWorldPosition(const XMFLOAT3& Position)
 
 void KActor::SetWorldRotation(const XMFLOAT4& Rotation)
 {
-    LocalTransform.Rotation = Rotation;
+    if (Parent)
+    {
+        XMMATRIX parentWorld = Parent->GetWorldMatrix();
+        XMMATRIX parentInv = XMMatrixInverse(nullptr, parentWorld);
+        XMMATRIX worldMat = XMMatrixRotationQuaternion(XMLoadFloat4(&Rotation));
+        XMMATRIX localMat = worldMat * parentInv;
+        XMVECTOR scale, rotQuat, trans;
+        XMMatrixDecompose(&scale, &rotQuat, &trans, localMat);
+        XMStoreFloat4(&LocalTransform.Rotation, rotQuat);
+    }
+    else
+    {
+        LocalTransform.Rotation = Rotation;
+    }
     WorldTransform.Rotation = Rotation;
     bTransformDirty = true;
 }
 
 void KActor::SetWorldScale(const XMFLOAT3& Scale)
 {
-    LocalTransform.Scale = Scale;
+    if (Parent)
+    {
+        XMMATRIX parentWorld = Parent->GetWorldMatrix();
+        XMMATRIX parentInv = XMMatrixInverse(nullptr, parentWorld);
+        XMMATRIX worldMat = XMMatrixScaling(Scale.x, Scale.y, Scale.z);
+        XMMATRIX localMat = worldMat * parentInv;
+        XMVECTOR scale, rotQuat, trans;
+        XMMatrixDecompose(&scale, &rotQuat, &trans, localMat);
+        XMStoreFloat3(&LocalTransform.Scale, scale);
+    }
+    else
+    {
+        LocalTransform.Scale = Scale;
+    }
     WorldTransform.Scale = Scale;
     bTransformDirty = true;
 }
@@ -291,6 +317,12 @@ void KActor::Deserialize(KBinaryArchive& Archive)
 
 HRESULT KScene::Load(const std::wstring& Path)
 {
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("Scene::Load: path traversal detected: " + StringUtils::WideToMultiByte(Path));
+        return E_INVALIDARG;
+    }
+
     KBinaryArchive Archive(KBinaryArchive::EMode::Read);
 
     if (!Archive.Open(Path))
@@ -338,6 +370,12 @@ HRESULT KScene::Load(const std::wstring& Path)
 
 HRESULT KScene::Save(const std::wstring& Path)
 {
+    if (PathUtils::ContainsTraversal(Path))
+    {
+        LOG_ERROR("Scene::Save: path traversal detected: " + StringUtils::WideToMultiByte(Path));
+        return E_INVALIDARG;
+    }
+
     KBinaryArchive Archive(KBinaryArchive::EMode::Write);
 
     if (!Archive.Open(Path))

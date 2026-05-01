@@ -27,6 +27,7 @@ struct FDeferredMeshRenderData
     XMFLOAT4 BaseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
     float Metallic = 0.0f;
     float Roughness = 0.5f;
+    float AO = 1.0f;
 };
 
 struct FForwardTransparentRenderData
@@ -75,8 +76,10 @@ static_assert(sizeof(FDeferredLightBuffer) % 16 == 0, "FDeferredLightBuffer must
 struct FDeferredMaterialBuffer
 {
     XMFLOAT4 BaseColor;
-    float Alpha;
-    float Padding[3];
+    float Metallic;
+    float Roughness;
+    float AO;
+    float Padding;
 };
 static_assert(sizeof(FDeferredMaterialBuffer) % 16 == 0, "FDeferredMaterialBuffer must be 16-byte aligned");
 
@@ -130,7 +133,7 @@ private:
 
     void UpdateTransformBuffer(ID3D11DeviceContext* Context, const XMMATRIX& World, const XMMATRIX& View, const XMMATRIX& Projection);
     void UpdateLightBuffer(ID3D11DeviceContext* Context, KCamera* Camera);
-    void UpdateMaterialBuffer(ID3D11DeviceContext* Context, const XMFLOAT4& InBaseColor, float InAlpha);
+    void UpdateMaterialBuffer(ID3D11DeviceContext* Context, const XMFLOAT4& InBaseColor, float InMetallic, float InRoughness, float InAO);
 
     void RenderFullscreenQuad(ID3D11DeviceContext* Context);
 

@@ -88,10 +88,21 @@ extern "C"
     ENGINEAPI void Renderer_SetShadowEnabled(void* renderer, bool enabled);
 
     ENGINEAPI void Renderer_SetSkyEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsSkyEnabled(void* renderer);
     ENGINEAPI void Renderer_SetTAAEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsTAAEnabled(void* renderer);
     ENGINEAPI void Renderer_SetDebugUIEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsDebugUIEnabled(void* renderer);
     ENGINEAPI void Renderer_SetSSREnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsSSREnabled(void* renderer);
     ENGINEAPI void Renderer_SetVolumetricFogEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsVolumetricFogEnabled(void* renderer);
+    ENGINEAPI void Renderer_SetSSAOEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsSSAOEnabled(void* renderer);
+    ENGINEAPI void Renderer_SetPostProcessEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsPostProcessEnabled(void* renderer);
+    ENGINEAPI void Renderer_SetShadowEnabled(void* renderer, bool enabled);
+    ENGINEAPI bool Renderer_IsShadowEnabled(void* renderer);
 
     ENGINEAPI void Camera_SetFOV(void* camera, float fovY);
     ENGINEAPI float Camera_GetFOV(void* camera);
@@ -164,6 +175,13 @@ extern "C"
     ENGINEAPI bool Renderer_IsIBLEnabled(void* renderer);
     ENGINEAPI HRESULT Renderer_LoadEnvironmentMap(void* renderer, const wchar_t* hdrPath);
     ENGINEAPI void Material_SetTexture(void* component, int textureSlot, const wchar_t* texturePath);
+    ENGINEAPI void Material_SetEmissive(void* component, float r, float g, float b, float intensity);
+    ENGINEAPI int Renderer_GetSpotLightCount(void* renderer);
+    ENGINEAPI void Renderer_GetSpotLight(void* renderer, int index,
+                                          float* posX, float* posY, float* posZ,
+                                          float* dirX, float* dirY, float* dirZ,
+                                          float* colorR, float* colorG, float* colorB, float* intensity,
+                                          float* innerCone, float* outerCone, float* radius, float* falloff);
     ENGINEAPI void Renderer_SetSSGIEnabled(void* renderer, bool enabled);
     ENGINEAPI bool Renderer_IsSSGIEnabled(void* renderer);
 

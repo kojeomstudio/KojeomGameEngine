@@ -1601,20 +1601,17 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             float  EmissiveIntensity;
             float4 EmissiveColor;
             float  NormalIntensity;
-            int    bUseAlbedoMap;
-            int    bUseNormalMap;
-            int    bUseMetallicMap;
-            int    bUseRoughnessMap;
-            int    bUseAOMap;
-            int    bUseEmissiveMap;
+            float  HeightScale;
+            float  Padding0;
+            float  Padding1;
         };
 
-        Texture2D AlbedoMap    : register(t0);
-        Texture2D NormalMap    : register(t1);
-        Texture2D MetallicMap  : register(t2);
-        Texture2D RoughnessMap : register(t3);
-        Texture2D AOMap        : register(t4);
-        Texture2D EmissiveMap  : register(t5);
+        Texture2D AlbedoMap    : register(t4);
+        Texture2D NormalMap    : register(t5);
+        Texture2D MetallicMap  : register(t6);
+        Texture2D RoughnessMap : register(t7);
+        Texture2D AOMap        : register(t8);
+        Texture2D EmissiveMap  : register(t9);
         SamplerState MaterialSampler : register(s0);
 
         struct VS_INPUT
@@ -1823,33 +1820,21 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
 
         float4 PS(PS_INPUT input) : SV_Target
         {
-            float3 albedo = AlbedoColor.rgb;
-            if (bUseAlbedoMap)
-                albedo = AlbedoMap.Sample(MaterialSampler, input.TexCoord).rgb * AlbedoColor.rgb;
+            float3 albedo = AlbedoMap.Sample(MaterialSampler, input.TexCoord).rgb * AlbedoColor.rgb;
             albedo = pow(albedo, float3(2.2f, 2.2f, 2.2f));
 
-            float metallic = Metallic;
-            if (bUseMetallicMap)
-                metallic = MetallicMap.Sample(MaterialSampler, input.TexCoord).r * Metallic;
-            float roughness = Roughness;
-            if (bUseRoughnessMap)
-                roughness = RoughnessMap.Sample(MaterialSampler, input.TexCoord).r * Roughness;
-            float ao = AO;
-            if (bUseAOMap)
-                ao = AOMap.Sample(MaterialSampler, input.TexCoord).r * AO;
+            float metallic = MetallicMap.Sample(MaterialSampler, input.TexCoord).r * Metallic;
+            float roughness = RoughnessMap.Sample(MaterialSampler, input.TexCoord).r * Roughness;
+            float ao = AOMap.Sample(MaterialSampler, input.TexCoord).r * AO;
 
             float3 normal = normalize(input.Normal);
-            if (bUseNormalMap)
-                normal = GetNormalFromMap(input, normal);
+            normal = GetNormalFromMap(input, normal);
 
             float3 V = normalize(CameraPosition - input.WorldPos);
             float3 color = CalculatePBRLighting(normal, V, input.WorldPos, albedo, metallic, roughness, ao);
 
-            if (bUseEmissiveMap)
-            {
-                float3 emissive = EmissiveMap.Sample(MaterialSampler, input.TexCoord).rgb * EmissiveColor.rgb * EmissiveIntensity;
-                color += emissive;
-            }
+            float3 emissive = EmissiveMap.Sample(MaterialSampler, input.TexCoord).rgb * EmissiveColor.rgb * EmissiveIntensity;
+            color += emissive;
 
             return float4(color, AlbedoColor.a);
         }

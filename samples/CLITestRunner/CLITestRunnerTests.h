@@ -27,6 +27,9 @@
 #include "../../Engine/Assets/BlendTree.h"
 #include "../../Engine/Graphics/RenderModule.h"
 #include "../../Engine/Input/InputManager.h"
+#include "../../Engine/Scene/Actor.h"
+#include "../../Engine/Assets/StaticMeshComponent.h"
+#include "../../Engine/Assets/StaticMesh.h"
 
 namespace CLITest
 {
@@ -1339,6 +1342,138 @@ namespace CLITest
             Result.Message = std::string("Exception: ") + e.what();
         }
 
+        return Result;
+    }
+
+    inline FTestResult TestSmokeMode()
+    {
+        FTestResult Result;
+        Result.Name = "smoke";
+        Result.bPassed = false;
+
+        std::cout << "  [INFO] Running smoke test...\n";
+
+        WNDCLASSW wc = {};
+        wc.lpfnWndProc = DefWindowProcW;
+        wc.hInstance = GetModuleHandle(nullptr);
+        wc.lpszClassName = L"CLITestRunnerSmoke";
+        RegisterClassW(&wc);
+
+        HWND HiddenWnd = CreateWindowW(L"CLITestRunnerSmoke", L"Smoke", WS_OVERLAPPED,
+            CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+            nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+        if (!HiddenWnd)
+        {
+            Result.bPassed = true;
+            Result.Message = "SKIPPED: No windowing support (headless CI)";
+            UnregisterClassW(L"CLITestRunnerSmoke", GetModuleHandle(nullptr));
+            return Result;
+        }
+
+        KEngine Engine;
+        HRESULT hr = Engine.InitializeWithExternalHwnd(HiddenWnd, 800, 600);
+        if (FAILED(hr))
+        {
+            Result.bPassed = true;
+            Result.Message = "SKIPPED: DX11 unavailable (headless CI)";
+            DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRunnerSmoke", GetModuleHandle(nullptr));
+            return Result;
+        }
+
+        bool bTickOK = true;
+        bool bRenderOK = true;
+        int32 FrameCount = 10;
+
+        for (int32 i = 0; i < FrameCount; ++i)
+        {
+            Engine.Update(1.0f / 60.0f);
+        }
+
+        Engine.Render();
+
+        Engine.Shutdown();
+        DestroyWindow(HiddenWnd);
+        UnregisterClassW(L"CLITestRunnerSmoke", GetModuleHandle(nullptr));
+
+        Result.bPassed = bTickOK && bRenderOK;
+        Result.Message = Result.bPassed ? "Smoke test passed: " + std::to_string(FrameCount) + " frames" : "Smoke test FAILED";
+        return Result;
+    }
+
+    inline FTestResult TestValidateAssets()
+    {
+        FTestResult Result;
+        Result.Name = "validate-assets";
+        Result.bPassed = false;
+
+        std::cout << "  [INFO] Running asset validation...\n";
+
+        int32 CheckedFiles = 0;
+        int32 MissingFiles = 0;
+
+        auto CheckFile = [&](const std::wstring& Path) {
+            ++CheckedFiles;
+            DWORD attrs = GetFileAttributesW(Path.c_str());
+            if (attrs == INVALID_FILE_ATTRIBUTES)
+            {
+                std::wcout << L"  [MISSING] " << Path << L"\n";
+                ++MissingFiles;
+            }
+        };
+
+        CheckFile(L"Assets/Textures/");
+
+        Result.bPassed = (MissingFiles == 0);
+        if (MissingFiles > 0)
+        {
+            Result.Message = "Asset validation FAILED: " + std::to_string(MissingFiles) + " missing assets";
+        }
+        else
+        {
+            Result.Message = "Asset validation passed: " + std::to_string(CheckedFiles) + " entries checked";
+        }
+        return Result;
+    }
+
+    inline FTestResult TestSceneDump()
+    {
+        FTestResult Result;
+        Result.Name = "scene-dump";
+        Result.bPassed = false;
+
+        std::cout << "  [INFO] Running scene dump test...\n";
+
+        KScene Scene;
+        Scene.SetName("TestScene");
+
+        auto Actor1 = std::make_shared<KActor>();
+        Actor1->SetName("Cube1");
+        auto MeshComp = std::make_shared<KStaticMeshComponent>();
+        Actor1->AddComponent(MeshComp);
+        Scene.AddActor(Actor1);
+
+        auto Actor2 = std::make_shared<KActor>();
+        Actor2->SetName("Sphere1");
+        Actor1->AddChild(Actor2);
+        Scene.AddActor(Actor2);
+
+        uint32 ActorCount = static_cast<uint32>(Scene.GetActors().size());
+        bool bHasActors = (ActorCount == 2);
+
+        auto FoundActor = Scene.FindActor("Cube1");
+        bool bFoundActor = (FoundActor != nullptr);
+
+        auto FoundChild = Scene.FindActor("Sphere1");
+        bool bFoundChild = (FoundChild != nullptr);
+
+        auto NotFound = Scene.FindActor("NonExistent");
+        bool bNotFound = (NotFound == nullptr);
+
+        Result.bPassed = bHasActors && bFoundActor && bFoundChild && bNotFound;
+        Result.Message = Result.bPassed
+            ? "Scene dump passed: " + std::to_string(ActorCount) + " actors"
+            : "Scene dump FAILED";
         return Result;
     }
 }

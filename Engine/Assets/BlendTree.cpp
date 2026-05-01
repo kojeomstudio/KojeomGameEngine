@@ -261,10 +261,11 @@ void KBlendTree::BlendChildMatrices(const std::vector<std::vector<XMMATRIX>>& Al
     for (uint32 BoneIdx = 0; BoneIdx < BoneCount; ++BoneIdx)
     {
         XMVECTOR AccScale = XMVectorSet(0, 0, 0, 0);
-        XMVECTOR AccRot = XMVectorSet(0, 0, 0, 0);
+        XMVECTOR AccRot = XMQuaternionIdentity();
         XMVECTOR AccTrans = XMVectorSet(0, 0, 0, 0);
         float TotalWeight = 0.0f;
 
+        bool bFirst = true;
         for (size_t ChildIdx = 0; ChildIdx < AllMatrices.size(); ++ChildIdx)
         {
             if (ChildIdx >= Weights.size()) break;
@@ -282,7 +283,24 @@ void KBlendTree::BlendChildMatrices(const std::vector<std::vector<XMMATRIX>>& Al
 
             AccScale = XMVectorAdd(AccScale, XMVectorScale(S, W));
             AccTrans = XMVectorAdd(AccTrans, XMVectorScale(T, W));
-            AccRot = XMVectorAdd(AccRot, XMVectorScale(R, W));
+
+            if (bFirst)
+            {
+                AccRot = R;
+                bFirst = false;
+            }
+            else
+            {
+                float dot4 = XMVectorGetX(XMVector4Dot(AccRot, R));
+                if (dot4 < 0.0f)
+                {
+                    R = XMVectorNegate(R);
+                }
+                float blendT = W / (TotalWeight + W);
+                AccRot = XMQuaternionSlerp(AccRot, R, blendT);
+                AccRot = XMQuaternionNormalize(AccRot);
+            }
+
             TotalWeight += W;
         }
 
@@ -290,17 +308,6 @@ void KBlendTree::BlendChildMatrices(const std::vector<std::vector<XMMATRIX>>& Al
         {
             AccScale = XMVectorScale(AccScale, 1.0f / TotalWeight);
             AccTrans = XMVectorScale(AccTrans, 1.0f / TotalWeight);
-            AccRot = XMVectorScale(AccRot, 1.0f / TotalWeight);
-
-            float RotLength = XMVectorGetX(XMVector4Length(AccRot));
-            if (RotLength > 0.0001f)
-            {
-                AccRot = XMVector4Normalize(AccRot);
-            }
-            else
-            {
-                AccRot = XMQuaternionIdentity();
-            }
 
             OutMatrices[BoneIdx] = XMMatrixScalingFromVector(AccScale) *
                                    XMMatrixRotationQuaternion(AccRot) *

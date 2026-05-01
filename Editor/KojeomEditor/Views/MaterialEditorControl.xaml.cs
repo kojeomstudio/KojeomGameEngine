@@ -35,6 +35,11 @@ public partial class MaterialEditorControl : UserControl
 
         if (dialog.ShowDialog() == true)
         {
+            if (dialog.FileName.Contains("..") || dialog.FileName.Contains("~"))
+            {
+                MessageBox.Show("Path traversal detected. Please select a file within the project directory.", "Invalid Path", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
             return dialog.FileName;
         }
         return null;

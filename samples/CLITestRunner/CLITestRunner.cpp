@@ -39,6 +39,9 @@ int main(int argc, char* argv[])
     Runner.AddTest("blend-tree", CLITest::TestBlendTree);
     Runner.AddTest("root-motion", CLITest::TestRootMotion);
     Runner.AddTest("animation-events", CLITest::TestAnimationEvents);
+    Runner.AddTest("smoke", CLITest::TestSmokeMode);
+    Runner.AddTest("validate-assets", CLITest::TestValidateAssets);
+    Runner.AddTest("scene-dump", CLITest::TestSceneDump);
 
     std::string Command = Args.Command;
     if (Command.empty())

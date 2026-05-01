@@ -863,6 +863,54 @@ extern "C"
         krenderer->SetVolumetricFogEnabled(enabled);
     }
 
+    ENGINEAPI bool Renderer_IsSkyEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsSkyEnabled();
+    }
+
+    ENGINEAPI bool Renderer_IsTAAEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsTAAEnabled();
+    }
+
+    ENGINEAPI bool Renderer_IsDebugUIEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsDebugUIEnabled();
+    }
+
+    ENGINEAPI bool Renderer_IsSSREnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsSSREnabled();
+    }
+
+    ENGINEAPI bool Renderer_IsVolumetricFogEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsVolumetricFogEnabled();
+    }
+
+    ENGINEAPI bool Renderer_IsSSAOEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsSSAOEnabled();
+    }
+
+    ENGINEAPI bool Renderer_IsPostProcessEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsPostProcessEnabled();
+    }
+
+    ENGINEAPI bool Renderer_IsShadowEnabled(void* renderer)
+    {
+        if (!renderer) return false;
+        return static_cast<KRenderer*>(renderer)->IsShadowEnabled();
+    }
+
     ENGINEAPI void Camera_SetFOV(void* camera, float fovY)
     {
         if (!camera) return;
@@ -1313,6 +1361,47 @@ extern "C"
         if (!texture) return;
 
         material->SetTexture(static_cast<EMaterialTextureSlot>(textureSlot), texture);
+    }
+
+    ENGINEAPI void Material_SetEmissive(void* component, float r, float g, float b, float intensity)
+    {
+        if (!component) return;
+        KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
+        KMaterial* material = smc->GetMaterial();
+        if (!material) return;
+        material->SetEmissive(XMFLOAT4(r, g, b, 1.0f), intensity);
+    }
+
+    ENGINEAPI int Renderer_GetSpotLightCount(void* renderer)
+    {
+        if (!renderer) return 0;
+        return static_cast<int32>(static_cast<KRenderer*>(renderer)->GetNumSpotLights());
+    }
+
+    ENGINEAPI void Renderer_GetSpotLight(void* renderer, int index,
+                                          float* posX, float* posY, float* posZ,
+                                          float* dirX, float* dirY, float* dirZ,
+                                          float* colorR, float* colorG, float* colorB, float* intensity,
+                                          float* innerCone, float* outerCone, float* radius, float* falloff)
+    {
+        if (!renderer || index < 0) return;
+        KRenderer* krenderer = static_cast<KRenderer*>(renderer);
+        if (static_cast<UINT32>(index) >= krenderer->GetNumSpotLights()) return;
+        const FSpotLight& light = krenderer->GetSpotLight(static_cast<UINT32>(index));
+        if (posX) *posX = light.Position.x;
+        if (posY) *posY = light.Position.y;
+        if (posZ) *posZ = light.Position.z;
+        if (dirX) *dirX = light.Direction.x;
+        if (dirY) *dirY = light.Direction.y;
+        if (dirZ) *dirZ = light.Direction.z;
+        if (colorR) *colorR = light.Color.x;
+        if (colorG) *colorG = light.Color.y;
+        if (colorB) *colorB = light.Color.z;
+        if (intensity) *intensity = light.Intensity;
+        if (innerCone) *innerCone = light.InnerCone;
+        if (outerCone) *outerCone = light.OuterCone;
+        if (radius) *radius = light.Radius;
+        if (falloff) *falloff = light.Falloff;
     }
 
     ENGINEAPI void Renderer_SetSSGIEnabled(void* renderer, bool enabled)

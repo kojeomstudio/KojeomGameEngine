@@ -452,11 +452,12 @@ void KAnimationStateMachine::ForceState(const std::string& StateName, float Blen
         BlendState.BlendProgress = 0.0f;
         BlendState.bIsActive = true;
         
+        BlendState.SourceState->SetStatus(EAnimStateStatus::TransitioningOut);
+        
         PreviousStateName = CurrentStateName;
         CurrentStateName = StateName;
         CurrentState = TargetState;
         
-        CurrentState->SetStatus(EAnimStateStatus::TransitioningOut);
         TargetState->Reset();
         TargetState->SetStatus(EAnimStateStatus::TransitioningIn);
     }

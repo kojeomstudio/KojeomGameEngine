@@ -244,122 +244,212 @@ VSOutput main(VSInput input)
 )";
 
     std::string PSSource = R"(
-struct PointLightData
-{
-    float3 Position;
-    float Intensity;
-    float3 Color;
-    float Radius;
-};
+    static const float PI = 3.14159265359f;
 
-struct SpotLightData
-{
-    float3 Position;
-    float Intensity;
-    float3 Direction;
-    float OuterConeAngle;
-    float3 Color;
-    float InnerConeAngle;
-};
-
-cbuffer LightBufferCB : register(b1)
-{
-    float3 CameraPosition;
-    float Padding0;
-    float3 DirLightDirection;
-    float Padding1;
-    float3 DirLightColor;
-    float DirLightIntensity;
-    uint NumPointLights;
-    uint NumSpotLights;
-    float Padding2[2];
-    PointLightData PointLights[8];
-    SpotLightData SpotLights[4];
-};
-
-Texture2D AlbedoMetallicTex : register(t0);
-Texture2D NormalRoughnessTex : register(t1);
-Texture2D PositionAOTex : register(t2);
-Texture2D DepthTex : register(t3);
-
-SamplerState PointSampler : register(s0);
-SamplerState LinearSampler : register(s1);
-
-float3 ComputeDirectionalLight(float3 normal, float3 lightDir, float3 lightColor, float intensity)
-{
-    float ndotl = max(dot(normal, -lightDir), 0.0f);
-    return lightColor * intensity * ndotl;
-}
-
-float3 ComputePointLight(float3 worldPos, float3 normal, float3 lightPos, float3 lightColor, float intensity, float radius)
-{
-    float3 lightDir = lightPos - worldPos;
-    float distance = length(lightDir);
-    lightDir = normalize(lightDir);
-    
-    float attenuation = 1.0f - saturate(distance / radius);
-    attenuation = attenuation * attenuation;
-    
-    float ndotl = max(dot(normal, lightDir), 0.0f);
-    return lightColor * intensity * ndotl * attenuation;
-}
-
-float3 ComputeSpotLight(float3 worldPos, float3 normal, float3 lightPos, float3 lightDir, float3 lightColor, float intensity, float innerCone, float outerCone)
-{
-    float3 toLight = lightPos - worldPos;
-    float distance = length(toLight);
-    toLight = normalize(toLight);
-    
-    float theta = dot(toLight, -lightDir);
-    float epsilon = innerCone - outerCone;
-    float spotAttenuation = saturate((theta - outerCone) / epsilon);
-    
-    float ndotl = max(dot(normal, toLight), 0.0f);
-    return lightColor * intensity * ndotl * spotAttenuation;
-}
-
-float4 main(float4 Position : SV_POSITION, float2 TexCoord : TEXCOORD0) : SV_TARGET
-{
-    float4 albedoMetallic = AlbedoMetallicTex.Sample(PointSampler, TexCoord);
-    float4 normalRoughness = NormalRoughnessTex.Sample(PointSampler, TexCoord);
-    float4 positionAO = PositionAOTex.Sample(PointSampler, TexCoord);
-    
-    float3 albedo = albedoMetallic.rgb;
-    float metallic = albedoMetallic.a;
-    float3 normal = normalRoughness.rgb * 2.0f - 1.0f;
-    float roughness = normalRoughness.a;
-    float3 worldPos = positionAO.rgb;
-    float ao = positionAO.a;
-    
-    if (length(normal) < 0.01f)
+    float DistributionGGX(float3 N, float3 H, float roughness)
     {
-        return float4(albedo, 1.0f);
+        float a = roughness * roughness;
+        float a2 = a * a;
+        float NdotH = max(dot(N, H), 0.0f);
+        float NdotH2 = NdotH * NdotH;
+
+        float nom = a2;
+        float denom = (NdotH2 * (a2 - 1.0f) + 1.0f);
+        denom = PI * denom * denom;
+
+        return nom / max(denom, 0.0001f);
     }
-    
-    normal = normalize(normal);
-    
-    float3 ambient = float3(0.1f, 0.1f, 0.15f) * albedo * ao;
-    float3 totalLight = ambient;
-    
-    totalLight += ComputeDirectionalLight(normal, DirLightDirection, DirLightColor, DirLightIntensity);
-    
-    for (uint i = 0; i < NumPointLights; ++i)
+
+    float GeometrySchlickGGX(float NdotV, float roughness)
     {
-        totalLight += ComputePointLight(worldPos, normal, PointLights[i].Position, 
-            PointLights[i].Color, PointLights[i].Intensity, PointLights[i].Radius);
+        float r = (roughness + 1.0f);
+        float k = (r * r) / 8.0f;
+        float nom = NdotV;
+        float denom = NdotV * (1.0f - k) + k;
+        return nom / max(denom, 0.0001f);
     }
-    
-    for (uint j = 0; j < NumSpotLights; ++j)
+
+    float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
     {
-        totalLight += ComputeSpotLight(worldPos, normal, SpotLights[j].Position,
-            SpotLights[j].Direction, SpotLights[j].Color,
-            SpotLights[j].Intensity, SpotLights[j].InnerConeAngle,
-            SpotLights[j].OuterConeAngle);
+        float NdotV = max(dot(N, V), 0.0f);
+        float NdotL = max(dot(N, L), 0.0f);
+        return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
     }
-    
-    float3 finalColor = totalLight * albedo;
-    return float4(finalColor, 1.0f);
-}
+
+    float3 fresnelSchlick(float cosTheta, float3 F0)
+    {
+        return F0 + (1.0f - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+    }
+
+    float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+    {
+        return F0 + (max((1.0f - roughness).rrr, F0) - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+    }
+
+    struct PointLightData
+    {
+        float3 Position;
+        float Intensity;
+        float3 Color;
+        float Radius;
+    };
+
+    struct SpotLightData
+    {
+        float3 Position;
+        float Intensity;
+        float3 Direction;
+        float OuterConeAngle;
+        float3 Color;
+        float InnerConeAngle;
+    };
+
+    cbuffer LightBufferCB : register(b1)
+    {
+        float3 CameraPosition;
+        float Padding0;
+        float3 DirLightDirection;
+        float Padding1;
+        float3 DirLightColor;
+        float DirLightIntensity;
+        uint NumPointLights;
+        uint NumSpotLights;
+        float Padding2[2];
+        PointLightData PointLights[8];
+        SpotLightData SpotLights[4];
+    };
+
+    Texture2D AlbedoMetallicTex : register(t0);
+    Texture2D NormalRoughnessTex : register(t1);
+    Texture2D PositionAOTex : register(t2);
+    Texture2D DepthTex : register(t3);
+
+    SamplerState PointSampler : register(s0);
+    SamplerState LinearSampler : register(s1);
+
+    float3 ComputePBRDirectionalLight(float3 N, float3 V, float3 lightDir, float3 lightColor, float intensity, float3 albedo, float metallic, float roughness, float ao)
+    {
+        float3 L = normalize(-lightDir);
+        float3 H = normalize(V + L);
+
+        float NdotL = max(dot(N, L), 0.0f);
+        float NDF = DistributionGGX(N, H, roughness);
+        float G = GeometrySmith(N, V, L, roughness);
+        float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+        float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+
+        float3 numerator = NDF * G * F;
+        float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+        float3 specular = numerator / denominator;
+
+        float3 kS = F;
+        float3 kD = (1.0f - kS) * (1.0f - metallic);
+
+        float3 radiance = lightColor * intensity;
+        return (kD * albedo / PI + specular) * radiance * NdotL;
+    }
+
+    float3 ComputePBRPointLight(float3 worldPos, float3 N, float3 V, float3 lightPos, float3 lightColor, float intensity, float radius, float3 albedo, float metallic, float roughness)
+    {
+        float3 L = normalize(lightPos - worldPos);
+        float3 H = normalize(V + L);
+        float distance = length(lightPos - worldPos);
+
+        float attenuation = 1.0f / (1.0f + 0.09f * distance + 0.032f * distance * distance);
+        float NdotL = max(dot(N, L), 0.0f);
+
+        float NDF = DistributionGGX(N, H, roughness);
+        float G = GeometrySmith(N, V, L, roughness);
+        float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+        float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+
+        float3 numerator = NDF * G * F;
+        float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+        float3 specular = numerator / denominator;
+
+        float3 kS = F;
+        float3 kD = (1.0f - kS) * (1.0f - metallic);
+
+        float3 radiance = lightColor * intensity * attenuation;
+        return (kD * albedo / PI + specular) * radiance * NdotL;
+    }
+
+    float3 ComputePBRSpotLight(float3 worldPos, float3 N, float3 V, float3 lightPos, float3 lightDir, float3 lightColor, float intensity, float innerCone, float outerCone, float3 albedo, float metallic, float roughness)
+    {
+        float3 toLight = normalize(lightPos - worldPos);
+        float theta = dot(toLight, normalize(-lightDir));
+        float epsilon = cos(innerCone) - cos(outerCone);
+        float spotAttenuation = saturate((theta - cos(outerCone)) / epsilon);
+
+        float3 L = toLight;
+        float3 H = normalize(V + L);
+        float distance = length(lightPos - worldPos);
+
+        float attenuation = 1.0f / (1.0f + 0.09f * distance + 0.032f * distance * distance);
+        attenuation *= spotAttenuation;
+        float NdotL = max(dot(N, L), 0.0f);
+
+        float NDF = DistributionGGX(N, H, roughness);
+        float G = GeometrySmith(N, V, L, roughness);
+        float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+        float3 F = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+
+        float3 numerator = NDF * G * F;
+        float denominator = 4.0f * max(dot(N, V), 0.0f) * NdotL + 0.0001f;
+        float3 specular = numerator / denominator;
+
+        float3 kS = F;
+        float3 kD = (1.0f - kS) * (1.0f - metallic);
+
+        float3 radiance = lightColor * intensity * attenuation;
+        return (kD * albedo / PI + specular) * radiance * NdotL;
+    }
+
+    float4 main(float4 Position : SV_POSITION, float2 TexCoord : TEXCOORD0) : SV_TARGET
+    {
+        float4 albedoMetallic = AlbedoMetallicTex.Sample(PointSampler, TexCoord);
+        float4 normalRoughness = NormalRoughnessTex.Sample(PointSampler, TexCoord);
+        float4 positionAO = PositionAOTex.Sample(PointSampler, TexCoord);
+        
+        float3 albedo = albedoMetallic.rgb;
+        float metallic = albedoMetallic.a;
+        float3 normal = normalRoughness.rgb * 2.0f - 1.0f;
+        float roughness = normalRoughness.a;
+        float3 worldPos = positionAO.rgb;
+        float ao = positionAO.a;
+        
+        if (length(normal) < 0.01f)
+        {
+            return float4(albedo, 1.0f);
+        }
+        
+        normal = normalize(normal);
+        float3 V = normalize(CameraPosition - worldPos);
+        
+        float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+        float3 kS = fresnelSchlickRoughness(max(dot(normal, V), 0.0f), F0, roughness);
+        float3 kD = (1.0f - kS) * (1.0f - metallic);
+        float3 ambient = kD * float3(0.03f, 0.03f, 0.03f) * albedo * ao;
+        float3 totalLight = ambient;
+        
+        totalLight += ComputePBRDirectionalLight(normal, V, DirLightDirection, DirLightColor, DirLightIntensity, albedo, metallic, roughness, ao);
+        
+        for (uint i = 0; i < NumPointLights; ++i)
+        {
+            totalLight += ComputePBRPointLight(worldPos, normal, V, PointLights[i].Position, 
+                PointLights[i].Color, PointLights[i].Intensity, PointLights[i].Radius, albedo, metallic, roughness);
+        }
+        
+        for (uint j = 0; j < NumSpotLights; ++j)
+        {
+            totalLight += ComputePBRSpotLight(worldPos, normal, V, SpotLights[j].Position,
+                SpotLights[j].Direction, SpotLights[j].Color,
+                SpotLights[j].Intensity, SpotLights[j].InnerConeAngle,
+                SpotLights[j].OuterConeAngle, albedo, metallic, roughness);
+        }
+        
+        return float4(totalLight, 1.0f);
+    }
 )";
 
     return LightingPassShader->CompileFromSource(Device, VSSource, PSSource, "main", "main");
@@ -474,6 +564,8 @@ void KDeferredRenderer::RenderGeometry(ID3D11DeviceContext* Context)
     XMMATRIX View = CurrentCamera->GetViewMatrix();
     XMMATRIX Projection = CurrentCamera->GetProjectionMatrix();
 
+    Context->PSSetSamplers(0, 1, PointSamplerState.GetAddressOf());
+
     for (const auto& RenderData : RenderDataList)
     {
         if (!RenderData.Mesh)
@@ -481,6 +573,9 @@ void KDeferredRenderer::RenderGeometry(ID3D11DeviceContext* Context)
 
         UpdateTransformBuffer(Context, RenderData.WorldMatrix, View, Projection);
         Context->VSSetConstantBuffers(0, 1, TransformConstantBuffer.GetAddressOf());
+
+        UpdateMaterialBuffer(Context, RenderData.BaseColor, RenderData.Metallic, RenderData.Roughness, RenderData.AO);
+        Context->PSSetConstantBuffers(2, 1, MaterialConstantBuffer.GetAddressOf());
 
         if (RenderData.DiffuseTexture)
         {
@@ -492,8 +587,6 @@ void KDeferredRenderer::RenderGeometry(ID3D11DeviceContext* Context)
             ID3D11ShaderResourceView* NullSRV = nullptr;
             Context->PSSetShaderResources(0, 1, &NullSRV);
         }
-
-        Context->VSSetConstantBuffers(0, 1, TransformConstantBuffer.GetAddressOf());
 
         UINT32 Stride = sizeof(FVertex);
         UINT32 Offset = 0;
@@ -593,7 +686,7 @@ void KDeferredRenderer::UpdateLightBuffer(ID3D11DeviceContext* Context, KCamera*
         Buffer->DirLightDirection = DirectionalLight.Direction;
         Buffer->Padding1 = 0.0f;
         Buffer->DirLightColor = XMFLOAT3(DirectionalLight.Color.x, DirectionalLight.Color.y, DirectionalLight.Color.z);
-        Buffer->DirLightIntensity = DirectionalLight.Color.w > 0.0f ? DirectionalLight.Color.w : 1.0f;
+        Buffer->DirLightIntensity = DirectionalLight.Intensity;
         Buffer->NumPointLights = static_cast<UINT32>(std::min(PointLights.size(), size_t(8)));
         Buffer->NumSpotLights = static_cast<UINT32>(std::min(SpotLights.size(), size_t(4)));
         Buffer->Padding2[0] = 0.0f;
@@ -665,12 +758,14 @@ void KDeferredRenderer::ClearAllLights()
     ClearSpotLights();
 }
 
-void KDeferredRenderer::UpdateMaterialBuffer(ID3D11DeviceContext* Context, const XMFLOAT4& InBaseColor, float InAlpha)
+void KDeferredRenderer::UpdateMaterialBuffer(ID3D11DeviceContext* Context, const XMFLOAT4& InBaseColor, float InMetallic, float InRoughness, float InAO)
 {
     FDeferredMaterialBuffer MaterialCB;
     MaterialCB.BaseColor = InBaseColor;
-    MaterialCB.Alpha = InAlpha;
-    MaterialCB.Padding[0] = MaterialCB.Padding[1] = MaterialCB.Padding[2] = 0.0f;
+    MaterialCB.Metallic = InMetallic;
+    MaterialCB.Roughness = InRoughness;
+    MaterialCB.AO = InAO;
+    MaterialCB.Padding = 0.0f;
 
     D3D11_MAPPED_SUBRESOURCE MappedResource;
     if (SUCCEEDED(Context->Map(MaterialConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
@@ -944,7 +1039,7 @@ void KDeferredRenderer::RenderForwardTransparentPass(ID3D11DeviceContext* Contex
         UpdateTransformBuffer(Context, RenderData.WorldMatrix, View, Projection);
         Context->VSSetConstantBuffers(0, 1, TransformConstantBuffer.GetAddressOf());
 
-        UpdateMaterialBuffer(Context, RenderData.BaseColor, RenderData.Alpha);
+        UpdateMaterialBuffer(Context, RenderData.BaseColor, 0.0f, 0.5f, 1.0f);
         Context->PSSetConstantBuffers(2, 1, MaterialConstantBuffer.GetAddressOf());
 
         if (RenderData.DiffuseTexture)
