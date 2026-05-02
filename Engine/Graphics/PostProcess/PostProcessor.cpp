@@ -935,17 +935,18 @@ void KPostProcessor::SetRenderTarget(ID3D11DeviceContext* Context, ID3D11RenderT
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
     
-    ID3D11Resource* resource = nullptr;
+    ComPtr<ID3D11Resource> resource;
     if (RTV)
     {
         RTV->GetResource(&resource);
         if (resource)
         {
             D3D11_TEXTURE2D_DESC texDesc;
-            ((ID3D11Texture2D*)resource)->GetDesc(&texDesc);
+            ComPtr<ID3D11Texture2D> texture;
+            resource.As(&texture);
+            texture->GetDesc(&texDesc);
             viewport.Width = static_cast<float>(texDesc.Width);
             viewport.Height = static_cast<float>(texDesc.Height);
-            resource->Release();
         }
     }
     else

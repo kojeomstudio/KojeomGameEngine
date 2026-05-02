@@ -99,6 +99,7 @@ HRESULT KUIFont::LoadFontFile(const std::wstring& FontPath)
 
             return S_OK;
         }
+        file.swap(fntFile);
     }
 
     std::string line;

@@ -254,15 +254,14 @@ void KRenderer::RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
             initData.pSysMem = &DefaultParams;
 
             HRESULT bufHR = GraphicsDevice->GetDevice()->CreateBuffer(&desc, &initData, &DefaultMaterialBuffer);
-            if (FAILED(bufHR))
+            if (FAILED(bufHR) || !DefaultMaterialBuffer)
             {
                 LOG_ERROR("Failed to create default material buffer");
+                PBRShader->Unbind(Context);
+                return;
             }
         }
-        if (DefaultMaterialBuffer)
-        {
-            Context->PSSetConstantBuffers(4, 1, DefaultMaterialBuffer.GetAddressOf());
-        }
+        Context->PSSetConstantBuffers(4, 1, DefaultMaterialBuffer.GetAddressOf());
     }
 
     InMesh->Render(Context);
@@ -446,15 +445,14 @@ void KRenderer::RenderSkeletalMeshPBR(KSkeletalMesh* InMesh, const XMMATRIX& Wor
             initData.pSysMem = &DefaultParams;
 
             HRESULT bufHR = GraphicsDevice->GetDevice()->CreateBuffer(&desc, &initData, &DefaultMaterialBuffer);
-            if (FAILED(bufHR))
+            if (FAILED(bufHR) || !DefaultMaterialBuffer)
             {
                 LOG_ERROR("Failed to create default material buffer");
+                SkinnedPBRShader->Unbind(Context);
+                return;
             }
         }
-        if (DefaultMaterialBuffer)
-        {
-            Context->PSSetConstantBuffers(4, 1, DefaultMaterialBuffer.GetAddressOf());
-        }
+        Context->PSSetConstantBuffers(4, 1, DefaultMaterialBuffer.GetAddressOf());
     }
 
     InMesh->Render(Context);
