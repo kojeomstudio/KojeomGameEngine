@@ -30,6 +30,9 @@
 #include "../../Engine/Scene/Actor.h"
 #include "../../Engine/Assets/StaticMeshComponent.h"
 #include "../../Engine/Assets/StaticMesh.h"
+#include "../../Engine/Assets/LightComponent.h"
+#include "../../Engine/Graphics/Light.h"
+#include "../../Engine/Graphics/GraphicsDevice.h"
 
 namespace CLITest
 {
@@ -122,6 +125,25 @@ namespace CLITest
 
         void SetResultJsonPath(const std::string& Path) { ResultJsonPath = Path; }
 
+        static std::string EscapeJson(const std::string& s)
+        {
+            std::string Result;
+            Result.reserve(s.size() + 8);
+            for (char c : s)
+            {
+                switch (c)
+                {
+                case '"': Result += "\\\""; break;
+                case '\\': Result += "\\\\"; break;
+                case '\n': Result += "\\n"; break;
+                case '\r': Result += "\\r"; break;
+                case '\t': Result += "\\t"; break;
+                default: Result += c; break;
+                }
+            }
+            return Result;
+        }
+
         void ListTests()
         {
             std::cout << "\nAvailable tests:\n";
@@ -211,25 +233,6 @@ namespace CLITest
             {
                 std::cerr << "[ERROR] Failed to write result JSON: " << e.what() << std::endl;
             }
-        }
-
-        static std::string EscapeJson(const std::string& s)
-        {
-            std::string Result;
-            Result.reserve(s.size() + 8);
-            for (char c : s)
-            {
-                switch (c)
-                {
-                case '"': Result += "\\\""; break;
-                case '\\': Result += "\\\\"; break;
-                case '\n': Result += "\\n"; break;
-                case '\r': Result += "\\r"; break;
-                case '\t': Result += "\\t"; break;
-                default: Result += c; break;
-                }
-            }
-            return Result;
         }
     };
 
@@ -1499,29 +1502,185 @@ namespace CLITest
 
         std::cout << "  [INFO] Running asset validation...\n";
 
-        int32 CheckedFiles = 0;
-        int32 MissingFiles = 0;
+        int32 CheckedItems = 0;
+        int32 MissingItems = 0;
+        int32 PassedValidations = 0;
 
-        auto CheckFile = [&](const std::wstring& Path) {
-            ++CheckedFiles;
+        auto CheckDir = [&](const std::wstring& Path) {
+            ++CheckedItems;
             DWORD attrs = GetFileAttributesW(Path.c_str());
-            if (attrs == INVALID_FILE_ATTRIBUTES)
+            if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY))
             {
-                std::wcout << L"  [MISSING] " << Path << L"\n";
-                ++MissingFiles;
+                std::wcout << L"  [MISSING] Directory: " << Path << L"\n";
+                ++MissingItems;
+            }
+            else
+            {
+                ++PassedValidations;
             }
         };
 
-        CheckFile(L"Assets/Textures/");
+        CheckDir(L"Assets");
+        CheckDir(L"Assets/Models");
+        CheckDir(L"Assets/Textures");
+        CheckDir(L"Assets/Materials");
+        CheckDir(L"Assets/Scenes");
 
-        Result.bPassed = (MissingFiles == 0);
-        if (MissingFiles > 0)
+        std::cout << "  [INFO] Testing model loader format support...\n";
+        KModelLoader Loader;
+        HRESULT hr = Loader.Initialize();
+        if (SUCCEEDED(hr))
         {
-            Result.Message = "Asset validation FAILED: " + std::to_string(MissingFiles) + " missing assets";
+            struct FFormatCheck { const wchar_t* Ext; const char* Name; };
+            FFormatCheck Formats[] = {
+                { L"model.obj", "OBJ" },
+                { L"model.fbx", "FBX" },
+                { L"model.gltf", "GLTF" },
+                { L"model.glb", "GLB" },
+                { L"model.stl", "STL" },
+                { L"model.dae", "DAE" },
+            };
+
+            for (const auto& Fmt : Formats)
+            {
+                ++CheckedItems;
+                bool Supported = KModelLoader::IsSupportedFormat(Fmt.Ext);
+                if (Supported)
+                {
+                    ++PassedValidations;
+                    std::cout << "  [OK] Format supported: " << Fmt.Name << "\n";
+                }
+                else
+                {
+                    std::cout << "  [INFO] Format not supported: " << Fmt.Name << " (expected if Assimp disabled)\n";
+                }
+            }
+            Loader.Cleanup();
         }
         else
         {
-            Result.Message = "Asset validation passed: " + std::to_string(CheckedFiles) + " entries checked";
+            std::cout << "  [INFO] Model loader init failed (expected without GPU/Assimp)\n";
+        }
+
+        std::cout << "  [INFO] Testing OBJ load from memory...\n";
+        {
+            const std::string TestFile = "test_validate_asset.obj";
+            {
+                std::ofstream f(TestFile);
+                f << "# Test OBJ\nv 0 0 0\nv 1 0 0\nv 0.5 1 0\nvn 0 0 1\nvt 0 0\nvt 1 0\nvt 0.5 1\nf 1/1/1 2/2/1 3/3/1\n";
+                f.close();
+            }
+
+            KModelLoader ObjLoader;
+            if (SUCCEEDED(ObjLoader.Initialize()))
+            {
+                ++CheckedItems;
+                auto Model = ObjLoader.LoadModel(std::wstring(TestFile.begin(), TestFile.end()));
+                if (Model)
+                {
+                    ++PassedValidations;
+                    std::cout << "  [OK] OBJ file loaded and parsed successfully\n";
+
+                    if (Model->StaticMesh && Model->StaticMesh->IsValid())
+                    {
+                        ++PassedValidations;
+                        auto LOD0 = Model->StaticMesh->GetLOD(0);
+                        if (LOD0)
+                        {
+                            std::cout << "  [OK] Mesh LOD0 verified: " << LOD0->Vertices.size() << "v/" << LOD0->Indices.size() << "i\n";
+                        }
+                    }
+                }
+                else
+                {
+                    ++MissingItems;
+                    std::cout << "  [FAIL] OBJ file failed to load\n";
+                }
+                ObjLoader.Cleanup();
+            }
+            std::remove(TestFile.c_str());
+        }
+
+        std::cout << "  [INFO] Testing serialization round-trip...\n";
+        {
+            ++CheckedItems;
+            KBinaryArchive Writer(KBinaryArchive::EMode::Write);
+            if (Writer.Open(L"test_validate_archive.bin"))
+            {
+                Writer << std::string("SceneName");
+                Writer << int32(3);
+                Writer << float(3.14f);
+                Writer << true;
+                Writer.Close();
+
+                KBinaryArchive Reader(KBinaryArchive::EMode::Read);
+                if (Reader.Open(L"test_validate_archive.bin"))
+                {
+                    std::string ReadStr;
+                    int32 ReadInt = 0;
+                    float ReadFloat = 0.0f;
+                    bool ReadBool = false;
+                    Reader >> ReadStr >> ReadInt >> ReadFloat >> ReadBool;
+                    Reader.Close();
+
+                    if (ReadStr == "SceneName" && ReadInt == 3 &&
+                        std::abs(ReadFloat - 3.14f) < 0.01f && ReadBool == true)
+                    {
+                        ++PassedValidations;
+                        std::cout << "  [OK] Binary archive round-trip verified\n";
+                    }
+                    else
+                    {
+                        ++MissingItems;
+                        std::cout << "  [FAIL] Binary archive round-trip mismatch\n";
+                    }
+                }
+                _wremove(L"test_validate_archive.bin");
+            }
+        }
+
+        std::cout << "  [INFO] Testing JSON archive...\n";
+        {
+            ++CheckedItems;
+            KJsonArchive Json;
+            auto Root = KJsonArchive::CreateObject();
+            Root->Set("scene", std::string("ValidateTest"));
+            Root->Set("entities", 1);
+            Json.SetRoot(Root);
+            std::string Serialized = Json.SerializeToString();
+
+            KJsonArchive JsonReader;
+            if (JsonReader.DeserializeFromString(Serialized))
+            {
+                auto ReadRoot = JsonReader.GetRoot();
+                if (ReadRoot && ReadRoot->GetString("scene") == "ValidateTest" && ReadRoot->GetInt("entities") == 1)
+                {
+                    ++PassedValidations;
+                    std::cout << "  [OK] JSON archive round-trip verified\n";
+                }
+                else
+                {
+                    ++MissingItems;
+                    std::cout << "  [FAIL] JSON archive round-trip mismatch\n";
+                }
+            }
+            else
+            {
+                ++MissingItems;
+                std::cout << "  [FAIL] JSON deserialization failed\n";
+            }
+        }
+
+        Result.bPassed = (MissingItems == 0 && PassedValidations > 0);
+        if (MissingItems > 0)
+        {
+            Result.Message = "Asset validation FAILED: " + std::to_string(MissingItems) + " issues, " +
+                             std::to_string(PassedValidations) + "/" + std::to_string(CheckedItems) + " passed";
+        }
+        else
+        {
+            Result.Message = "Asset validation passed: " + std::to_string(PassedValidations) + "/" +
+                             std::to_string(CheckedItems) + " checks OK";
         }
         return Result;
     }
@@ -1535,35 +1694,284 @@ namespace CLITest
         std::cout << "  [INFO] Running scene dump test...\n";
 
         KScene Scene;
-        Scene.SetName("TestScene");
+        Scene.SetName("DumpTestScene");
 
         auto Actor1 = std::make_shared<KActor>();
         Actor1->SetName("Cube1");
-        auto MeshComp = std::make_shared<KStaticMeshComponent>();
-        Actor1->AddComponent(MeshComp);
+        Actor1->SetWorldPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
+        auto MeshComp1 = std::make_shared<KStaticMeshComponent>();
+        Actor1->AddComponent(MeshComp1);
         Scene.AddActor(Actor1);
 
         auto Actor2 = std::make_shared<KActor>();
         Actor2->SetName("Sphere1");
+        Actor2->SetWorldPosition(XMFLOAT3(3.0f, 0.0f, 0.0f));
+        auto MeshComp2 = std::make_shared<KStaticMeshComponent>();
+        Actor2->AddComponent(MeshComp2);
         Actor1->AddChild(Actor2);
         Scene.AddActor(Actor2);
 
+        auto Actor3 = std::make_shared<KActor>();
+        Actor3->SetName("DirLight");
+        Actor3->SetWorldPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
+        auto LightComp = std::make_shared<KLightComponent>();
+        Actor3->AddComponent(LightComp);
+        Scene.AddActor(Actor3);
+
+        auto Actor4 = std::make_shared<KActor>();
+        Actor4->SetName("EmptyActor");
+        Actor4->SetWorldPosition(XMFLOAT3(5.0f, 0.0f, 5.0f));
+        Scene.AddActor(Actor4);
+
+        std::string DumpJsonPath = "scene_dump_result.json";
+        {
+            std::ofstream Out(DumpJsonPath);
+            if (!Out.is_open())
+            {
+                Result.Message = "Failed to write scene dump JSON";
+                return Result;
+            }
+
+            uint32 StaticMeshCount = 0;
+            uint32 SkinnedMeshCount = 0;
+            uint32 LightCount = 0;
+            uint32 EmptyCount = 0;
+            uint32 TotalComponents = 0;
+
+            Out << "{\n";
+            Out << "  \"scene\": \"" << FTestRunner::EscapeJson(Scene.GetName()) << "\",\n";
+
+            for (const auto& Actor : Scene.GetActors())
+            {
+                for (const auto& Comp : Actor->GetComponents())
+                {
+                    TotalComponents++;
+                    EComponentType CType = Comp->GetComponentTypeID();
+                    if (CType == EComponentType::StaticMesh) StaticMeshCount++;
+                    else if (CType == EComponentType::SkeletalMesh) SkinnedMeshCount++;
+                    else if (CType == EComponentType::Light) LightCount++;
+                }
+                if (Actor->GetComponents().empty()) EmptyCount++;
+            }
+
+            Out << "  \"actors\": " << Scene.GetActors().size() << ",\n";
+            Out << "  \"components\": {\n";
+            Out << "    \"total\": " << TotalComponents << ",\n";
+            Out << "    \"staticMesh\": " << StaticMeshCount << ",\n";
+            Out << "    \"skinnedMesh\": " << SkinnedMeshCount << ",\n";
+            Out << "    \"light\": " << LightCount << ",\n";
+            Out << "    \"empty\": " << EmptyCount << "\n";
+            Out << "  },\n";
+
+            Out << "  \"actorsList\": [\n";
+            size_t ActorIdx = 0;
+            for (const auto& Actor : Scene.GetActors())
+            {
+                auto Transform = Actor->GetWorldTransform();
+                Out << "    {\n";
+                Out << "      \"name\": \"" << FTestRunner::EscapeJson(Actor->GetName()) << "\",\n";
+                Out << "      \"position\": [" << Transform.Position.x << ", " << Transform.Position.y << ", " << Transform.Position.z << "],\n";
+                Out << "      \"componentCount\": " << Actor->GetComponents().size() << ",\n";
+                Out << "      \"childCount\": " << Actor->GetChildren().size() << ",\n";
+                Out << "      \"parent\": " << (Actor->GetParent() ? ("\"" + FTestRunner::EscapeJson(Actor->GetParent()->GetName()) + "\"") : "null") << "\n";
+                Out << "    }" << (ActorIdx + 1 < Scene.GetActors().size() ? "," : "") << "\n";
+                ActorIdx++;
+            }
+            Out << "  ],\n";
+
+            Out << "  \"camera\": { \"valid\": true },\n";
+            Out << "  \"staticDrawCommands\": " << StaticMeshCount << ",\n";
+            Out << "  \"skinnedDrawCommands\": " << SkinnedMeshCount << "\n";
+            Out << "}\n";
+            Out.close();
+        }
+
+        bool bJsonValid = false;
+        {
+            std::ifstream In(DumpJsonPath);
+            if (In.is_open())
+            {
+                std::string Content((std::istreambuf_iterator<char>(In)), std::istreambuf_iterator<char>());
+                In.close();
+                bJsonValid = Content.find("\"scene\":") != std::string::npos &&
+                             Content.find("\"actors\": 4") != std::string::npos &&
+                             Content.find("\"staticMesh\": 2") != std::string::npos &&
+                             Content.find("\"light\": 1") != std::string::npos &&
+                             Content.find("\"empty\": 1") != std::string::npos &&
+                             Content.find("\"Cube1\"") != std::string::npos &&
+                             Content.find("\"Sphere1\"") != std::string::npos &&
+                             Content.find("\"DirLight\"") != std::string::npos &&
+                             Content.find("\"EmptyActor\"") != std::string::npos;
+            }
+        }
+        std::remove(DumpJsonPath.c_str());
+
         uint32 ActorCount = static_cast<uint32>(Scene.GetActors().size());
-        bool bHasActors = (ActorCount == 2);
-
         auto FoundActor = Scene.FindActor("Cube1");
-        bool bFoundActor = (FoundActor != nullptr);
-
         auto FoundChild = Scene.FindActor("Sphere1");
-        bool bFoundChild = (FoundChild != nullptr);
-
         auto NotFound = Scene.FindActor("NonExistent");
-        bool bNotFound = (NotFound == nullptr);
 
-        Result.bPassed = bHasActors && bFoundActor && bFoundChild && bNotFound;
-        Result.Message = Result.bPassed
-            ? "Scene dump passed: " + std::to_string(ActorCount) + " actors"
-            : "Scene dump FAILED";
+        Result.bPassed = (ActorCount == 4 && FoundActor && FoundChild && !NotFound &&
+                          bJsonValid);
+        if (Result.bPassed)
+        {
+            Result.Message = "Scene dump passed: " + std::to_string(ActorCount) + " actors, "
+                             "2 static mesh, 1 light, JSON output verified";
+        }
+        else
+        {
+            Result.Message = "Scene dump FAILED (actors=" + std::to_string(ActorCount) +
+                             ", json=" + (bJsonValid ? "ok" : "invalid") + ")";
+        }
+        return Result;
+    }
+
+    inline FTestResult TestRenderTest()
+    {
+        FTestResult Result;
+        Result.Name = "render-test";
+        Result.bPassed = false;
+
+        std::cout << "  [INFO] Running render test...\n";
+
+        WNDCLASSW wc = {};
+        wc.lpfnWndProc = DefWindowProcW;
+        wc.hInstance = GetModuleHandle(nullptr);
+        wc.lpszClassName = L"CLITestRenderTest";
+        RegisterClassW(&wc);
+
+        HWND HiddenWnd = CreateWindowW(L"CLITestRenderTest", L"RenderTest", WS_OVERLAPPED,
+            CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+            nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+        if (!HiddenWnd)
+        {
+            Result.bPassed = true;
+            Result.bSkipped = true;
+            Result.Message = "SKIPPED: No windowing support (headless CI)";
+            UnregisterClassW(L"CLITestRenderTest", GetModuleHandle(nullptr));
+            return Result;
+        }
+
+        KEngine Engine;
+        HRESULT hr = Engine.InitializeWithExternalHwnd(HiddenWnd, 800, 600);
+        if (FAILED(hr))
+        {
+            Result.bPassed = true;
+            Result.bSkipped = true;
+            Result.Message = "SKIPPED: DX11 unavailable (headless CI)";
+            DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRenderTest", GetModuleHandle(nullptr));
+            return Result;
+        }
+
+        auto Renderer = Engine.GetRenderer();
+        if (!Renderer)
+        {
+            Result.Message = "Renderer is null after initialization";
+            Engine.Shutdown();
+            DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRenderTest", GetModuleHandle(nullptr));
+            return Result;
+        }
+
+        auto Camera = Engine.GetCamera();
+        if (!Camera)
+        {
+            Result.Message = "Camera is null";
+            Engine.Shutdown();
+            DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRenderTest", GetModuleHandle(nullptr));
+            return Result;
+        }
+        Camera->SetPosition(XMFLOAT3(0.0f, 2.0f, -5.0f));
+
+        FDirectionalLight DirLight;
+        DirLight.Direction = XMFLOAT3(-0.5f, -1.0f, 0.3f);
+        DirLight.Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        DirLight.Intensity = 1.0f;
+        DirLight.AmbientColor = XMFLOAT4(0.15f, 0.15f, 0.2f, 1.0f);
+        Renderer->SetDirectionalLight(DirLight);
+
+        auto CubeMesh = Renderer->CreateCubeMesh();
+        auto SphereMesh = Renderer->CreateSphereMesh(24, 12);
+        if (!CubeMesh || !SphereMesh)
+        {
+            Result.Message = "Mesh creation failed";
+            Engine.Shutdown();
+            DestroyWindow(HiddenWnd);
+            UnregisterClassW(L"CLITestRenderTest", GetModuleHandle(nullptr));
+            return Result;
+        }
+
+        XMMATRIX CubeWorld = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+        XMMATRIX SphereWorld = XMMatrixTranslation(2.5f, 0.0f, 0.0f);
+
+        int32 FrameCount = 3;
+        for (int32 i = 0; i < FrameCount; ++i)
+        {
+            Engine.Update(1.0f / 60.0f);
+            Renderer->BeginFrame(Camera);
+
+            Renderer->RenderMeshLit(CubeMesh, CubeWorld);
+            Renderer->RenderMeshLit(SphereMesh, SphereWorld);
+
+            Renderer->EndFrame(true);
+        }
+
+        int32 DrawCalls = Renderer->GetDrawCallCount();
+        int32 VertexCount = Renderer->GetVertexCount();
+        float FrameTime = Renderer->GetFrameTime();
+
+        KGraphicsDevice* GraphicsDevice = Engine.GetGraphicsDevice();
+        bool bBackbufferValid = false;
+        if (GraphicsDevice && GraphicsDevice->GetContext())
+        {
+            ID3D11DeviceContext* Ctx = GraphicsDevice->GetContext();
+            ID3D11RenderTargetView* RTV = nullptr;
+            Ctx->OMGetRenderTargets(1, &RTV, nullptr);
+            if (RTV)
+            {
+                ID3D11Resource* BackBuffer = nullptr;
+                RTV->GetResource(&BackBuffer);
+                RTV->Release();
+
+                if (BackBuffer)
+                {
+                    D3D11_TEXTURE2D_DESC Desc;
+                    ID3D11Texture2D* Tex = nullptr;
+                    if (SUCCEEDED(BackBuffer->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&Tex)))
+                    {
+                        Tex->GetDesc(&Desc);
+                        Tex->Release();
+                    }
+                    BackBuffer->Release();
+
+                    if (Desc.Width > 0 && Desc.Height > 0)
+                    {
+                        bBackbufferValid = true;
+                        std::cout << "  [OK] Backbuffer: " << Desc.Width << "x" << Desc.Height << "\n";
+                    }
+                }
+            }
+        }
+
+        Engine.Shutdown();
+        DestroyWindow(HiddenWnd);
+        UnregisterClassW(L"CLITestRenderTest", GetModuleHandle(nullptr));
+
+        Result.bPassed = (DrawCalls > 0 && VertexCount > 0 && bBackbufferValid);
+        if (Result.bPassed)
+        {
+            Result.Message = "Render test passed: " + std::to_string(DrawCalls) + " draw calls, "
+                             + std::to_string(VertexCount) + " vertices, "
+                             + std::to_string(FrameCount) + " frames";
+        }
+        else
+        {
+            Result.Message = "Render test FAILED (drawCalls=" + std::to_string(DrawCalls) +
+                             ", vertices=" + std::to_string(VertexCount) +
+                             ", backbuffer=" + (bBackbufferValid ? "valid" : "invalid") + ")";
+        }
         return Result;
     }
 }

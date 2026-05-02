@@ -353,7 +353,7 @@ void KActor::RegisterWithSceneRecursive(KScene* Scene)
 
 HRESULT KScene::Load(const std::wstring& Path)
 {
-    if (PathUtils::ContainsTraversal(Path))
+    if (PathUtils::ContainsTraversal(Path) || !PathUtils::IsPathSafe(Path, L"."))
     {
         LOG_ERROR("Scene::Load: path traversal detected: " + StringUtils::WideToMultiByte(Path));
         return E_INVALIDARG;
@@ -414,7 +414,7 @@ HRESULT KScene::Load(const std::wstring& Path)
 
 HRESULT KScene::Save(const std::wstring& Path)
 {
-    if (PathUtils::ContainsTraversal(Path))
+    if (PathUtils::ContainsTraversal(Path) || !PathUtils::IsPathSafe(Path, L"."))
     {
         LOG_ERROR("Scene::Save: path traversal detected: " + StringUtils::WideToMultiByte(Path));
         return E_INVALIDARG;

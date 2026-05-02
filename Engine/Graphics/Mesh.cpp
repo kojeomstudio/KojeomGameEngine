@@ -80,7 +80,10 @@ void KMesh::UpdateConstantBuffer(ID3D11DeviceContext* Context,
     CB.ViewMatrix = XMMatrixTranspose(ViewMatrix);
     CB.ProjectionMatrix = XMMatrixTranspose(ProjMatrix);
 
-    Context->UpdateSubresource(ConstantBuffer.Get(), 0, nullptr, &CB, 0, 0);
+    if (ConstantBuffer)
+    {
+        Context->UpdateSubresource(ConstantBuffer.Get(), 0, nullptr, &CB, 0, 0);
+    }
 }
 
 void KMesh::Cleanup()
@@ -140,7 +143,7 @@ HRESULT KMesh::InitializeFromBuffer(ID3D11Buffer* InVertexBuffer, UINT32 InVerte
         return E_INVALIDARG;
     }
 
-    VertexBuffer = InVertexBuffer;
+    VertexBuffer.Attach(InVertexBuffer);
     VertexCount = InVertexCount;
     IndexCount = 0;
     VertexStride = InVertexStride > 0 ? InVertexStride : sizeof(FVertex);
@@ -158,10 +161,10 @@ HRESULT KMesh::InitializeFromBuffers(ID3D11Device* Device,
         return E_INVALIDARG;
     }
 
-    VertexBuffer = InVertexBuffer;
+    VertexBuffer.Attach(InVertexBuffer);
     if (InIndexBuffer)
     {
-        IndexBuffer = InIndexBuffer;
+        IndexBuffer.Attach(InIndexBuffer);
     }
     VertexCount = InVertexCount;
     IndexCount = InIndexCount;

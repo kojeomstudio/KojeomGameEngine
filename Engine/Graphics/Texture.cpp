@@ -282,7 +282,7 @@ void KTexture::SetFromExisting(ID3D11Texture2D* InTexture, ID3D11ShaderResourceV
 {
     if (InTexture)
     {
-        Texture = InTexture;
+        Texture.Attach(InTexture);
         D3D11_TEXTURE2D_DESC desc;
         InTexture->GetDesc(&desc);
         Width = desc.Width;
@@ -292,7 +292,7 @@ void KTexture::SetFromExisting(ID3D11Texture2D* InTexture, ID3D11ShaderResourceV
     
     if (InSRV)
     {
-        ShaderResourceView = InSRV;
+        ShaderResourceView.Attach(InSRV);
     }
 }
 

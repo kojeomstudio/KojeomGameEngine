@@ -845,7 +845,7 @@ HRESULT KIBLSystem::ConvoluteToIrradiance()
         TransformData.MipLevel = 0;
         TransformData.Padding = XMFLOAT2(0.0f, 0.0f);
 
-        Context->UpdateSubresource(TransformBuffer.Get(), 0, nullptr, &TransformData, 0, 0);
+        (void)Context->UpdateSubresource(TransformBuffer.Get(), 0, nullptr, &TransformData, 0, 0);
         Context->VSSetConstantBuffers(0, 1, TransformBuffer.GetAddressOf());
         Context->PSSetConstantBuffers(0, 1, TransformBuffer.GetAddressOf());
 
@@ -988,7 +988,7 @@ HRESULT KIBLSystem::ConvoluteToPrefiltered()
             TransformData.MipLevel = mip;
             TransformData.Padding = XMFLOAT2(0.0f, 0.0f);
 
-            Context->UpdateSubresource(TransformBuffer.Get(), 0, nullptr, &TransformData, 0, 0);
+            (void)Context->UpdateSubresource(TransformBuffer.Get(), 0, nullptr, &TransformData, 0, 0);
             Context->VSSetConstantBuffers(0, 1, TransformBuffer.GetAddressOf());
             Context->PSSetConstantBuffers(0, 1, TransformBuffer.GetAddressOf());
 

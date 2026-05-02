@@ -42,6 +42,7 @@ int main(int argc, char* argv[])
     Runner.AddTest("smoke", CLITest::TestSmokeMode);
     Runner.AddTest("validate-assets", CLITest::TestValidateAssets);
     Runner.AddTest("scene-dump", CLITest::TestSceneDump);
+    Runner.AddTest("render-test", CLITest::TestRenderTest);
 
     std::string ResultJsonPath = CLIUtils::GetOption(Args, "result-json");
     if (!ResultJsonPath.empty())
