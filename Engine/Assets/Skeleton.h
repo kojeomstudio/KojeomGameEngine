@@ -43,6 +43,7 @@ public:
     KSkeleton& operator=(const KSkeleton&) = delete;
 
     uint32 AddBone(const FBone& Bone);
+    static constexpr uint32 INVALID_BONE_INDEX_U32 = static_cast<uint32>(-1);
     uint32 GetBoneCount() const { return static_cast<uint32>(Bones.size()); }
     
     int32 GetBoneIndex(const std::string& Name) const;

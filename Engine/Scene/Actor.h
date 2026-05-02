@@ -93,7 +93,7 @@ public:
     void SetName(const std::string& InName) { Name = InName; }
     const std::string& GetName() const { return Name; }
 
-    void SetWorldTransform(const FTransform& InTransform) { WorldTransform = InTransform; bTransformDirty = true; }
+    void SetWorldTransform(const FTransform& InTransform);
     const FTransform& GetWorldTransform() const { return WorldTransform; }
     FTransform& GetWorldTransformMutable() { return WorldTransform; }
 
@@ -122,6 +122,7 @@ public:
 
     void Serialize(KBinaryArchive& Archive);
     void Deserialize(KBinaryArchive& Archive);
+    void RegisterWithSceneRecursive(class KScene* Scene);
 
 protected:
     std::string Name;
@@ -136,6 +137,7 @@ protected:
 
 class KScene
 {
+    friend class KActor;
 public:
     KScene() = default;
     ~KScene() = default;
@@ -178,4 +180,7 @@ private:
     std::string Name;
     std::vector<ActorPtr> Actors;
     std::unordered_map<std::string, ActorPtr> ActorMap;
+
+    void RemoveActorRecursive(ActorPtr Actor);
+    void RegisterActor(ActorPtr Actor);
 };

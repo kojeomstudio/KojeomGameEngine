@@ -17,6 +17,8 @@ public:
     void SetStaticMesh(std::shared_ptr<KStaticMesh> InMesh);
     std::shared_ptr<KStaticMesh> GetStaticMesh() const { return StaticMesh; }
 
+    HRESULT CreateDeviceResources(ID3D11Device* Device);
+
     void SetShader(std::shared_ptr<KShaderProgram> InShader) { Shader = InShader; }
     std::shared_ptr<KShaderProgram> GetShader() const { return Shader; }
 

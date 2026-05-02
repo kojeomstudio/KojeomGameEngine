@@ -17,6 +17,11 @@ void KAnimationInstance::PlayAnimation(const std::string& Name, std::shared_ptr<
     CurrentState.CurrentTime = 0.0f;
     CurrentState.bReverse = false;
 
+    bRootMotionInitialized = false;
+    PreviousRootPosition = XMFLOAT3(0, 0, 0);
+    PreviousRootRotation = XMFLOAT4(0, 0, 0, 1);
+    LastRootMotion = FRootMotionData();
+
     if (Anim->IsValid() && Skeleton)
     {
         Anim->BuildBoneIndexMap(Skeleton);

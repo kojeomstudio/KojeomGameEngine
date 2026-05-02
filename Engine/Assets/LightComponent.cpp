@@ -152,7 +152,15 @@ void KLightComponent::Deserialize(KBinaryArchive& Archive)
     KActorComponent::Deserialize(Archive);
     uint32 lightTypeVal = 0;
     Archive >> lightTypeVal;
-    LightType = static_cast<ELightType>(lightTypeVal);
+    if (lightTypeVal > static_cast<uint32>(ELightType::Spot))
+    {
+        LOG_ERROR("LightComponent::Deserialize: invalid light type: " + std::to_string(lightTypeVal));
+        LightType = ELightType::Directional;
+    }
+    else
+    {
+        LightType = static_cast<ELightType>(lightTypeVal);
+    }
     Archive >> bCastShadow;
 
     switch (LightType)

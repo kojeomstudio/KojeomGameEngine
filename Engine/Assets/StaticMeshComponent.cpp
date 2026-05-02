@@ -35,6 +35,25 @@ void KStaticMeshComponent::SetStaticMesh(std::shared_ptr<KStaticMesh> InMesh)
     StaticMesh = InMesh;
 }
 
+HRESULT KStaticMeshComponent::CreateDeviceResources(ID3D11Device* Device)
+{
+    if (!Device || !StaticMesh) return S_OK;
+
+    std::wstring sourcePath = StaticMesh->GetSourcePath();
+    if (!sourcePath.empty() && !StaticMesh->GetRenderMesh(0))
+    {
+        HRESULT hr = StaticMesh->LoadFromFile(sourcePath, Device);
+        if (FAILED(hr))
+        {
+            LOG_ERROR("StaticMeshComponent::CreateDeviceResources: failed to load mesh from: " + StringUtils::WideToMultiByte(sourcePath));
+            return hr;
+        }
+        LOG_INFO("StaticMeshComponent::CreateDeviceResources: loaded mesh from: " + StringUtils::WideToMultiByte(sourcePath));
+    }
+
+    return S_OK;
+}
+
 void KStaticMeshComponent::Serialize(KBinaryArchive& Archive)
 {
     KActorComponent::Serialize(Archive);
@@ -107,5 +126,6 @@ void KStaticMeshComponent::Deserialize(KBinaryArchive& Archive)
             mesh->SetSourcePath(StringUtils::MultiByteToWide(meshSourcePath));
         }
         StaticMesh = mesh;
+        LOG_INFO("StaticMeshComponent::Deserialize: mesh '" + meshPath + "' queued for deferred GPU resource creation");
     }
 }

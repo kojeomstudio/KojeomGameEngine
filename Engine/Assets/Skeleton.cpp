@@ -41,7 +41,7 @@ uint32 KSkeleton::AddBone(const FBone& Bone)
     if (Bones.size() >= MAX_BONES)
     {
         LOG_ERROR("Cannot add bone: maximum bone count (" + std::to_string(MAX_BONES) + ") reached");
-        return INVALID_BONE_INDEX;
+        return INVALID_BONE_INDEX_U32;
     }
     uint32 index = static_cast<uint32>(Bones.size());
     Bones.push_back(Bone);

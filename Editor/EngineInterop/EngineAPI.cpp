@@ -673,6 +673,7 @@ extern "C"
         for (auto idx : CubeIndices) indices.push_back(idx);
 
         staticMesh->AddLOD(vertices, indices);
+        staticMesh->CalculateBounds();
         smc->SetStaticMesh(staticMesh);
         return staticMesh.get();
     }
@@ -1568,6 +1569,7 @@ extern "C"
 
     static thread_local std::string tl_animSMStateName;
     static thread_local std::string tl_animSMPrevStateName;
+    static thread_local std::string tl_animSMStateNameByIndex;
 
     ENGINEAPI void* AnimStateMachine_Create()
     {
@@ -1627,8 +1629,8 @@ extern "C"
         {
             if (i == index)
             {
-                tl_animSMStateName = name;
-                return tl_animSMStateName.c_str();
+                tl_animSMStateNameByIndex = name;
+                return tl_animSMStateNameByIndex.c_str();
             }
             ++i;
         }
@@ -1801,6 +1803,11 @@ extern "C"
     ENGINEAPI void Terrain_SetHeightMapFromRaw(void* terrain, const wchar_t* path, int width, int height)
     {
         if (!terrain || !path) return;
+        if (PathUtils::ContainsTraversal(path))
+        {
+            LOG_ERROR("Terrain_SetHeightMapFromRaw: path traversal detected");
+            return;
+        }
         auto* t = static_cast<KTerrain*>(terrain);
         auto heightMap = std::make_shared<KHeightMap>();
         HRESULT hr = heightMap->LoadFromRawFile(path, static_cast<UINT32>(width), static_cast<UINT32>(height));

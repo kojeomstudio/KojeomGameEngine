@@ -65,6 +65,7 @@ public:
     void CalculateBounds();
 
     bool IsValid() const { return !LODs.empty() && !LODs[0].Vertices.empty(); }
+    const std::vector<FMeshLOD>& GetLODs() const { return LODs; }
 
     void Cleanup();
 

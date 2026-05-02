@@ -195,7 +195,8 @@ public class SceneViewModel : ViewModelBase
 
         if (_undoRedo != null)
         {
-            _undoRedo.ExecuteAction(new AddItemAction<ActorViewModel>(Actors, actor));
+            var scenePtr = _activeScenePtr;
+            _undoRedo.ExecuteAction(new AddActorAction(Actors, actor, scenePtr, _engine));
         }
         else
         {
@@ -211,11 +212,16 @@ public class SceneViewModel : ViewModelBase
 
         if (_undoRedo != null)
         {
-            _undoRedo.ExecuteAction(new RemoveItemAction<ActorViewModel>(Actors, actor));
+            var scenePtr = _activeScenePtr;
+            _undoRedo.ExecuteAction(new RemoveActorAction(Actors, actor, scenePtr, _engine));
         }
         else
         {
             Actors.Remove(actor);
+            if (_engine != null && actor.NativePtr != IntPtr.Zero && _activeScenePtr != IntPtr.Zero)
+            {
+                _engine.DestroyActor(_activeScenePtr, actor.NativePtr);
+            }
         }
 
         if (SelectedActor == actor)
@@ -344,6 +350,7 @@ public class SceneViewModel : ViewModelBase
     private void OnActorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (_engine == null || !_engine.IsInitialized) return;
+        if (_isUndoRedoInProgress) return;
         if (sender is not ActorViewModel actor || actor.NativePtr == IntPtr.Zero) return;
 
         switch (e.PropertyName)
@@ -352,60 +359,54 @@ public class SceneViewModel : ViewModelBase
             case nameof(ActorViewModel.PositionY):
             case nameof(ActorViewModel.PositionZ):
             {
-                if (!_isUndoRedoInProgress && _undoRedo != null)
+                var newValues = (actor.PositionX, actor.PositionY, actor.PositionZ);
+                var (oldX, oldY, oldZ) = _engine.GetActorPosition(actor.NativePtr);
+                if ((oldX, oldY, oldZ) != newValues)
                 {
-                    var (oldX, oldY, oldZ) = _engine.GetActorPosition(actor.NativePtr);
-                    var newValues = (actor.PositionX, actor.PositionY, actor.PositionZ);
-                    if ((oldX, oldY, oldZ) != newValues)
+                    _engine.SetActorPosition(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3);
+                    if (_undoRedo != null)
                     {
-                        _engine.SetActorPosition(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3);
                         _undoRedo.ExecuteAction(new SetPropertyAction<(float, float, float)>(
                             actor, "Position", (oldX, oldY, oldZ), newValues,
                             v => { actor.PositionX = v.Item1; actor.PositionY = v.Item2; actor.PositionZ = v.Item3; }));
-                        break;
                     }
                 }
-                _engine.SetActorPosition(actor.NativePtr, actor.PositionX, actor.PositionY, actor.PositionZ);
                 break;
             }
             case nameof(ActorViewModel.RotationX):
             case nameof(ActorViewModel.RotationY):
             case nameof(ActorViewModel.RotationZ):
             {
-                if (!_isUndoRedoInProgress && _undoRedo != null)
+                var newValues = (actor.RotationX, actor.RotationY, actor.RotationZ);
+                _engine.GetActorRotation(actor.NativePtr, out float oldRx, out float oldRy, out float oldRz, out _);
+                if ((oldRx, oldRy, oldRz) != newValues)
                 {
-                    _engine.GetActorRotation(actor.NativePtr, out float oldRx, out float oldRy, out float oldRz, out _);
-                    var newValues = (actor.RotationX, actor.RotationY, actor.RotationZ);
-                    if ((oldRx, oldRy, oldRz) != newValues)
+                    _engine.SetActorRotation(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3, actor.RotationW);
+                    if (_undoRedo != null)
                     {
-                        _engine.SetActorRotation(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3, actor.RotationW);
                         _undoRedo.ExecuteAction(new SetPropertyAction<(float, float, float)>(
                             actor, "Rotation", (oldRx, oldRy, oldRz), newValues,
                             v => { actor.RotationX = v.Item1; actor.RotationY = v.Item2; actor.RotationZ = v.Item3; }));
-                        break;
                     }
                 }
-                _engine.SetActorRotation(actor.NativePtr, actor.RotationX, actor.RotationY, actor.RotationZ, actor.RotationW);
                 break;
             }
             case nameof(ActorViewModel.ScaleX):
             case nameof(ActorViewModel.ScaleY):
             case nameof(ActorViewModel.ScaleZ):
             {
-                if (!_isUndoRedoInProgress && _undoRedo != null)
+                var newValues = (actor.ScaleX, actor.ScaleY, actor.ScaleZ);
+                _engine.GetActorScale(actor.NativePtr, out float oldSx, out float oldSy, out float oldSz);
+                if ((oldSx, oldSy, oldSz) != newValues)
                 {
-                    _engine.GetActorScale(actor.NativePtr, out float oldSx, out float oldSy, out float oldSz);
-                    var newValues = (actor.ScaleX, actor.ScaleY, actor.ScaleZ);
-                    if ((oldSx, oldSy, oldSz) != newValues)
+                    _engine.SetActorScale(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3);
+                    if (_undoRedo != null)
                     {
-                        _engine.SetActorScale(actor.NativePtr, newValues.Item1, newValues.Item2, newValues.Item3);
                         _undoRedo.ExecuteAction(new SetPropertyAction<(float, float, float)>(
                             actor, "Scale", (oldSx, oldSy, oldSz), newValues,
                             v => { actor.ScaleX = v.Item1; actor.ScaleY = v.Item2; actor.ScaleZ = v.Item3; }));
-                        break;
                     }
                 }
-                _engine.SetActorScale(actor.NativePtr, actor.ScaleX, actor.ScaleY, actor.ScaleZ);
                 break;
             }
             case nameof(ActorViewModel.Name):
@@ -530,5 +531,110 @@ public class ActorViewModel : ViewModelBase
     public void RemoveComponent(ComponentViewModel component)
     {
         Components.Remove(component);
+    }
+}
+
+public class AddActorAction : IUndoableAction
+{
+    private readonly IList<ActorViewModel> _collection;
+    private readonly ActorViewModel _item;
+    private readonly int _index;
+    private readonly IntPtr _scenePtr;
+    private readonly EngineInterop? _engine;
+
+    public string Description => $"Add Actor {_item?.Name ?? "item"}";
+
+    public AddActorAction(IList<ActorViewModel> collection, ActorViewModel item, IntPtr scenePtr, EngineInterop? engine)
+    {
+        _collection = collection;
+        _item = item;
+        _index = collection.Count;
+        _scenePtr = scenePtr;
+        _engine = engine;
+    }
+
+    public void Undo()
+    {
+        if (_collection.Contains(_item))
+        {
+            _collection.Remove(_item);
+        }
+        if (_engine != null && _item.NativePtr != IntPtr.Zero && _scenePtr != IntPtr.Zero)
+        {
+            _engine.DestroyActor(_scenePtr, _item.NativePtr);
+        }
+    }
+
+    public void Redo()
+    {
+        if (!_collection.Contains(_item))
+        {
+            if (_index >= 0 && _index <= _collection.Count)
+            {
+                _collection.Insert(_index, _item);
+            }
+            else
+            {
+                _collection.Add(_item);
+            }
+        }
+        if (_item.NativePtr == IntPtr.Zero && _engine != null && _scenePtr != IntPtr.Zero)
+        {
+            var nativePtr = _engine.CreateActor(_scenePtr, _item.Name);
+            _item.NativePtr = nativePtr;
+        }
+    }
+}
+
+public class RemoveActorAction : IUndoableAction
+{
+    private readonly IList<ActorViewModel> _collection;
+    private readonly ActorViewModel _item;
+    private int _originalIndex;
+    private readonly IntPtr _scenePtr;
+    private readonly EngineInterop? _engine;
+
+    public string Description => $"Remove Actor {_item?.Name ?? "item"}";
+
+    public RemoveActorAction(IList<ActorViewModel> collection, ActorViewModel item, IntPtr scenePtr, EngineInterop? engine)
+    {
+        _collection = collection;
+        _item = item;
+        _originalIndex = collection.IndexOf(item);
+        _scenePtr = scenePtr;
+        _engine = engine;
+    }
+
+    public void Undo()
+    {
+        if (!_collection.Contains(_item))
+        {
+            if (_originalIndex >= 0 && _originalIndex <= _collection.Count)
+            {
+                _collection.Insert(_originalIndex, _item);
+            }
+            else
+            {
+                _collection.Add(_item);
+            }
+        }
+        if (_item.NativePtr == IntPtr.Zero && _engine != null && _scenePtr != IntPtr.Zero)
+        {
+            var nativePtr = _engine.CreateActor(_scenePtr, _item.Name);
+            _item.NativePtr = nativePtr;
+        }
+    }
+
+    public void Redo()
+    {
+        _originalIndex = _collection.IndexOf(_item);
+        if (_collection.Contains(_item))
+        {
+            _collection.Remove(_item);
+        }
+        if (_engine != null && _item.NativePtr != IntPtr.Zero && _scenePtr != IntPtr.Zero)
+        {
+            _engine.DestroyActor(_scenePtr, _item.NativePtr);
+        }
     }
 }

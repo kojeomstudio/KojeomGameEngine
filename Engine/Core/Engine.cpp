@@ -216,6 +216,8 @@ void KEngine::Shutdown()
 
     bIsRunning = false;
 
+    SceneManager.UnloadAllScenes();
+
     // Shutdown all registered subsystems (in reverse order)
     SubsystemRegistry.ShutdownAll();
 

@@ -284,21 +284,20 @@ void KBlendTree::BlendChildMatrices(const std::vector<std::vector<XMMATRIX>>& Al
             AccScale = XMVectorAdd(AccScale, XMVectorScale(S, W));
             AccTrans = XMVectorAdd(AccTrans, XMVectorScale(T, W));
 
+            float rotDot4 = XMVectorGetX(XMVector4Dot(AccRot, R));
+            if (rotDot4 < 0.0f)
+            {
+                R = XMVectorNegate(R);
+            }
+
             if (bFirst)
             {
-                AccRot = R;
+                AccRot = XMVectorScale(R, W);
                 bFirst = false;
             }
             else
             {
-                float dot4 = XMVectorGetX(XMVector4Dot(AccRot, R));
-                if (dot4 < 0.0f)
-                {
-                    R = XMVectorNegate(R);
-                }
-                float blendT = W / (TotalWeight + W);
-                AccRot = XMQuaternionSlerp(AccRot, R, blendT);
-                AccRot = XMQuaternionNormalize(AccRot);
+                AccRot = XMVectorAdd(AccRot, XMVectorScale(R, W));
             }
 
             TotalWeight += W;
@@ -308,6 +307,7 @@ void KBlendTree::BlendChildMatrices(const std::vector<std::vector<XMMATRIX>>& Al
         {
             AccScale = XMVectorScale(AccScale, 1.0f / TotalWeight);
             AccTrans = XMVectorScale(AccTrans, 1.0f / TotalWeight);
+            AccRot = XMQuaternionNormalize(AccRot);
 
             OutMatrices[BoneIdx] = XMMatrixScalingFromVector(AccScale) *
                                    XMMatrixRotationQuaternion(AccRot) *

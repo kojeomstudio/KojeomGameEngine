@@ -1331,7 +1331,11 @@ std::shared_ptr<KStaticMesh> KModelLoader::ProcessMesh(void* AssimpMesh, void* A
         auto skeletalMesh = std::make_shared<KSkeletalMesh>();
         skeletalMesh->CreateFromData(Device, skinnedVertices, indices);
         skeletalMesh->SetName(meshName);
-        OutModel->SkeletalMesh = skeletalMesh;
+        OutModel->SkeletalMeshes.push_back(skeletalMesh);
+        if (!OutModel->SkeletalMesh)
+        {
+            OutModel->SkeletalMesh = skeletalMesh;
+        }
     }
     else
     {

@@ -133,6 +133,28 @@ XMMATRIX KActor::GetWorldMatrix() const
     return localMatrix;
 }
 
+void KActor::SetWorldTransform(const FTransform& InTransform)
+{
+    WorldTransform = InTransform;
+    if (Parent)
+    {
+        XMMATRIX parentWorld = Parent->GetWorldMatrix();
+        XMMATRIX parentInv = XMMatrixInverse(nullptr, parentWorld);
+        XMMATRIX worldMat = InTransform.ToMatrix();
+        XMMATRIX localMat = worldMat * parentInv;
+        XMVECTOR scale, rotQuat, trans;
+        XMMatrixDecompose(&scale, &rotQuat, &trans, localMat);
+        XMStoreFloat3(&LocalTransform.Position, trans);
+        XMStoreFloat4(&LocalTransform.Rotation, rotQuat);
+        XMStoreFloat3(&LocalTransform.Scale, scale);
+    }
+    else
+    {
+        LocalTransform = InTransform;
+    }
+    bTransformDirty = true;
+}
+
 void KActor::AddComponent(ComponentPtr Component)
 {
     if (Component)
@@ -315,6 +337,20 @@ void KActor::Deserialize(KBinaryArchive& Archive)
     }
 }
 
+void KActor::RegisterWithSceneRecursive(KScene* Scene)
+{
+    if (!Scene) return;
+
+    for (auto& child : Children)
+    {
+        if (!child->GetName().empty())
+        {
+            Scene->RegisterActor(child);
+        }
+        child->RegisterWithSceneRecursive(Scene);
+    }
+}
+
 HRESULT KScene::Load(const std::wstring& Path)
 {
     if (PathUtils::ContainsTraversal(Path))
@@ -360,6 +396,14 @@ HRESULT KScene::Load(const std::wstring& Path)
         auto actor = std::make_shared<KActor>();
         actor->Deserialize(Archive);
         AddActor(actor);
+    }
+
+    for (auto& actor : Actors)
+    {
+        if (!actor->GetParent())
+        {
+            actor->RegisterWithSceneRecursive(this);
+        }
     }
 
     Archive.Close();
@@ -480,24 +524,7 @@ void KScene::RemoveActor(const std::string& ActorName)
         auto childrenCopy = actor->GetChildren();
         for (auto& child : childrenCopy)
         {
-            child->SetParent(nullptr);
-            const std::string& childName = child->GetName();
-            if (!childName.empty())
-            {
-                auto childIt = ActorMap.find(childName);
-                if (childIt != ActorMap.end() && childIt->second == child)
-                {
-                    ActorMap.erase(childIt);
-                }
-            }
-            for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
-            {
-                if (*ait == child)
-                {
-                    ait = Actors.erase(ait);
-                    break;
-                }
-            }
+            RemoveActorRecursive(child);
         }
 
         ActorMap.erase(it);
@@ -545,6 +572,52 @@ void KScene::Clear()
 {
     Actors.clear();
     ActorMap.clear();
+}
+
+void KScene::RemoveActorRecursive(ActorPtr Actor)
+{
+    if (!Actor) return;
+
+    auto childrenCopy = Actor->GetChildren();
+    for (auto& child : childrenCopy)
+    {
+        RemoveActorRecursive(child);
+    }
+
+    const std::string& actorName = Actor->GetName();
+    if (!actorName.empty())
+    {
+        auto it = ActorMap.find(actorName);
+        if (it != ActorMap.end() && it->second == Actor)
+        {
+            ActorMap.erase(it);
+        }
+    }
+
+    for (auto ait = Actors.begin(); ait != Actors.end(); ++ait)
+    {
+        if (*ait == Actor)
+        {
+            ait = Actors.erase(ait);
+            break;
+        }
+    }
+}
+
+void KScene::RegisterActor(ActorPtr Actor)
+{
+    if (!Actor) return;
+
+    const std::string& actorName = Actor->GetName();
+    if (!actorName.empty())
+    {
+        ActorMap[actorName] = Actor;
+    }
+
+    for (auto& child : Actor->GetChildren())
+    {
+        RegisterActor(child);
+    }
 }
 
 

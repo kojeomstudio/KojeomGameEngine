@@ -31,6 +31,15 @@ public class UndoRedoService
 
     public void ExecuteAction(IUndoableAction action)
     {
+        _undoStack.Push(action);
+        _redoStack.Clear();
+
+        TrimHistory();
+        OnStateChanged();
+    }
+
+    public void ExecuteActionWithRedo(IUndoableAction action)
+    {
         action.Redo();
         _undoStack.Push(action);
         _redoStack.Clear();
