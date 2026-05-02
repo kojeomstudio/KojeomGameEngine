@@ -13,7 +13,37 @@ void KStaticMeshComponent::Render(KRenderer* Renderer)
         return;
 
     XMMATRIX worldMatrix = GetOwner()->GetWorldMatrix();
-    std::shared_ptr<KMesh> renderMesh = StaticMesh->GetRenderMeshShared(0);
+
+    uint32 selectedLOD = 0;
+    if (StaticMesh->GetLODCount() > 1)
+    {
+        KCamera* camera = Renderer->GetCamera();
+        if (camera && StaticMesh->GetBoundingSphere().Radius > 0.0f)
+        {
+            XMFLOAT3 actorPos;
+            XMStoreFloat3(&actorPos, GetOwner()->GetWorldMatrix().r[3]);
+            XMVECTOR camPos = XMLoadFloat3(&camera->GetPosition());
+            XMVECTOR actPos = XMLoadFloat3(&actorPos);
+            float distance = XMVectorGetX(XMVector3Length(camPos - actPos));
+
+            uint32 lodCount = StaticMesh->GetLODCount();
+            for (uint32 i = 0; i < lodCount; ++i)
+            {
+                const FMeshLOD* lod = StaticMesh->GetLOD(i);
+                if (lod && distance <= lod->Distance && lod->Distance > 0.0f)
+                {
+                    selectedLOD = i;
+                    break;
+                }
+                if (i == lodCount - 1)
+                {
+                    selectedLOD = i;
+                }
+            }
+        }
+    }
+
+    std::shared_ptr<KMesh> renderMesh = StaticMesh->GetRenderMeshShared(selectedLOD);
     
     if (!renderMesh)
         return;

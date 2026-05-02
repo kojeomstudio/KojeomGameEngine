@@ -125,12 +125,24 @@ void KActor::SetWorldScale(const XMFLOAT3& Scale)
 
 XMMATRIX KActor::GetWorldMatrix() const
 {
+    if (!bTransformDirty && bWorldMatrixCached)
+    {
+        return CachedWorldMatrix;
+    }
+
     XMMATRIX localMatrix = LocalTransform.ToMatrix();
     if (Parent)
     {
-        return localMatrix * Parent->GetWorldMatrix();
+        CachedWorldMatrix = localMatrix * Parent->GetWorldMatrix();
     }
-    return localMatrix;
+    else
+    {
+        CachedWorldMatrix = localMatrix;
+    }
+
+    bWorldMatrixCached = true;
+    bTransformDirty = false;
+    return CachedWorldMatrix;
 }
 
 void KActor::SetWorldTransform(const FTransform& InTransform)
@@ -153,6 +165,16 @@ void KActor::SetWorldTransform(const FTransform& InTransform)
         LocalTransform = InTransform;
     }
     bTransformDirty = true;
+}
+
+void KActor::InvalidateChildTransforms()
+{
+    for (auto& child : Children)
+    {
+        child->bTransformDirty = true;
+        child->bWorldMatrixCached = false;
+        child->InvalidateChildTransforms();
+    }
 }
 
 void KActor::AddComponent(ComponentPtr Component)
@@ -187,6 +209,8 @@ void KActor::SetParent(KActor* InParent)
     }
 
     Parent = InParent;
+    bTransformDirty = true;
+    bWorldMatrixCached = false;
 
     if (InParent)
     {

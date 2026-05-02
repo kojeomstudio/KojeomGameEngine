@@ -12,13 +12,16 @@
 
 enum class EBlendTreeType
 {
-    BlendTree1D
+    BlendTree1D,
+    BlendTree2D
 };
 
 struct FBlendTreeChild
 {
     std::shared_ptr<KAnimation> Animation;
     float ParameterValue;
+    float ParameterValueX;
+    float ParameterValueY;
     float CurrentTime;
     float Speed;
     bool bLooping;
@@ -27,6 +30,8 @@ struct FBlendTreeChild
 
     FBlendTreeChild()
         : ParameterValue(0.0f)
+        , ParameterValueX(0.0f)
+        , ParameterValueY(0.0f)
         , CurrentTime(0.0f)
         , Speed(1.0f)
         , bLooping(true)
@@ -49,16 +54,21 @@ public:
     void SetParameterName(const std::string& InName) { ParameterName = InName; }
     const std::string& GetParameterName() const { return ParameterName; }
 
+    void SetParameterNameY(const std::string& InName) { ParameterNameY = InName; }
+    const std::string& GetParameterNameY() const { return ParameterNameY; }
+
     void SetType(EBlendTreeType InType) { Type = InType; }
     EBlendTreeType GetType() const { return Type; }
 
     int AddChild(std::shared_ptr<KAnimation> Anim, float ParameterValue);
+    int AddChild2D(std::shared_ptr<KAnimation> Anim, float ParameterValueX, float ParameterValueY);
     void RemoveChild(int Index);
     int GetChildCount() const { return static_cast<int>(Children.size()); }
     const FBlendTreeChild* GetChild(int Index) const;
     FBlendTreeChild* GetChildMutable(int Index);
 
     void Update(float DeltaTime, float ParameterValue);
+    void Update2D(float DeltaTime, float ParameterValueX, float ParameterValueY);
 
     const std::vector<XMMATRIX>& GetBoneMatrices() const { return BlendedBoneMatrices; }
     const XMMATRIX* GetBoneMatrixData() const { return BlendedBoneMatrices.empty() ? nullptr : BlendedBoneMatrices.data(); }
@@ -70,6 +80,7 @@ public:
 
 private:
     void ComputeWeights(float ParameterValue);
+    void ComputeWeights2D(float ParameterValueX, float ParameterValueY);
     void EvaluateChild(FBlendTreeChild& Child, std::vector<XMMATRIX>& OutMatrices);
     void BlendChildMatrices(const std::vector<std::vector<XMMATRIX>>& AllMatrices,
                             const std::vector<float>& Weights,
@@ -78,6 +89,7 @@ private:
 private:
     KSkeleton* Skeleton = nullptr;
     std::string ParameterName;
+    std::string ParameterNameY;
     EBlendTreeType Type = EBlendTreeType::BlendTree1D;
     std::vector<FBlendTreeChild> Children;
     std::vector<XMMATRIX> BlendedBoneMatrices;

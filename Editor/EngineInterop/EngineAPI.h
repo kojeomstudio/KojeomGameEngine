@@ -194,6 +194,12 @@ extern "C"
     ENGINEAPI void BlendTree_RemoveChild(void* blendTree, int index);
     ENGINEAPI int BlendTree_GetChildCount(void* blendTree);
     ENGINEAPI void BlendTree_Update(void* blendTree, float deltaTime, float parameterValue);
+    ENGINEAPI void BlendTree_SetType(void* blendTree, int type);
+    ENGINEAPI int BlendTree_GetType(void* blendTree);
+    ENGINEAPI void BlendTree_SetParameterNameY(void* blendTree, const char* name);
+    ENGINEAPI const char* BlendTree_GetParameterNameY(void* blendTree);
+    ENGINEAPI int BlendTree_AddChild2D(void* blendTree, void* animation, float parameterValueX, float parameterValueY);
+    ENGINEAPI void BlendTree_Update2D(void* blendTree, float deltaTime, float parameterValueX, float parameterValueY);
     ENGINEAPI int BlendTree_GetBoneMatrixCount(void* blendTree);
     ENGINEAPI const float* BlendTree_GetBoneMatrixData(void* blendTree);
     ENGINEAPI float BlendTree_GetChildWeight(void* blendTree, int index);

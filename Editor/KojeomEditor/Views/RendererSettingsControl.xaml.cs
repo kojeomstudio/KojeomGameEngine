@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using KojeomEditor.Services;
+using Microsoft.Win32;
 
 namespace KojeomEditor.Views;
 
@@ -136,6 +137,33 @@ public partial class RendererSettingsControl : UserControl
         if (Engine != null && ShowAxis)
         {
             Engine.DebugRendererDrawAxis(0, 0.01f, 0, 2.0f);
+        }
+    }
+
+    private void OnLoadEnvMapClick(object sender, RoutedEventArgs e)
+    {
+        if (Engine == null) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "Select HDR Environment Map",
+            Filter = "HDR Files|*.hdr;*.hdrl|All Files|*.*",
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            int result = Engine.LoadEnvironmentMap(dialog.FileName);
+            if (result >= 0)
+            {
+                TextBlockEnvMapPath.Text = System.IO.Path.GetFileName(dialog.FileName);
+                CheckBoxIBL.IsChecked = true;
+            }
+            else
+            {
+                MessageBox.Show($"Failed to load environment map: {dialog.FileName}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
     }
 }

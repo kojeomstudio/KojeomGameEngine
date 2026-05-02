@@ -264,14 +264,19 @@ void KRenderer::RenderMeshPBR(std::shared_ptr<KMesh> InMesh, const XMMATRIX& Wor
         Context->PSSetConstantBuffers(4, 1, DefaultMaterialBuffer.GetAddressOf());
     }
 
+    if (bIBLEnabled && IBLSystem.HasEnvironmentMap())
+    {
+        IBLSystem.Bind(Context, 10);
+    }
+
     InMesh->Render(Context);
 
     DrawCallCount++;
     VertexCount += static_cast<int32>(InMesh->GetVertexCount());
     TriangleCount += static_cast<int32>(InMesh->GetIndexCount()) / 3;
 
-    ID3D11ShaderResourceView* nullSRVs[10] = {};
-    Context->PSSetShaderResources(0, 10, nullSRVs);
+    ID3D11ShaderResourceView* nullSRVs[13] = {};
+    Context->PSSetShaderResources(0, 13, nullSRVs);
 
     PBRShader->Unbind(Context);
 }
@@ -455,14 +460,19 @@ void KRenderer::RenderSkeletalMeshPBR(KSkeletalMesh* InMesh, const XMMATRIX& Wor
         Context->PSSetConstantBuffers(4, 1, DefaultMaterialBuffer.GetAddressOf());
     }
 
+    if (bIBLEnabled && IBLSystem.HasEnvironmentMap())
+    {
+        IBLSystem.Bind(Context, 10);
+    }
+
     InMesh->Render(Context);
 
     DrawCallCount++;
     VertexCount += static_cast<int32>(InMesh->GetVertexCount());
     TriangleCount += static_cast<int32>(InMesh->GetIndexCount()) / 3;
 
-    ID3D11ShaderResourceView* nullSRVs[10] = {};
-    Context->PSSetShaderResources(0, 10, nullSRVs);
+    ID3D11ShaderResourceView* nullSRVs[13] = {};
+    Context->PSSetShaderResources(0, 13, nullSRVs);
 
     SkinnedPBRShader->Unbind(Context);
 }

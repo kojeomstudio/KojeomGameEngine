@@ -986,7 +986,12 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
         Texture2D AOMap        : register(t8);
         Texture2D EmissiveMap  : register(t9);
 
+        TextureCube IrradianceMap  : register(t10);
+        TextureCube PrefilteredMap : register(t11);
+        Texture2D   BRDFLUTMap     : register(t12);
+
         SamplerState MaterialSampler : register(s1);
+        SamplerState IBL_Sampler     : register(s2);
 
         struct VS_INPUT
         {
@@ -1055,6 +1060,26 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
         float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
         {
             return F0 + (max((1.0f - roughness).rrr, F0) - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+        }
+
+        float3 CalculateIBL(float3 N, float3 V, float3 albedo, float metallic, float roughness, float ao)
+        {
+            float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+            float3 R = reflect(-V, N);
+            float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0f), F0, roughness);
+
+            float3 kS = F;
+            float3 kD = (1.0f - kS) * (1.0f - metallic);
+
+            float3 irradiance = IrradianceMap.Sample(IBL_Sampler, N).rgb;
+            float3 diffuse = irradiance * albedo;
+
+            const float MAX_REFLECTION_LOD = 4.0f;
+            float3 prefilteredColor = PrefilteredMap.SampleLevel(IBL_Sampler, R, roughness * MAX_REFLECTION_LOD).rgb;
+            float2 brdf = BRDFLUTMap.Sample(MaterialSampler, float2(max(dot(N, V), 0.0f), roughness)).rg;
+            float3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+            return (kD * diffuse + specular) * ao;
         }
 
         float CalculateShadow(float4 shadowPos)
@@ -1206,7 +1231,7 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
                 Lo += (kD * albedo / PI + specular) * radiance * NdotL;
             }
 
-            float3 ambient = AmbientColor.rgb * albedo * ao;
+            float3 ambient = CalculateIBL(N, V, albedo, metallic, roughness, ao);
             float3 emissive = EmissiveColor.rgb * EmissiveIntensity;
             float3 color = ambient + Lo + emissive;
 
@@ -1629,7 +1654,13 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
         Texture2D RoughnessMap : register(t7);
         Texture2D AOMap        : register(t8);
         Texture2D EmissiveMap  : register(t9);
+
+        TextureCube IrradianceMap  : register(t10);
+        TextureCube PrefilteredMap : register(t11);
+        Texture2D   BRDFLUTMap     : register(t12);
+
         SamplerState MaterialSampler : register(s1);
+        SamplerState IBL_Sampler     : register(s2);
 
         struct VS_INPUT
         {
@@ -1730,6 +1761,31 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
         float3 fresnelSchlick(float cosTheta, float3 F0)
         {
             return F0 + (1.0f - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+        }
+
+        float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+        {
+            return F0 + (max((1.0f - roughness).rrr, F0) - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+        }
+
+        float3 CalculateIBL(float3 N, float3 V, float3 albedo, float metallic, float roughness, float ao)
+        {
+            float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+            float3 R = reflect(-V, N);
+            float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0f), F0, roughness);
+
+            float3 kS = F;
+            float3 kD = (1.0f - kS) * (1.0f - metallic);
+
+            float3 irradiance = IrradianceMap.Sample(IBL_Sampler, N).rgb;
+            float3 diffuse = irradiance * albedo;
+
+            const float MAX_REFLECTION_LOD = 4.0f;
+            float3 prefilteredColor = PrefilteredMap.SampleLevel(IBL_Sampler, R, roughness * MAX_REFLECTION_LOD).rgb;
+            float2 brdf = BRDFLUTMap.Sample(MaterialSampler, float2(max(dot(N, V), 0.0f), roughness)).rg;
+            float3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+            return (kD * diffuse + specular) * ao;
         }
 
         float CalculateShadow(float4 shadowPos)
@@ -1853,7 +1909,7 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
                 Lo += (kD * albedo / PI + specular) * radiance * NdotL;
             }
 
-            float3 ambient = AmbientColor.rgb * albedo * ao;
+            float3 ambient = CalculateIBL(N, V, albedo, metallic, roughness, ao);
             float3 emissive = EmissiveColor.rgb * EmissiveIntensity;
             float3 color = ambient + Lo + emissive;
             return color;

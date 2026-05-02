@@ -62,6 +62,7 @@ public:
 
     HRESULT Initialize(KGraphicsDevice* InGraphicsDevice);
 
+    KCamera* GetCamera() const { return CurrentCamera; }
     void BeginFrame(KCamera* InCamera, const float ClearColor[4] = Colors::CornflowerBlue);
     void EndFrame(bool bVSync = true);
 

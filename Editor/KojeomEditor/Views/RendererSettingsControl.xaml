@@ -23,6 +23,11 @@
                 <CheckBox x:Name="CheckBoxShadows" Content="Shadows" Foreground="White" Margin="0,4,0,4" Checked="OnShadowsChanged" Unchecked="OnShadowsChanged"/>
                 <CheckBox x:Name="CheckBoxCascadedShadows" Content="Cascaded Shadows" Foreground="White" Margin="0,4,0,4" Checked="OnCascadedShadowsChanged" Unchecked="OnCascadedShadowsChanged"/>
                 <CheckBox x:Name="CheckBoxIBL" Content="IBL (Image-Based Lighting)" Foreground="White" Margin="0,4,0,4" Checked="OnIBLChanged" Unchecked="OnIBLChanged"/>
+                <StackPanel Orientation="Horizontal" Margin="0,2,0,4">
+                    <TextBlock Text="HDR Environment Map:" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="TextBlockEnvMapPath" Text="(none)" Foreground="#888888" VerticalAlignment="Center" Margin="0,0,8,0" MaxWidth="120" TextTrimming="CharacterEllipsis"/>
+                    <Button x:Name="ButtonLoadEnvMap" Content="Load..." Width="50" Padding="4,2" Click="OnLoadEnvMapClick"/>
+                </StackPanel>
                 <CheckBox x:Name="CheckBoxSky" Content="Sky" Foreground="White" Margin="0,4,0,4" Checked="OnSkyChanged" Unchecked="OnSkyChanged"/>
                 <CheckBox x:Name="CheckBoxTAA" Content="TAA (Temporal Anti-Aliasing)" Foreground="White" Margin="0,4,0,4" Checked="OnTAAChanged" Unchecked="OnTAAChanged"/>
                 <CheckBox x:Name="CheckBoxDebugUI" Content="Debug UI" Foreground="White" Margin="0,4,0,4" Checked="OnDebugUIChanged" Unchecked="OnDebugUIChanged"/>

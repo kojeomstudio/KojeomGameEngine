@@ -1608,9 +1608,22 @@ void KModelLoader::ProcessMaterials(void* AssimpScene, FLoadedModel* OutModel, c
                 std::string texPathStr = texPath.C_Str();
                 std::wstring wideTexPath(modelDir + StringUtils::MultiByteToWide(texPathStr));
 
-                auto texture = std::make_shared<KTexture>();
-                HRESULT texHR = texture->LoadFromFile(Device, wideTexPath.c_str());
-                if (SUCCEEDED(texHR))
+                std::shared_ptr<KTexture> texture;
+                if (TextureManager && Device)
+                {
+                    texture = TextureManager->LoadTexture(Device, wideTexPath);
+                }
+                else
+                {
+                    texture = std::make_shared<KTexture>();
+                    HRESULT texHR = texture->LoadFromFile(Device, wideTexPath.c_str());
+                    if (FAILED(texHR))
+                    {
+                        texture.reset();
+                    }
+                }
+
+                if (texture)
                 {
                     material->SetTexture(slot, texture);
                     return true;

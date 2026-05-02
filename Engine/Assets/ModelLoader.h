@@ -6,6 +6,7 @@
 #include "../Assets/Animation.h"
 #include "../Assets/SkeletalMeshComponent.h"
 #include "../Graphics/Material.h"
+#include "../Graphics/Texture.h"
 #include <future>
 #include <memory>
 #include <vector>
@@ -50,6 +51,7 @@ public:
     void Cleanup();
 
     void SetDevice(ID3D11Device* InDevice) { Device = InDevice; }
+    void SetTextureManager(KTextureManager* InTextureManager) { TextureManager = InTextureManager; }
 
     std::shared_ptr<FLoadedModel> LoadModel(const std::wstring& Path, const FModelLoadOptions& Options = FModelLoadOptions());
     std::future<std::shared_ptr<FLoadedModel>> LoadModelAsync(const std::wstring& Path, const FModelLoadOptions& Options = FModelLoadOptions());
@@ -80,6 +82,7 @@ private:
     std::unordered_map<std::wstring, std::shared_ptr<FLoadedModel>> LoadedModels;
     mutable std::mutex LoadedModelsMutex;
     ID3D11Device* Device = nullptr;
+    KTextureManager* TextureManager = nullptr;
     bool bInitialized = false;
     bool bAssimpAvailable = false;
 };

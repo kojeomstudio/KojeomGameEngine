@@ -103,9 +103,9 @@ public:
 
     XMMATRIX GetWorldMatrix() const;
 
-    void SetLocalPosition(const XMFLOAT3& Position) { LocalTransform.Position = Position; bTransformDirty = true; }
-    void SetLocalRotation(const XMFLOAT4& Rotation) { LocalTransform.Rotation = Rotation; bTransformDirty = true; }
-    void SetLocalScale(const XMFLOAT3& Scale) { LocalTransform.Scale = Scale; bTransformDirty = true; }
+    void SetLocalPosition(const XMFLOAT3& Position) { LocalTransform.Position = Position; bTransformDirty = true; InvalidateChildTransforms(); }
+    void SetLocalRotation(const XMFLOAT4& Rotation) { LocalTransform.Rotation = Rotation; bTransformDirty = true; InvalidateChildTransforms(); }
+    void SetLocalScale(const XMFLOAT3& Scale) { LocalTransform.Scale = Scale; bTransformDirty = true; InvalidateChildTransforms(); }
 
     const FTransform& GetLocalTransform() const { return LocalTransform; }
 
@@ -125,10 +125,14 @@ public:
     void RegisterWithSceneRecursive(class KScene* Scene);
 
 protected:
+    void InvalidateChildTransforms();
+
     std::string Name;
     FTransform WorldTransform;
     FTransform LocalTransform;
-    bool bTransformDirty = false;
+    mutable bool bTransformDirty = true;
+    mutable XMMATRIX CachedWorldMatrix = XMMatrixIdentity();
+    mutable bool bWorldMatrixCached = false;
     std::vector<ComponentPtr> Components;
     KActor* Parent = nullptr;
     std::vector<ActorPtr> Children;

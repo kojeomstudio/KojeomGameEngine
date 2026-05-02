@@ -99,6 +99,8 @@ extern "C"
         HRESULT hr = wrapper->Engine->Initialize(hInst, L"KojeomEditor", width, height);
         if (SUCCEEDED(hr))
         {
+            wrapper->ModelLoader->SetDevice(wrapper->Engine->GetGraphicsDevice()->GetDevice());
+            wrapper->ModelLoader->SetTextureManager(wrapper->Engine->GetRenderer()->GetTextureManager());
             wrapper->ModelLoader->Initialize();
             wrapper->InitializeDebugRenderer();
         }
@@ -115,6 +117,8 @@ extern "C"
         HRESULT hr = wrapper->Engine->InitializeWithExternalHwnd(hwnd, width, height);
         if (SUCCEEDED(hr))
         {
+            wrapper->ModelLoader->SetDevice(wrapper->Engine->GetGraphicsDevice()->GetDevice());
+            wrapper->ModelLoader->SetTextureManager(wrapper->Engine->GetRenderer()->GetTextureManager());
             wrapper->ModelLoader->Initialize();
             wrapper->InitializeDebugRenderer();
         }
@@ -1503,6 +1507,46 @@ extern "C"
     {
         if (!blendTree) return;
         static_cast<KBlendTree*>(blendTree)->Update(deltaTime, parameterValue);
+    }
+
+    ENGINEAPI void BlendTree_SetType(void* blendTree, int type)
+    {
+        if (!blendTree) return;
+        static_cast<KBlendTree*>(blendTree)->SetType(static_cast<EBlendTreeType>(type));
+    }
+
+    ENGINEAPI int BlendTree_GetType(void* blendTree)
+    {
+        if (!blendTree) return 0;
+        return static_cast<int>(static_cast<KBlendTree*>(blendTree)->GetType());
+    }
+
+    ENGINEAPI void BlendTree_SetParameterNameY(void* blendTree, const char* name)
+    {
+        if (!blendTree || !name) return;
+        static_cast<KBlendTree*>(blendTree)->SetParameterNameY(std::string(name));
+    }
+
+    ENGINEAPI const char* BlendTree_GetParameterNameY(void* blendTree)
+    {
+        if (!blendTree) return "";
+        static thread_local std::string result;
+        result = static_cast<KBlendTree*>(blendTree)->GetParameterNameY();
+        return result.c_str();
+    }
+
+    ENGINEAPI int BlendTree_AddChild2D(void* blendTree, void* animation, float parameterValueX, float parameterValueY)
+    {
+        if (!blendTree || !animation) return -1;
+        return static_cast<KBlendTree*>(blendTree)->AddChild2D(
+            *static_cast<std::shared_ptr<KAnimation>*>(animation),
+            parameterValueX, parameterValueY);
+    }
+
+    ENGINEAPI void BlendTree_Update2D(void* blendTree, float deltaTime, float parameterValueX, float parameterValueY)
+    {
+        if (!blendTree) return;
+        static_cast<KBlendTree*>(blendTree)->Update2D(deltaTime, parameterValueX, parameterValueY);
     }
 
     ENGINEAPI int BlendTree_GetBoneMatrixCount(void* blendTree)
