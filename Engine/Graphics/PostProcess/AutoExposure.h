@@ -83,6 +83,8 @@ private:
 
     ComPtr<ID3D11Buffer> HistogramReadbackBuffer;
 
+    ComPtr<ID3D11Texture2D> LuminanceStagingTexture;
+
     ComPtr<ID3D11Buffer> AutoExposureConstantBuffer;
     ComPtr<ID3D11Buffer> ExposureConstantBuffer;
 

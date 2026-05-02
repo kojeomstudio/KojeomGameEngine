@@ -173,6 +173,10 @@ extern "C"
     ENGINEAPI HRESULT Renderer_LoadEnvironmentMap(void* renderer, const wchar_t* hdrPath);
     ENGINEAPI void Material_SetTexture(void* component, int textureSlot, const wchar_t* texturePath);
     ENGINEAPI void Material_SetEmissive(void* component, float r, float g, float b, float intensity);
+    ENGINEAPI void Material_GetEmissive(void* component, float* r, float* g, float* b, float* intensity);
+    ENGINEAPI int Material_HasTexture(void* component, int textureSlot);
+    ENGINEAPI void* Scene_FindActor(void* scene, const char* name);
+    ENGINEAPI const char* Scene_GetName(void* scene);
     ENGINEAPI int Renderer_GetSpotLightCount(void* renderer);
     ENGINEAPI void Renderer_GetSpotLight(void* renderer, int index,
                                           float* posX, float* posY, float* posZ,

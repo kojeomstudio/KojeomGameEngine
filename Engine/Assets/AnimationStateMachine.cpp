@@ -670,7 +670,7 @@ void KAnimationStateMachine::EvaluateState(KAnimationState* State, float Weight,
         const FBone* Bone = Skeleton->GetBone(BoneIdx);
         if (Bone)
         {
-            XMMATRIX InverseBindPose = Bone->InverseBindPose;
+            XMMATRIX InverseBindPose = XMLoadFloat4x4(&Bone->InverseBindPose);
             OutMatrices[BoneIdx] = InverseBindPose * OutMatrices[BoneIdx];
         }
     }

@@ -364,7 +364,7 @@ float3 SampleIndirectLighting(float3 origin, float3 normal, float2 uv, float2 no
 
     float stepSize = Radius / SampleCount;
 
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < SampleCount; i++)
     {
         float3 sampleDir = mul(SampleKernel[i], tbn);
         float3 samplePos = origin + sampleDir * Radius;

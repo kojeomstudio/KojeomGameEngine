@@ -217,7 +217,9 @@ void KParticleEmitter::CreateSamplerStates(ID3D11Device* InDevice)
     samplerDesc.MinLOD = 0;
     samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    InDevice->CreateSamplerState(&samplerDesc, &LinearSamplerState);
+    HRESULT hr;
+    hr = InDevice->CreateSamplerState(&samplerDesc, &LinearSamplerState);
+    if (FAILED(hr)) { LOG_ERROR("Failed to create particle sampler state"); return; }
 
     D3D11_BLEND_DESC blendDesc = {};
     blendDesc.RenderTarget[0].BlendEnable = TRUE;
@@ -229,20 +231,23 @@ void KParticleEmitter::CreateSamplerStates(ID3D11Device* InDevice)
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-    InDevice->CreateBlendState(&blendDesc, &AdditiveBlendState);
+    hr = InDevice->CreateBlendState(&blendDesc, &AdditiveBlendState);
+    if (FAILED(hr)) { LOG_ERROR("Failed to create particle blend state"); return; }
 
     D3D11_DEPTH_STENCIL_DESC depthDesc = {};
     depthDesc.DepthEnable = TRUE;
     depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
     depthDesc.DepthFunc = D3D11_COMPARISON_LESS;
 
-    InDevice->CreateDepthStencilState(&depthDesc, &ParticleDepthState);
+    hr = InDevice->CreateDepthStencilState(&depthDesc, &ParticleDepthState);
+    if (FAILED(hr)) { LOG_ERROR("Failed to create particle depth state"); return; }
 
     D3D11_RASTERIZER_DESC rasterDesc = {};
     rasterDesc.FillMode = D3D11_FILL_SOLID;
     rasterDesc.CullMode = D3D11_CULL_NONE;
 
-    InDevice->CreateRasterizerState(&rasterDesc, &ParticleRasterizerState);
+    hr = InDevice->CreateRasterizerState(&rasterDesc, &ParticleRasterizerState);
+    if (FAILED(hr)) { LOG_ERROR("Failed to create particle rasterizer state"); return; }
 }
 
 void KParticleEmitter::Update(float DeltaTime)

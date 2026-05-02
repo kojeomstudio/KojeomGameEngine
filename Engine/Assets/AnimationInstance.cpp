@@ -273,7 +273,8 @@ void KAnimationInstance::CalculateFinalBoneTransforms()
         const FBone* bone = Skeleton->GetBone(i);
         if (bone)
         {
-            FinalBoneMatrices[i] = bone->InverseBindPose * BoneMatrices[i];
+            XMMATRIX invBindPose = XMLoadFloat4x4(&bone->InverseBindPose);
+            FinalBoneMatrices[i] = invBindPose * BoneMatrices[i];
         }
         else
         {

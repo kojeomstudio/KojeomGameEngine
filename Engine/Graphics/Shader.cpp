@@ -1207,10 +1207,8 @@ HRESULT KShaderProgram::CreatePBRShader(ID3D11Device* Device)
             }
 
             float3 ambient = AmbientColor.rgb * albedo * ao;
-            float3 color = ambient + Lo;
-
-            color = color / (color + float3(1.0f, 1.0f, 1.0f));
-            color = pow(color, float3(1.0f / 2.2f, 1.0f / 2.2f, 1.0f / 2.2f));
+            float3 emissive = EmissiveColor.rgb * EmissiveIntensity;
+            float3 color = ambient + Lo + emissive;
 
             return color;
         }
@@ -1364,14 +1362,17 @@ HRESULT KShaderProgram::CreateSkinnedShader(ID3D11Device* Device)
 
         float3 SkinPosition(float3 pos, uint4 boneIndices, float4 boneWeights)
         {
+            float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
+            float4 weights = weightSum > 0.0f ? boneWeights / weightSum : boneWeights;
+
             float3 skinnedPos = float3(0, 0, 0);
             
             [unroll]
             for (int i = 0; i < 4; ++i)
             {
-                if (boneWeights[i] > 0.0f)
+                if (weights[i] > 0.0f)
                 {
-                    skinnedPos += mul(float4(pos, 1.0f), BoneMatrices[boneIndices[i]]).xyz * boneWeights[i];
+                    skinnedPos += mul(float4(pos, 1.0f), BoneMatrices[boneIndices[i]]).xyz * weights[i];
                 }
             }
             
@@ -1380,14 +1381,17 @@ HRESULT KShaderProgram::CreateSkinnedShader(ID3D11Device* Device)
 
         float3 SkinNormal(float3 normal, uint4 boneIndices, float4 boneWeights)
         {
+            float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
+            float4 weights = weightSum > 0.0f ? boneWeights / weightSum : boneWeights;
+
             float3 skinnedNormal = float3(0, 0, 0);
             
             [unroll]
             for (int i = 0; i < 4; ++i)
             {
-                if (boneWeights[i] > 0.0f)
+                if (weights[i] > 0.0f)
                 {
-                    skinnedNormal += mul(normal, (float3x3)BoneMatrices[boneIndices[i]]) * boneWeights[i];
+                    skinnedNormal += mul(normal, (float3x3)BoneMatrices[boneIndices[i]]) * weights[i];
                 }
             }
             
@@ -1653,36 +1657,42 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
 
         float3 SkinPosition(float3 pos, uint4 boneIndices, float4 boneWeights)
         {
+            float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
+            float4 weights = weightSum > 0.0f ? boneWeights / weightSum : boneWeights;
             float3 skinnedPos = float3(0, 0, 0);
             [unroll]
             for (int i = 0; i < 4; ++i)
             {
-                if (boneWeights[i] > 0.0f)
-                    skinnedPos += mul(float4(pos, 1.0f), BoneMatrices[boneIndices[i]]).xyz * boneWeights[i];
+                if (weights[i] > 0.0f)
+                    skinnedPos += mul(float4(pos, 1.0f), BoneMatrices[boneIndices[i]]).xyz * weights[i];
             }
             return skinnedPos;
         }
 
         float3 SkinNormal(float3 normal, uint4 boneIndices, float4 boneWeights)
         {
+            float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
+            float4 weights = weightSum > 0.0f ? boneWeights / weightSum : boneWeights;
             float3 skinnedNormal = float3(0, 0, 0);
             [unroll]
             for (int i = 0; i < 4; ++i)
             {
-                if (boneWeights[i] > 0.0f)
-                    skinnedNormal += mul(normal, (float3x3)BoneMatrices[boneIndices[i]]) * boneWeights[i];
+                if (weights[i] > 0.0f)
+                    skinnedNormal += mul(normal, (float3x3)BoneMatrices[boneIndices[i]]) * weights[i];
             }
             return skinnedNormal;
         }
 
         float3 SkinTangent(float3 tangent, uint4 boneIndices, float4 boneWeights)
         {
+            float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
+            float4 weights = weightSum > 0.0f ? boneWeights / weightSum : boneWeights;
             float3 skinnedTangent = float3(0, 0, 0);
             [unroll]
             for (int i = 0; i < 4; ++i)
             {
-                if (boneWeights[i] > 0.0f)
-                    skinnedTangent += mul(tangent, (float3x3)BoneMatrices[boneIndices[i]]) * boneWeights[i];
+                if (weights[i] > 0.0f)
+                    skinnedTangent += mul(tangent, (float3x3)BoneMatrices[boneIndices[i]]) * weights[i];
             }
             return skinnedTangent;
         }
@@ -1844,9 +1854,8 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             }
 
             float3 ambient = AmbientColor.rgb * albedo * ao;
-            float3 color = ambient + Lo;
-            color = color / (color + float3(1.0f, 1.0f, 1.0f));
-            color = pow(color, float3(1.0f / 2.2f, 1.0f / 2.2f, 1.0f / 2.2f));
+            float3 emissive = EmissiveColor.rgb * EmissiveIntensity;
+            float3 color = ambient + Lo + emissive;
             return color;
         }
 
@@ -1885,9 +1894,6 @@ HRESULT KShaderProgram::CreateSkinnedPBRShader(ID3D11Device* Device)
             float3 V = normalize(CameraPosition - input.WorldPos);
             float shadow = CalculateShadow(input.ShadowPos);
             float3 color = CalculatePBRLighting(normal, V, input.WorldPos, albedo, metallic, roughness, ao, shadow);
-
-            float3 emissive = EmissiveMap.Sample(MaterialSampler, input.TexCoord).rgb * EmissiveColor.rgb * EmissiveIntensity;
-            color += emissive;
 
             return float4(color, AlbedoColor.a);
         }
@@ -2037,7 +2043,7 @@ HRESULT KShaderProgram::CreateWaterShader(ID3D11Device* Device)
             float3 tangent = normalize(px - p0);
             float3 bitangent = normalize(pz - p0);
             
-            return normalize(cross(bitangent, tangent));
+            return normalize(cross(tangent, bitangent));
         }
 
         float Fresnel(float3 viewDir, float3 normal)

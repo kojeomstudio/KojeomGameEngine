@@ -15,8 +15,10 @@ struct FMotionBlurParams
     float MaxVelocity = 100.0f;
     bool bEnabled = true;
     XMFLOAT2 Resolution;
-    float Padding[2];
+    float Padding[5];
 };
+
+static_assert(sizeof(FMotionBlurParams) % 16 == 0, "FMotionBlurParams must be 16-byte aligned");
 
 class KMotionBlur
 {

@@ -15,6 +15,12 @@ HRESULT KWater::Initialize(KGraphicsDevice* Device, const FWaterConfig& InConfig
         return E_INVALIDARG;
     }
 
+    if (InConfig.Resolution < 2)
+    {
+        LOG_ERROR("Water resolution must be at least 2");
+        return E_INVALIDARG;
+    }
+
     GraphicsDevice = Device;
     Config = InConfig;
 

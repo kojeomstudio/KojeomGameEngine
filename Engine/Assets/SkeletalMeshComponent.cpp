@@ -365,14 +365,18 @@ void KSkeletalMeshComponent::ComputeBoneMatrices()
         
         for (uint32 i = animBoneCount; i < boneCount; ++i)
         {
-            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(bones[i].BindPose * bones[i].InverseBindPose);
+            XMMATRIX bindPose = XMLoadFloat4x4(&bones[i].BindPose);
+            XMMATRIX invBindPose = XMLoadFloat4x4(&bones[i].InverseBindPose);
+            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(bindPose * invBindPose);
         }
     }
     else
     {
         for (uint32 i = 0; i < boneCount; ++i)
         {
-            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(bones[i].BindPose * bones[i].InverseBindPose);
+            XMMATRIX bindPose = XMLoadFloat4x4(&bones[i].BindPose);
+            XMMATRIX invBindPose = XMLoadFloat4x4(&bones[i].InverseBindPose);
+            BoneMatrices.BoneMatrices[i] = XMMatrixTranspose(bindPose * invBindPose);
         }
     }
 

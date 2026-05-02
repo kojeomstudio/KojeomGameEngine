@@ -1373,6 +1373,46 @@ extern "C"
         material->SetEmissive(XMFLOAT4(r, g, b, 1.0f), intensity);
     }
 
+    ENGINEAPI void Material_GetEmissive(void* component, float* r, float* g, float* b, float* intensity)
+    {
+        if (!component) return;
+        KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
+        KMaterial* material = smc->GetMaterial();
+        if (!material) return;
+        const FPBRMaterialParams& params = material->GetParams();
+        if (r) *r = params.EmissiveColor.x;
+        if (g) *g = params.EmissiveColor.y;
+        if (b) *b = params.EmissiveColor.z;
+        if (intensity) *intensity = params.EmissiveIntensity;
+    }
+
+    ENGINEAPI int Material_HasTexture(void* component, int textureSlot)
+    {
+        if (!component) return 0;
+        KStaticMeshComponent* smc = static_cast<KStaticMeshComponent*>(component);
+        KMaterial* material = smc->GetMaterial();
+        if (!material) return 0;
+        if (textureSlot < 0 || textureSlot >= static_cast<int>(EMaterialTextureSlot::Count)) return 0;
+        return material->HasTexture(static_cast<EMaterialTextureSlot>(textureSlot)) ? 1 : 0;
+    }
+
+    ENGINEAPI void* Scene_FindActor(void* scene, const char* name)
+    {
+        if (!scene || !name) return nullptr;
+        KScene* kscene = static_cast<KScene*>(scene);
+        std::shared_ptr<KActor> actor = kscene->FindActor(name);
+        return actor ? actor.get() : nullptr;
+    }
+
+    ENGINEAPI const char* Scene_GetName(void* scene)
+    {
+        if (!scene) return "";
+        KScene* kscene = static_cast<KScene*>(scene);
+        static thread_local std::string name;
+        name = kscene->GetName();
+        return name.c_str();
+    }
+
     ENGINEAPI int Renderer_GetSpotLightCount(void* renderer)
     {
         if (!renderer) return 0;

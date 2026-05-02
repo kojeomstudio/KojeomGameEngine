@@ -229,7 +229,9 @@ static XMMATRIX AiMatrixToXMMatrix(const aiMatrix4x4& aiMat)
     );
 }
 
-static void BuildSkeletonRecursive(aiNode* Node, KSkeleton* Skeleton, int32 ParentIndex, std::unordered_map<std::string, uint32>& BoneMapping)
+static void BuildSkeletonRecursive(aiNode* Node, KSkeleton* Skeleton, int32 ParentIndex,
+                                     std::unordered_map<std::string, uint32>& BoneMapping,
+                                     const std::unordered_set<std::string>& ValidBoneNames)
 {
     std::string boneName = Node->mName.C_Str();
     
@@ -238,13 +240,23 @@ static void BuildSkeletonRecursive(aiNode* Node, KSkeleton* Skeleton, int32 Pare
     
     if (it == BoneMapping.end())
     {
+        if (ValidBoneNames.find(boneName) == ValidBoneNames.end())
+        {
+            for (uint32 i = 0; i < Node->mNumChildren; ++i)
+            {
+                BuildSkeletonRecursive(Node->mChildren[i], Skeleton, ParentIndex, BoneMapping, ValidBoneNames);
+            }
+            return;
+        }
+
         FBone bone;
         bone.Name = boneName;
         bone.ParentIndex = ParentIndex;
-        bone.BindPose = AiMatrixToXMMatrix(Node->mTransformation);
+        XMMATRIX nodeTransform = AiMatrixToXMMatrix(Node->mTransformation);
+        XMStoreFloat4x4(&bone.BindPose, nodeTransform);
         
         XMVECTOR scale, rotQuat, trans;
-        XMMatrixDecompose(&scale, &rotQuat, &trans, bone.BindPose);
+        XMMatrixDecompose(&scale, &rotQuat, &trans, nodeTransform);
         
         XMStoreFloat3(&bone.LocalPosition, trans);
         XMStoreFloat4(&bone.LocalRotation, rotQuat);
@@ -260,7 +272,7 @@ static void BuildSkeletonRecursive(aiNode* Node, KSkeleton* Skeleton, int32 Pare
 
     for (uint32 i = 0; i < Node->mNumChildren; ++i)
     {
-        BuildSkeletonRecursive(Node->mChildren[i], Skeleton, static_cast<int32>(boneIndex), BoneMapping);
+        BuildSkeletonRecursive(Node->mChildren[i], Skeleton, static_cast<int32>(boneIndex), BoneMapping, ValidBoneNames);
     }
 }
 
@@ -345,7 +357,7 @@ HRESULT KModelLoader::LoadWithAssimp(const std::wstring& Path, FLoadedModel* Out
         OutModel->Skeleton->SetName(OutModel->Name + "_Skeleton");
         
         std::unordered_map<std::string, uint32> boneMapping;
-        BuildSkeletonRecursive(scene->mRootNode, OutModel->Skeleton.get(), INVALID_BONE_INDEX, boneMapping);
+        BuildSkeletonRecursive(scene->mRootNode, OutModel->Skeleton.get(), INVALID_BONE_INDEX, boneMapping, boneNames);
         
         for (uint32 meshIdx = 0; meshIdx < scene->mNumMeshes; ++meshIdx)
         {
@@ -361,7 +373,7 @@ HRESULT KModelLoader::LoadWithAssimp(const std::wstring& Path, FLoadedModel* Out
                 if (skelBoneIdx != INVALID_BONE_INDEX)
                 {
                     FBone* skelBone = OutModel->Skeleton->GetBoneMutable(skelBoneIdx);
-                    skelBone->InverseBindPose = AiMatrixToXMMatrix(aiBone->mOffsetMatrix);
+                    XMStoreFloat4x4(&skelBone->InverseBindPose, AiMatrixToXMMatrix(aiBone->mOffsetMatrix));
                 }
             }
         }
@@ -1415,7 +1427,7 @@ void KModelLoader::ProcessBones(void* AssimpMesh, FLoadedModel* OutModel, uint32
             FBone* bone = OutModel->Skeleton->GetBoneMutable(static_cast<uint32>(skelBoneIdx));
             if (bone)
             {
-                bone->InverseBindPose = AiMatrixToXMMatrix(aiBone->mOffsetMatrix);
+                XMStoreFloat4x4(&bone->InverseBindPose, AiMatrixToXMMatrix(aiBone->mOffsetMatrix));
             }
         }
     }
@@ -2078,7 +2090,7 @@ HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* Ou
                         {
                             for (size_t bi = 0; bi < boneNames.size(); ++bi)
                             {
-                                if (boneNames[bi].find(targetID) != std::string::npos)
+                                if (boneNames[bi] == targetID)
                                 {
                                     boneCurves[boneNames[bi]].push_back(ci);
                                     break;
@@ -2211,12 +2223,14 @@ HRESULT KModelLoader::ParseFBXAscii(const std::string& Content, FLoadedModel* Ou
             bone.LocalPosition = boneLocalPositions[i];
             bone.LocalRotation = boneLocalRotations[i];
             bone.LocalScale = XMFLOAT3(1, 1, 1);
-            bone.BindPose = XMMatrixIdentity();
-            bone.InverseBindPose = XMMatrixIdentity();
+            XMMATRIX identity = XMMatrixIdentity();
+            XMStoreFloat4x4(&bone.BindPose, identity);
+            XMStoreFloat4x4(&bone.InverseBindPose, identity);
             skeleton->AddBone(bone);
         }
 
         skeleton->CalculateBindPoses();
+        skeleton->CalculateInverseBindPoses();
         OutModel->Skeleton = skeleton;
     }
 

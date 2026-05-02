@@ -350,11 +350,11 @@ float4 main(PS_INPUT input) : SV_TARGET
     float3 color = SceneTexture.Sample(PointSampler, input.TexCoord).rgb;
     float brightness = dot(color, float3(0.2126, 0.7152, 0.0722));
     
-    if (brightness > BloomThreshold)
-    {
-        return float4(color, 1.0f);
-    }
-    return float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float knee = BloomThreshold * 0.5f;
+    float soft = brightness - knee + sqrt(brightness * brightness - knee * knee);
+    float contribution = max(soft, 0.0f) / (2.0f * max(BloomThreshold - knee, 0.001f) + brightness);
+    
+    return float4(color * contribution, 1.0f);
 }
 )";
 
@@ -800,10 +800,13 @@ void KPostProcessor::BlurBloomTexture(ID3D11DeviceContext* Context)
 
         {
             D3D11_MAPPED_SUBRESOURCE mapped;
-            Context->Map(BlurConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-            blurData.BlurDirection = XMFLOAT2(1.0f, 0.0f);
-            memcpy(mapped.pData, &blurData, sizeof(blurData));
-            Context->Unmap(BlurConstantBuffer.Get(), 0);
+            HRESULT mapHr = Context->Map(BlurConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+            if (SUCCEEDED(mapHr))
+            {
+                blurData.BlurDirection = XMFLOAT2(1.0f, 0.0f);
+                memcpy(mapped.pData, &blurData, sizeof(blurData));
+                Context->Unmap(BlurConstantBuffer.Get(), 0);
+            }
         }
 
         SetRenderTarget(Context, outputRTV);
@@ -814,10 +817,13 @@ void KPostProcessor::BlurBloomTexture(ID3D11DeviceContext* Context)
 
         {
             D3D11_MAPPED_SUBRESOURCE mapped;
-            Context->Map(BlurConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-            blurData.BlurDirection = XMFLOAT2(0.0f, 1.0f);
-            memcpy(mapped.pData, &blurData, sizeof(blurData));
-            Context->Unmap(BlurConstantBuffer.Get(), 0);
+            HRESULT mapHr = Context->Map(BlurConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+            if (SUCCEEDED(mapHr))
+            {
+                blurData.BlurDirection = XMFLOAT2(0.0f, 1.0f);
+                memcpy(mapped.pData, &blurData, sizeof(blurData));
+                Context->Unmap(BlurConstantBuffer.Get(), 0);
+            }
         }
 
         SetRenderTarget(Context, BloomBlurRTVs[0].Get());

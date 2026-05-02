@@ -445,17 +445,32 @@ float KAutoExposure::ReadAverageLuminance(ID3D11DeviceContext* Context)
 {
     float avgLuminance = 0.18f;
 
+    if (!LuminanceStagingTexture)
+    {
+        D3D11_TEXTURE2D_DESC srcDesc;
+        LuminanceTexture4->GetDesc(&srcDesc);
+        D3D11_TEXTURE2D_DESC stagingDesc = srcDesc;
+        stagingDesc.Usage = D3D11_USAGE_STAGING;
+        stagingDesc.BindFlags = 0;
+        stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+
+        if (FAILED(Device->CreateTexture2D(&stagingDesc, nullptr, &LuminanceStagingTexture)))
+        {
+            return avgLuminance;
+        }
+    }
+
+    Context->CopyResource(LuminanceStagingTexture.Get(), LuminanceTexture4.Get());
+
     D3D11_MAPPED_SUBRESOURCE mapped;
-    HRESULT hr = Context->Map(LuminanceTexture4.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-    
-    if (SUCCEEDED(hr) && mapped.pData)
+    if (SUCCEEDED(Context->Map(LuminanceStagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mapped)) && mapped.pData)
     {
         const UINT32 size = LuminanceSize / 4;
         const float* data = static_cast<const float*>(mapped.pData);
-        
+
         float sum = 0.0f;
         UINT32 count = 0;
-        
+
         for (UINT32 y = 0; y < size; ++y)
         {
             for (UINT32 x = 0; x < size; ++x)
@@ -474,54 +489,7 @@ float KAutoExposure::ReadAverageLuminance(ID3D11DeviceContext* Context)
             avgLuminance = expf(sum / count);
         }
 
-        Context->Unmap(LuminanceTexture4.Get(), 0);
-    }
-    else
-    {
-        ID3D11Texture2D* stagingTexture = nullptr;
-        D3D11_TEXTURE2D_DESC srcDesc;
-        LuminanceTexture4->GetDesc(&srcDesc);
-
-        D3D11_TEXTURE2D_DESC stagingDesc = srcDesc;
-        stagingDesc.Usage = D3D11_USAGE_STAGING;
-        stagingDesc.BindFlags = 0;
-        stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-
-        if (SUCCEEDED(Device->CreateTexture2D(&stagingDesc, nullptr, &stagingTexture)))
-        {
-            Context->CopyResource(stagingTexture, LuminanceTexture4.Get());
-            
-            hr = Context->Map(stagingTexture, 0, D3D11_MAP_READ, 0, &mapped);
-            if (SUCCEEDED(hr) && mapped.pData)
-            {
-                const UINT32 size = LuminanceSize / 4;
-                const float* data = static_cast<const float*>(mapped.pData);
-                
-                float sum = 0.0f;
-                UINT32 count = 0;
-                
-                for (UINT32 y = 0; y < size; ++y)
-                {
-                    for (UINT32 x = 0; x < size; ++x)
-                    {
-                        float lum = data[y * (mapped.RowPitch / sizeof(float)) + x];
-                        if (lum > 0.0001f)
-                        {
-                            sum += logf(lum + 0.0001f);
-                            count++;
-                        }
-                    }
-                }
-
-                if (count > 0)
-                {
-                    avgLuminance = expf(sum / count);
-                }
-
-                Context->Unmap(stagingTexture, 0);
-            }
-            stagingTexture->Release();
-        }
+        Context->Unmap(LuminanceStagingTexture.Get(), 0);
     }
 
     return avgLuminance;

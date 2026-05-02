@@ -483,6 +483,10 @@ HRESULT KSSAO::CreateConstantBuffers(ID3D11Device* InDevice)
     bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
     HRESULT hr = InDevice->CreateBuffer(&bufferDesc, nullptr, &SSAOConstantBuffer);
+    if (FAILED(hr)) return hr;
+
+    bufferDesc.ByteWidth = sizeof(FBlurConstantBuffer);
+    hr = InDevice->CreateBuffer(&bufferDesc, nullptr, &BlurConstantBuffer);
     return hr;
 }
 
@@ -602,28 +606,19 @@ void KSSAO::BlurAO(ID3D11DeviceContext* Context)
 
     BlurShader->Bind(Context);
 
-    ID3D11Buffer* blurCB = nullptr;
-    D3D11_BUFFER_DESC desc = {};
-    desc.ByteWidth = sizeof(FBlurConstantBuffer);
-    desc.Usage = D3D11_USAGE_DYNAMIC;
-    desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-    Device->CreateBuffer(&desc, nullptr, &blurCB);
-
     for (UINT32 i = 0; i < Parameters.BlurIterations; ++i)
     {
         D3D11_MAPPED_SUBRESOURCE mapped;
-        if (SUCCEEDED(Context->Map(blurCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+        if (SUCCEEDED(Context->Map(BlurConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
         {
             FBlurConstantBuffer* data = reinterpret_cast<FBlurConstantBuffer*>(mapped.pData);
             data->TexelSize = blurData.TexelSize;
             data->Direction = (i % 2 == 0) ? XMFLOAT2(1.0f, 0.0f) : XMFLOAT2(0.0f, 1.0f);
-            Context->Unmap(blurCB, 0);
+            Context->Unmap(BlurConstantBuffer.Get(), 0);
         }
 
-        Context->VSSetConstantBuffers(0, 1, &blurCB);
-        Context->PSSetConstantBuffers(0, 1, &blurCB);
+        Context->VSSetConstantBuffers(0, 1, BlurConstantBuffer.GetAddressOf());
+        Context->PSSetConstantBuffers(0, 1, BlurConstantBuffer.GetAddressOf());
 
         ID3D11ShaderResourceView* inputSRV = (i == 0) ? SSAOSRV.Get() : BlurOutputSRV[1 - (i % 2)].Get();
         int32 outputIndex = i % 2;
@@ -640,11 +635,6 @@ void KSSAO::BlurAO(ID3D11DeviceContext* Context)
         Context->OMSetRenderTargets(1, &nullRTV, nullptr);
     }
 
-    if (blurCB)
-    {
-        blurCB->Release();
-        blurCB = nullptr;
-    }
     BlurShader->Unbind(Context);
 }
 

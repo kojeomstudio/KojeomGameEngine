@@ -14,20 +14,21 @@ struct FBone
 {
     std::string Name;
     int32 ParentIndex;
-    XMMATRIX BindPose;
-    XMMATRIX InverseBindPose;
+    XMFLOAT4X4 BindPose;
+    XMFLOAT4X4 InverseBindPose;
     XMFLOAT3 LocalPosition;
     XMFLOAT4 LocalRotation;
     XMFLOAT3 LocalScale;
 
     FBone()
         : ParentIndex(INVALID_BONE_INDEX)
-        , BindPose(XMMatrixIdentity())
-        , InverseBindPose(XMMatrixIdentity())
         , LocalPosition(0, 0, 0)
         , LocalRotation(0, 0, 0, 1)
         , LocalScale(1, 1, 1)
-    {}
+    {
+        XMStoreFloat4x4(&BindPose, XMMatrixIdentity());
+        XMStoreFloat4x4(&InverseBindPose, XMMatrixIdentity());
+    }
 
     void Serialize(KBinaryArchive& Archive);
     void Deserialize(KBinaryArchive& Archive);

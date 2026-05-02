@@ -4,15 +4,8 @@ void FBone::Serialize(KBinaryArchive& Archive)
 {
     Archive << Name;
     Archive << ParentIndex;
-    
-    XMFLOAT4X4 bindPoseFloat4x4;
-    XMStoreFloat4x4(&bindPoseFloat4x4, BindPose);
-    Archive.WriteRaw(&bindPoseFloat4x4, sizeof(bindPoseFloat4x4));
-    
-    XMFLOAT4X4 invBindPoseFloat4x4;
-    XMStoreFloat4x4(&invBindPoseFloat4x4, InverseBindPose);
-    Archive.WriteRaw(&invBindPoseFloat4x4, sizeof(invBindPoseFloat4x4));
-    
+    Archive.WriteRaw(&BindPose, sizeof(BindPose));
+    Archive.WriteRaw(&InverseBindPose, sizeof(InverseBindPose));
     Archive.WriteRaw(&LocalPosition, sizeof(LocalPosition));
     Archive.WriteRaw(&LocalRotation, sizeof(LocalRotation));
     Archive.WriteRaw(&LocalScale, sizeof(LocalScale));
@@ -22,15 +15,8 @@ void FBone::Deserialize(KBinaryArchive& Archive)
 {
     Archive >> Name;
     Archive >> ParentIndex;
-    
-    XMFLOAT4X4 bindPoseFloat4x4;
-    Archive.ReadRaw(&bindPoseFloat4x4, sizeof(bindPoseFloat4x4));
-    BindPose = XMLoadFloat4x4(&bindPoseFloat4x4);
-    
-    XMFLOAT4X4 invBindPoseFloat4x4;
-    Archive.ReadRaw(&invBindPoseFloat4x4, sizeof(invBindPoseFloat4x4));
-    InverseBindPose = XMLoadFloat4x4(&invBindPoseFloat4x4);
-    
+    Archive.ReadRaw(&BindPose, sizeof(BindPose));
+    Archive.ReadRaw(&InverseBindPose, sizeof(InverseBindPose));
     Archive.ReadRaw(&LocalPosition, sizeof(LocalPosition));
     Archive.ReadRaw(&LocalRotation, sizeof(LocalRotation));
     Archive.ReadRaw(&LocalScale, sizeof(LocalScale));
@@ -135,11 +121,13 @@ void KSkeleton::CalculateBoneBindPoseRecursive(uint32 BoneIndex)
     if (bone.ParentIndex >= 0)
     {
         const FBone& parent = Bones[bone.ParentIndex];
-        bone.BindPose = localMatrix * parent.BindPose;
+        XMMATRIX parentBindPose = XMLoadFloat4x4(&parent.BindPose);
+        XMMATRIX result = localMatrix * parentBindPose;
+        XMStoreFloat4x4(&bone.BindPose, result);
     }
     else
     {
-        bone.BindPose = localMatrix;
+        XMStoreFloat4x4(&bone.BindPose, localMatrix);
     }
 }
 
@@ -147,7 +135,9 @@ void KSkeleton::CalculateInverseBindPoses()
 {
     for (auto& bone : Bones)
     {
-        bone.InverseBindPose = XMMatrixInverse(nullptr, bone.BindPose);
+        XMMATRIX bindPose = XMLoadFloat4x4(&bone.BindPose);
+        XMMATRIX inverseBindPose = XMMatrixInverse(nullptr, bindPose);
+        XMStoreFloat4x4(&bone.InverseBindPose, inverseBindPose);
     }
 }
 
@@ -155,7 +145,7 @@ XMMATRIX KSkeleton::GetBoneMatrix(uint32 Index) const
 {
     if (Index < Bones.size())
     {
-        return Bones[Index].BindPose;
+        return XMLoadFloat4x4(&Bones[Index].BindPose);
     }
     return XMMatrixIdentity();
 }
@@ -164,7 +154,7 @@ void KSkeleton::SetBoneMatrix(uint32 Index, const XMMATRIX& Matrix)
 {
     if (Index < Bones.size())
     {
-        Bones[Index].BindPose = Matrix;
+        XMStoreFloat4x4(&Bones[Index].BindPose, Matrix);
     }
 }
 

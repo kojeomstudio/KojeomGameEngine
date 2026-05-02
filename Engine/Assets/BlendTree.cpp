@@ -241,7 +241,8 @@ void KBlendTree::EvaluateChild(FBlendTreeChild& Child, std::vector<XMMATRIX>& Ou
         const FBone* Bone = Skeleton->GetBone(BoneIdx);
         if (Bone)
         {
-            OutMatrices[BoneIdx] = Bone->InverseBindPose * OutMatrices[BoneIdx];
+            XMMATRIX invBindPose = XMLoadFloat4x4(&Bone->InverseBindPose);
+            OutMatrices[BoneIdx] = invBindPose * OutMatrices[BoneIdx];
         }
     }
 }

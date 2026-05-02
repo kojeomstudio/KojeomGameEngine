@@ -93,6 +93,7 @@ private:
 
     ComPtr<ID3D11Buffer> KernelBuffer;
     ComPtr<ID3D11Buffer> SSAOConstantBuffer;
+    ComPtr<ID3D11Buffer> BlurConstantBuffer;
 
     std::shared_ptr<KShaderProgram> SSAOShader;
     std::shared_ptr<KShaderProgram> BlurShader;
