@@ -10,6 +10,7 @@
 - 반드시 작업 완료 후 컴파일 테스트 후 오리진에 반영하십시오.
 - 현재 작업 환경(터미널, 운영체제)이 리눅스(우분투)/MacOS라면 CMake 및 현재 설치된 .Net sdk로 빌드 테스트를 진행하셔야합니다. 반대로 Windows라면 MSVC 및 .Net sdk로 진행하시면 됩니다.
 만약 CMake 관련 내용이 없다면 현재 프로젝트 기준으로 필요한 파일을 셋업하십시오.
+- 리눅스/윈도우즈 환경에서 게임 엔진은 동작해야합니다. 따라서, 윈도우즈의 경우는 directx11 기반 그리고, 리눅스의 경우 opengl 기반으로 동작할 수 있게 해야합니다. work/architecture 아래 문서를 참조하되, 이 규칙을 바탕으로 멀티플랫폼에서 동작할 수 있게 코드 아키텍처를 설정하십시오.
 
 ## ARCHITECTURE (우선순위 최상위)
 
@@ -36,11 +37,3 @@
 - **CLI 테스트**: `06_Agent_CLI_Test_Interface.md`를 참조하여 Scene Dump, Asset Validation, Screenshot Comparison 모드를 구현하십시오.
 - **안정성**: `03_Testing_Quality_Maintenance.md`를 참조하여 GitHub Actions CI/CD, 빌드 설정, 회귀 체크리스트를 점검하십시오.
 - **보안**: `docs/rules/AIAgentRules.md`의 Security 섹션을 참조하여 경로 검증, 버퍼 바운드, 리소스 정리, 시크릿 스캔을 점검하십시오.
-
-## BUILD
-
-```bash
-msbuild KojeomEngine.sln /p:Configuration=Debug /p:Platform=x64
-msbuild KojeomEngine.sln /p:Configuration=Release /p:Platform=x64
-dotnet build Editor/KojeomEditor/KojeomEditor.csproj
-```
