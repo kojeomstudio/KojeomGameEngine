@@ -172,6 +172,14 @@ appsettings.*.json
 .Trashes
 
 # ================================
+# CMake Build
+# ================================
+build/
+_ext_include/
+!Source/
+*.deb
+
+# ================================
 # Security
 # ================================
 *.credentials

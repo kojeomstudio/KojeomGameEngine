@@ -181,11 +181,48 @@ jobs:
       - name: Build KojeomEditor
         run: dotnet build Editor/KojeomEditor/KojeomEditor.csproj -c ${{ matrix.configuration }}
 
+  build-linux:
+    name: Build Linux (CMake + OpenGL)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libgl1-mesa-dev libglew-dev libglfw3-dev libassimp-dev nlohmann-json3-dev libstb-dev libglm-dev libxrandr-dev libxcursor-dev libxinerama-dev libxi-dev libxext-dev
+
+      - name: Cache CMake build
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf
+        with:
+          path: build/_deps
+          key: linux-cmake-deps-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: linux-cmake-deps-
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Verify build output
+        run: |
+          if [ ! -f build/bin/Simple3DEngine ]; then
+            echo "Simple3DEngine not found"
+            exit 1
+          fi
+          echo "Build output verified successfully"
+
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build-engine, build-samples, build-csharp]
+    needs: [build-engine, build-samples, build-csharp, build-linux]
     if: always()
     steps:
       - name: Check all jobs passed
@@ -193,9 +230,11 @@ jobs:
           echo "build-engine: ${{ needs.build-engine.result }}"
           echo "build-samples: ${{ needs.build-samples.result }}"
           echo "build-csharp: ${{ needs.build-csharp.result }}"
+          echo "build-linux: ${{ needs.build-linux.result }}"
           if [[ "${{ needs.build-engine.result }}" == "success" && \
                 "${{ needs.build-samples.result }}" == "success" && \
-                "${{ needs.build-csharp.result }}" == "success" ]]; then
+                "${{ needs.build-csharp.result }}" == "success" && \
+                "${{ needs.build-linux.result }}" == "success" ]]; then
             exit 0
           fi
           exit 1
