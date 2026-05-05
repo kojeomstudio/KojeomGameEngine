@@ -243,6 +243,8 @@ public:
                 cmd.terrainHandle = tc->terrainHandle;
                 cmd.materialHandle = tc->materialHandle;
                 cmd.worldMatrix = entity->GetTransform()->transform.ToMatrix();
+                cmd.boundsCenter = Vec3(0.0f);
+                cmd.boundsRadius = 200.0f;
                 scene.terrainDrawCommands.push_back(cmd);
             }
 

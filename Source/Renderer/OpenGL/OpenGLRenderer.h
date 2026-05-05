@@ -46,8 +46,10 @@ struct GLMaterialData
     float emissiveStrength = 1.0f;
     GLuint albedoTexture = 0;
     GLuint normalTexture = 0;
+    GLuint metallicRoughnessTexture = 0;
     bool hasAlbedoTexture = false;
     bool hasNormalTexture = false;
+    bool hasMetallicRoughnessTexture = false;
 };
 
 struct UniformLocations
@@ -67,8 +69,10 @@ struct UniformLocations
     GLint emissiveStrength = -1;
     GLint useAlbedoTexture = -1;
     GLint useNormalTexture = -1;
+    GLint useMetallicRoughnessTexture = -1;
     GLint albedoTexture = -1;
     GLint normalTexture = -1;
+    GLint metallicRoughnessTexture = -1;
     GLint boneMatrices = -1;
     GLint pointLightCount = -1;
     GLint pointLightPositions = -1;
@@ -118,6 +122,7 @@ public:
         CreateSkinnedShader();
         CreateShadowShader();
         CreatePostProcessShader();
+        CreateBloomShaders();
         CacheUniformLocations();
         CreateDefaultMesh();
         CreateDefaultTextures();
@@ -152,12 +157,15 @@ public:
         if (m_skinnedShader.program) { glDeleteProgram(m_skinnedShader.program); m_skinnedShader.program = 0; }
         if (m_shadowShader.program) { glDeleteProgram(m_shadowShader.program); m_shadowShader.program = 0; }
         if (m_postProcessShader.program) { glDeleteProgram(m_postProcessShader.program); m_postProcessShader.program = 0; }
+        if (m_bloomExtractShader.program) { glDeleteProgram(m_bloomExtractShader.program); m_bloomExtractShader.program = 0; }
+        if (m_bloomBlurShader.program) { glDeleteProgram(m_bloomBlurShader.program); m_bloomBlurShader.program = 0; }
         if (m_defaultAlbedoTexture) { glDeleteTextures(1, &m_defaultAlbedoTexture); m_defaultAlbedoTexture = 0; }
         if (m_defaultNormalTexture) { glDeleteTextures(1, &m_defaultNormalTexture); m_defaultNormalTexture = 0; }
         if (m_screenQuadVAO) { glDeleteVertexArrays(1, &m_screenQuadVAO); m_screenQuadVAO = 0; }
         if (m_screenQuadVBO) { glDeleteBuffers(1, &m_screenQuadVBO); m_screenQuadVBO = 0; }
 
         DestroyFramebuffer();
+        DestroyBloomFBOs();
         DestroyShadowMap();
 
         KE_LOG_INFO("OpenGL Renderer shutdown");
@@ -169,6 +177,7 @@ public:
         m_windowHeight = height;
         glViewport(0, 0, width, height);
         CreateFramebuffer(width, height);
+        CreateBloomFBOs(width, height);
     }
 
     void BeginFrame() override
@@ -195,6 +204,7 @@ public:
         RenderTerrain(scene);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        RenderBloom();
         RenderPostProcess();
 
         RenderDebugOverlay();
@@ -315,15 +325,19 @@ public:
     AssetHandle RegisterMaterial(const Vec3& albedo, float metallic, float roughness,
         AssetHandle albedoTexHandle = INVALID_HANDLE, bool hasTex = false,
         AssetHandle normalTexHandle = INVALID_HANDLE, bool hasNormalTex = false,
-        const Vec3& emissiveColor = Vec3(0.0f), float emissiveStr = 1.0f) override
+        const Vec3& emissiveColor = Vec3(0.0f), float emissiveStr = 1.0f,
+        AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE, bool hasMetallicRoughnessTex = false,
+        float ao = 1.0f) override
     {
         AssetHandle handle = GenerateHandle();
         GLMaterialData mat;
         mat.albedo = albedo;
         mat.metallic = metallic;
         mat.roughness = roughness;
+        mat.ao = ao;
         mat.hasAlbedoTexture = hasTex;
         mat.hasNormalTexture = hasNormalTex;
+        mat.hasMetallicRoughnessTexture = hasMetallicRoughnessTex;
         mat.emissive = emissiveColor;
         mat.emissiveStrength = emissiveStr;
         if (hasTex && albedoTexHandle != INVALID_HANDLE)
@@ -337,6 +351,12 @@ public:
             auto it = m_textureCache.find(normalTexHandle);
             if (it != m_textureCache.end())
                 mat.normalTexture = it->second.texture;
+        }
+        if (hasMetallicRoughnessTex && metallicRoughnessTexHandle != INVALID_HANDLE)
+        {
+            auto it = m_textureCache.find(metallicRoughnessTexHandle);
+            if (it != m_textureCache.end())
+                mat.metallicRoughnessTexture = it->second.texture;
         }
         m_materialCache[handle] = mat;
         return handle;
@@ -461,8 +481,9 @@ private:
                 glUniformMatrix3fv(m_pbrUniforms.normalMatrix, 1, GL_FALSE, &normalMat[0][0]);
             }
 
-            Vec3 worldPos = Vec3(cmd.worldMatrix * Vec4(0.0f, 0.0f, 0.0f, 1.0f));
-            if (!IsSphereInFrustum(frustumPlanes, worldPos, 100.0f)) continue;
+            Vec3 worldPos = Vec3(cmd.worldMatrix * Vec4(cmd.boundsCenter, 1.0f));
+            float cullRadius = (cmd.boundsRadius > 0.0f) ? cmd.boundsRadius : 100.0f;
+            if (!IsSphereInFrustum(frustumPlanes, worldPos, cullRadius)) continue;
 
             SetMaterialUniforms(cmd.materialHandle, m_pbrUniforms);
 
@@ -574,8 +595,9 @@ private:
                 glUniformMatrix3fv(m_pbrUniforms.normalMatrix, 1, GL_FALSE, &normalMat[0][0]);
             }
 
-            Vec3 terrainPos = Vec3(cmd.worldMatrix * Vec4(0.0f, 0.0f, 0.0f, 1.0f));
-            if (!IsSphereInFrustum(terrainFrustum, terrainPos, 200.0f)) continue;
+            Vec3 terrainPos = Vec3(cmd.worldMatrix * Vec4(cmd.boundsCenter, 1.0f));
+            float terrainRadius = (cmd.boundsRadius > 0.0f) ? cmd.boundsRadius : 200.0f;
+            if (!IsSphereInFrustum(terrainFrustum, terrainPos, terrainRadius)) continue;
 
             SetMaterialUniforms(cmd.materialHandle, m_pbrUniforms);
 
@@ -688,6 +710,8 @@ private:
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
+        EnsureScreenQuad();
+
         glUseProgram(m_postProcessShader.program);
 
         glActiveTexture(GL_TEXTURE0);
@@ -695,31 +719,20 @@ private:
         GLint sceneTexLoc = glGetUniformLocation(m_postProcessShader.program, "uSceneTexture");
         if (sceneTexLoc >= 0) glUniform1i(sceneTexLoc, 0);
 
+        bool useBloom = (m_bloomPingPongFBO[0] != 0);
+        GLint useBloomLoc = glGetUniformLocation(m_postProcessShader.program, "uUseBloom");
+        if (useBloomLoc >= 0) glUniform1i(useBloomLoc, useBloom ? 1 : 0);
+
+        if (useBloom)
+        {
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, m_bloomPingPongTexture[0]);
+            GLint bloomTexLoc = glGetUniformLocation(m_postProcessShader.program, "uBloomTexture");
+            if (bloomTexLoc >= 0) glUniform1i(bloomTexLoc, 1);
+        }
+
         GLint exposureLoc = glGetUniformLocation(m_postProcessShader.program, "uExposure");
         if (exposureLoc >= 0) glUniform1f(exposureLoc, 1.0f);
-
-        if (m_screenQuadVAO == 0)
-        {
-            float quad[] = {
-                -1.0f,  1.0f, 0.0f, 1.0f,
-                -1.0f, -1.0f, 0.0f, 0.0f,
-                 1.0f, -1.0f, 1.0f, 0.0f,
-                -1.0f,  1.0f, 0.0f, 1.0f,
-                 1.0f, -1.0f, 1.0f, 0.0f,
-                 1.0f,  1.0f, 1.0f, 1.0f,
-            };
-            glGenVertexArrays(1, &m_screenQuadVAO);
-            glGenBuffers(1, &m_screenQuadVBO);
-            glBindVertexArray(m_screenQuadVAO);
-            glBindBuffer(GL_ARRAY_BUFFER, m_screenQuadVBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                reinterpret_cast<void*>(2 * sizeof(float)));
-            glBindVertexArray(0);
-        }
 
         glBindVertexArray(m_screenQuadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -846,6 +859,7 @@ private:
                 if (locs.emissiveStrength >= 0) glUniform1f(locs.emissiveStrength, mat.emissiveStrength);
                 if (locs.useAlbedoTexture >= 0) glUniform1i(locs.useAlbedoTexture, mat.hasAlbedoTexture ? 1 : 0);
                 if (locs.useNormalTexture >= 0) glUniform1i(locs.useNormalTexture, mat.hasNormalTexture ? 1 : 0);
+                if (locs.useMetallicRoughnessTexture >= 0) glUniform1i(locs.useMetallicRoughnessTexture, mat.hasMetallicRoughnessTexture ? 1 : 0);
 
                 if (mat.hasAlbedoTexture && mat.albedoTexture)
                 {
@@ -859,6 +873,12 @@ private:
                     glBindTexture(GL_TEXTURE_2D, mat.normalTexture);
                     if (locs.normalTexture >= 0) glUniform1i(locs.normalTexture, 1);
                 }
+                if (mat.hasMetallicRoughnessTexture && mat.metallicRoughnessTexture)
+                {
+                    glActiveTexture(GL_TEXTURE3);
+                    glBindTexture(GL_TEXTURE_2D, mat.metallicRoughnessTexture);
+                    if (locs.metallicRoughnessTexture >= 0) glUniform1i(locs.metallicRoughnessTexture, 3);
+                }
                 return;
             }
         }
@@ -871,6 +891,7 @@ private:
         if (locs.emissiveStrength >= 0) glUniform1f(locs.emissiveStrength, 0.0f);
         if (locs.useAlbedoTexture >= 0) glUniform1i(locs.useAlbedoTexture, 0);
         if (locs.useNormalTexture >= 0) glUniform1i(locs.useNormalTexture, 0);
+        if (locs.useMetallicRoughnessTexture >= 0) glUniform1i(locs.useMetallicRoughnessTexture, 0);
     }
 
     void CreatePBRShader()
@@ -919,8 +940,10 @@ private:
             uniform float uEmissiveStrength;
             uniform bool uUseAlbedoTexture;
             uniform bool uUseNormalTexture;
+            uniform bool uUseMetallicRoughnessTexture;
             uniform sampler2D uAlbedoTexture;
             uniform sampler2D uNormalTexture;
+            uniform sampler2D uMetallicRoughnessTexture;
 
             uniform mat4 uLightSpaceMatrix;
             uniform sampler2D uShadowMap;
@@ -1024,6 +1047,16 @@ private:
             void main()
             {
                 vec3 albedo = uUseAlbedoTexture ? texture(uAlbedoTexture, vTexCoord).rgb : uAlbedo;
+                float metallic = uMetallic;
+                float roughness = uRoughness;
+                float ao = uAO;
+
+                if (uUseMetallicRoughnessTexture)
+                {
+                    vec3 mrSample = texture(uMetallicRoughnessTexture, vTexCoord).rgb;
+                    roughness = mrSample.g * roughness;
+                    metallic = mrSample.b * metallic;
+                }
 
                 vec3 N = GetNormal();
                 vec3 V = normalize(uCameraPos - vWorldPos);
@@ -1047,7 +1080,7 @@ private:
                     Lo += CalcLighting(L, radiance, N, V, albedo, 0.0);
                 }
 
-                vec3 ambient = uAmbientColor * albedo * uAO;
+                vec3 ambient = uAmbientColor * albedo * ao;
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
                 vec3 color = ambient + Lo + emissiveContrib;
 
@@ -1378,8 +1411,10 @@ private:
             m_pbrUniforms.emissiveStrength = cache(m_pbrShader.program, "uEmissiveStrength");
             m_pbrUniforms.useAlbedoTexture = cache(m_pbrShader.program, "uUseAlbedoTexture");
             m_pbrUniforms.useNormalTexture = cache(m_pbrShader.program, "uUseNormalTexture");
+            m_pbrUniforms.useMetallicRoughnessTexture = cache(m_pbrShader.program, "uUseMetallicRoughnessTexture");
             m_pbrUniforms.albedoTexture = cache(m_pbrShader.program, "uAlbedoTexture");
             m_pbrUniforms.normalTexture = cache(m_pbrShader.program, "uNormalTexture");
+            m_pbrUniforms.metallicRoughnessTexture = cache(m_pbrShader.program, "uMetallicRoughnessTexture");
             m_pbrUniforms.pointLightCount = cache(m_pbrShader.program, "uPointLightCount");
             m_pbrUniforms.pointLightPositions = cache(m_pbrShader.program, "uPointLightPositions[0]");
             m_pbrUniforms.pointLightColors = cache(m_pbrShader.program, "uPointLightColors[0]");
@@ -1477,11 +1512,19 @@ private:
             out vec4 FragColor;
 
             uniform sampler2D uSceneTexture;
+            uniform sampler2D uBloomTexture;
             uniform float uExposure;
+            uniform bool uUseBloom;
 
             void main()
             {
                 vec3 color = texture(uSceneTexture, vTexCoord).rgb;
+
+                if (uUseBloom)
+                {
+                    vec3 bloomColor = texture(uBloomTexture, vTexCoord).rgb;
+                    color += bloomColor;
+                }
 
                 color = vec3(1.0) - exp(-color * uExposure);
 
@@ -1506,7 +1549,7 @@ private:
 
         glGenFramebuffers(1, &m_sceneFBO);
         glGenTextures(1, &m_sceneColorTexture);
-        glGenRenderbuffers(1, &m_sceneDepthRBO);
+        glGenTextures(1, &m_sceneDepthTexture);
 
         glBindTexture(GL_TEXTURE_2D, m_sceneColorTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
@@ -1515,12 +1558,15 @@ private:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        glBindRenderbuffer(GL_RENDERBUFFER, m_sceneDepthRBO);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+        glBindTexture(GL_TEXTURE_2D, m_sceneDepthTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0,
+            GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
         glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFBO);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_sceneColorTexture, 0);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_sceneDepthRBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_sceneDepthTexture, 0);
 
         GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (status != GL_FRAMEBUFFER_COMPLETE)
@@ -1534,7 +1580,7 @@ private:
     {
         if (m_sceneFBO) { glDeleteFramebuffers(1, &m_sceneFBO); m_sceneFBO = 0; }
         if (m_sceneColorTexture) { glDeleteTextures(1, &m_sceneColorTexture); m_sceneColorTexture = 0; }
-        if (m_sceneDepthRBO) { glDeleteRenderbuffers(1, &m_sceneDepthRBO); m_sceneDepthRBO = 0; }
+        if (m_sceneDepthTexture) { glDeleteTextures(1, &m_sceneDepthTexture); m_sceneDepthTexture = 0; }
     }
 
     void CreateShadowMap(int width, int height)
@@ -1569,6 +1615,202 @@ private:
         if (m_shadowMapTexture) { glDeleteTextures(1, &m_shadowMapTexture); m_shadowMapTexture = 0; }
     }
 
+    void CreateBloomShaders()
+    {
+        const char* extractSrc = R"(
+            #version 450 core
+            layout(location = 0) in vec2 aPosition;
+            layout(location = 1) in vec2 aTexCoord;
+            out vec2 vTexCoord;
+            void main()
+            {
+                vTexCoord = aTexCoord;
+                gl_Position = vec4(aPosition, 0.0, 1.0);
+            }
+        )";
+
+        const char* extractFrag = R"(
+            #version 450 core
+            in vec2 vTexCoord;
+            out vec4 FragColor;
+            uniform sampler2D uSceneTexture;
+            uniform float uThreshold;
+            void main()
+            {
+                vec3 color = texture(uSceneTexture, vTexCoord).rgb;
+                float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
+                if (brightness > uThreshold)
+                    FragColor = vec4(color, 1.0);
+                else
+                    FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            }
+        )";
+
+        GLuint evs = CompileShader(GL_VERTEX_SHADER, extractSrc);
+        GLuint efs = CompileShader(GL_FRAGMENT_SHADER, extractFrag);
+        if (evs && efs)
+            m_bloomExtractShader.program = LinkProgram(evs, efs);
+
+        const char* blurFrag = R"(
+            #version 450 core
+            in vec2 vTexCoord;
+            out vec4 FragColor;
+            uniform sampler2D uTexture;
+            uniform vec2 uTexelSize;
+            uniform bool uHorizontal;
+            void main()
+            {
+                float weights[5] = float[](0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+                vec3 result = texture(uTexture, vTexCoord).rgb * weights[0];
+                vec2 offset = uHorizontal ? vec2(uTexelSize.x, 0.0) : vec2(0.0, uTexelSize.y);
+                for (int i = 1; i < 5; ++i)
+                {
+                    result += texture(uTexture, vTexCoord + offset * float(i)).rgb * weights[i];
+                    result += texture(uTexture, vTexCoord - offset * float(i)).rgb * weights[i];
+                }
+                FragColor = vec4(result, 1.0);
+            }
+        )";
+
+        GLuint bvs = CompileShader(GL_VERTEX_SHADER, extractSrc);
+        GLuint bfs = CompileShader(GL_FRAGMENT_SHADER, blurFrag);
+        if (bvs && bfs)
+            m_bloomBlurShader.program = LinkProgram(bvs, bfs);
+    }
+
+    void CreateBloomFBOs(int width, int height)
+    {
+        DestroyBloomFBOs();
+        if (width <= 0 || height <= 0) return;
+
+        int bloomW = width / 2;
+        int bloomH = height / 2;
+
+        glGenFramebuffers(1, &m_bloomExtractFBO);
+        glGenTextures(1, &m_bloomExtractTexture);
+        glBindTexture(GL_TEXTURE_2D, m_bloomExtractTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, bloomW, bloomH, 0, GL_RGBA, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_bloomExtractFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_bloomExtractTexture, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        for (int i = 0; i < 2; ++i)
+        {
+            glGenFramebuffers(1, &m_bloomPingPongFBO[i]);
+            glGenTextures(1, &m_bloomPingPongTexture[i]);
+            glBindTexture(GL_TEXTURE_2D, m_bloomPingPongTexture[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, bloomW, bloomH, 0, GL_RGBA, GL_FLOAT, nullptr);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glBindFramebuffer(GL_FRAMEBUFFER, m_bloomPingPongFBO[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_bloomPingPongTexture[i], 0);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void DestroyBloomFBOs()
+    {
+        if (m_bloomExtractFBO) { glDeleteFramebuffers(1, &m_bloomExtractFBO); m_bloomExtractFBO = 0; }
+        if (m_bloomExtractTexture) { glDeleteTextures(1, &m_bloomExtractTexture); m_bloomExtractTexture = 0; }
+        for (int i = 0; i < 2; ++i)
+        {
+            if (m_bloomPingPongFBO[i]) { glDeleteFramebuffers(1, &m_bloomPingPongFBO[i]); m_bloomPingPongFBO[i] = 0; }
+            if (m_bloomPingPongTexture[i]) { glDeleteTextures(1, &m_bloomPingPongTexture[i]); m_bloomPingPongTexture[i] = 0; }
+        }
+    }
+
+    void RenderBloom()
+    {
+        if (!m_bloomExtractShader.program || !m_bloomBlurShader.program) return;
+        if (!m_bloomExtractFBO) return;
+
+        EnsureScreenQuad();
+
+        int bloomW = m_windowWidth / 2;
+        int bloomH = m_windowHeight / 2;
+
+        glDisable(GL_DEPTH_TEST);
+
+        glUseProgram(m_bloomExtractShader.program);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_sceneColorTexture);
+        GLint sceneTexLoc = glGetUniformLocation(m_bloomExtractShader.program, "uSceneTexture");
+        if (sceneTexLoc >= 0) glUniform1i(sceneTexLoc, 0);
+        GLint thresholdLoc = glGetUniformLocation(m_bloomExtractShader.program, "uThreshold");
+        if (thresholdLoc >= 0) glUniform1f(thresholdLoc, 1.0f);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, m_bloomExtractFBO);
+        glViewport(0, 0, bloomW, bloomH);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glBindVertexArray(m_screenQuadVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glUseProgram(m_bloomBlurShader.program);
+        GLint texLoc = glGetUniformLocation(m_bloomBlurShader.program, "uTexture");
+        GLint texelSizeLoc = glGetUniformLocation(m_bloomBlurShader.program, "uTexelSize");
+        GLint horizontalLoc = glGetUniformLocation(m_bloomBlurShader.program, "uHorizontal");
+
+        if (texLoc >= 0) glUniform1i(texLoc, 0);
+
+        bool horizontal = true;
+        bool firstIteration = true;
+        for (int i = 0; i < 10; ++i)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, m_bloomPingPongFBO[horizontal ? 1 : 0]);
+            if (horizontalLoc >= 0) glUniform1i(horizontalLoc, horizontal ? 1 : 0);
+            if (texelSizeLoc >= 0)
+            {
+                float texelX = 1.0f / static_cast<float>(bloomW);
+                float texelY = 1.0f / static_cast<float>(bloomH);
+                glUniform2f(texelSizeLoc, texelX, texelY);
+            }
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, firstIteration ? m_bloomExtractTexture : m_bloomPingPongTexture[horizontal ? 0 : 1]);
+            glViewport(0, 0, bloomW, bloomH);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glBindVertexArray(m_screenQuadVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+            horizontal = !horizontal;
+            firstIteration = false;
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, m_windowWidth, m_windowHeight);
+        glUseProgram(0);
+        glEnable(GL_DEPTH_TEST);
+    }
+
+    void EnsureScreenQuad()
+    {
+        if (m_screenQuadVAO != 0) return;
+        float quad[] = {
+            -1.0f,  1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f,
+             1.0f, -1.0f, 1.0f, 0.0f,
+            -1.0f,  1.0f, 0.0f, 1.0f,
+             1.0f, -1.0f, 1.0f, 0.0f,
+             1.0f,  1.0f, 1.0f, 1.0f,
+        };
+        glGenVertexArrays(1, &m_screenQuadVAO);
+        glGenBuffers(1, &m_screenQuadVBO);
+        glBindVertexArray(m_screenQuadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, m_screenQuadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+            reinterpret_cast<void*>(2 * sizeof(float)));
+        glBindVertexArray(0);
+    }
+
 public:
     std::unordered_map<AssetHandle, std::vector<Mat4>> m_boneMatricesCache;
 
@@ -1582,6 +1824,8 @@ private:
     GLShaderProgram m_skinnedShader{};
     GLShaderProgram m_shadowShader{};
     GLShaderProgram m_postProcessShader{};
+    GLShaderProgram m_bloomExtractShader{};
+    GLShaderProgram m_bloomBlurShader{};
     UniformLocations m_pbrUniforms{};
     UniformLocations m_skinnedUniforms{};
     GLMeshData m_defaultMesh{};
@@ -1598,7 +1842,7 @@ private:
 
     GLuint m_sceneFBO = 0;
     GLuint m_sceneColorTexture = 0;
-    GLuint m_sceneDepthRBO = 0;
+    GLuint m_sceneDepthTexture = 0;
     GLuint m_shadowMapFBO = 0;
     GLuint m_shadowMapTexture = 0;
     int m_shadowMapSize = 2048;
@@ -1607,5 +1851,10 @@ private:
     Mat4 m_lightSpaceMatrix = Mat4(1.0f);
     int m_windowWidth = 1280;
     int m_windowHeight = 720;
+
+    GLuint m_bloomExtractFBO = 0;
+    GLuint m_bloomExtractTexture = 0;
+    GLuint m_bloomPingPongFBO[2] = {0, 0};
+    GLuint m_bloomPingPongTexture[2] = {0, 0};
 };
 }

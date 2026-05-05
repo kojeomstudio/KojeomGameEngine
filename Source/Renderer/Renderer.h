@@ -30,7 +30,8 @@ public:
         float roughness, AssetHandle albedoTexHandle = INVALID_HANDLE,
         bool hasTex = false, AssetHandle normalTexHandle = INVALID_HANDLE,
         bool hasNormalTex = false, const Vec3& emissiveColor = Vec3(0.0f),
-        float emissiveStr = 1.0f) = 0;
+        float emissiveStr = 1.0f, AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE,
+        bool hasMetallicRoughnessTex = false, float ao = 1.0f) = 0;
     virtual void UploadBoneMatrices(AssetHandle handle,
         const std::vector<Mat4>& matrices) = 0;
     virtual void RemoveMesh(AssetHandle handle) = 0;
@@ -105,12 +106,14 @@ public:
         float roughness, AssetHandle albedoTexHandle = INVALID_HANDLE,
         bool hasTex = false, AssetHandle normalTexHandle = INVALID_HANDLE,
         bool hasNormalTex = false, const Vec3& emissiveColor = Vec3(0.0f),
-        float emissiveStr = 1.0f)
+        float emissiveStr = 1.0f, AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE,
+        bool hasMetallicRoughnessTex = false, float ao = 1.0f)
     {
         if (!m_backend) return INVALID_HANDLE;
         return m_backend->RegisterMaterial(albedo, metallic, roughness,
             albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
-            emissiveColor, emissiveStr);
+            emissiveColor, emissiveStr, metallicRoughnessTexHandle,
+            hasMetallicRoughnessTex, ao);
     }
 
     void UploadBoneMatrices(AssetHandle handle,

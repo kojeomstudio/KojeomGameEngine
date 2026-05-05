@@ -34,6 +34,8 @@ struct StaticDrawCommand
     AssetHandle meshHandle = INVALID_HANDLE;
     AssetHandle materialHandle = INVALID_HANDLE;
     Mat4 worldMatrix = Mat4(1.0f);
+    Vec3 boundsCenter = Vec3(0.0f);
+    float boundsRadius = 0.0f;
 };
 
 struct SkinnedDrawCommand
@@ -50,6 +52,8 @@ struct TerrainDrawCommand
     AssetHandle terrainHandle = INVALID_HANDLE;
     AssetHandle materialHandle = INVALID_HANDLE;
     Mat4 worldMatrix = Mat4(1.0f);
+    Vec3 boundsCenter = Vec3(0.0f);
+    float boundsRadius = 0.0f;
 };
 
 struct RenderScene
