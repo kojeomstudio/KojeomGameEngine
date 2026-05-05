@@ -155,8 +155,7 @@ public:
             loaded = LoadGLTFStaticMesh(path, meshData);
         else if (ext == ".fbx" || ext == ".FBX")
         {
-            m_mutex.unlock();
-            return LoadFBXInternal(path);
+            return LoadFBXInternalLocked(path);
         }
         else
         {
@@ -796,11 +795,11 @@ public:
     AssetHandle LoadFBX(const std::string& path)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        return LoadFBXInternal(path);
+        return LoadFBXInternalLocked(path);
     }
 
 private:
-    AssetHandle LoadFBXInternal(const std::string& path)
+    AssetHandle LoadFBXInternalLocked(const std::string& path)
     {
         if (!FileSystem::ValidatePath(path))
         {

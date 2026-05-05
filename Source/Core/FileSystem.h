@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstdint>
+#include <algorithm>
 
 namespace Kojeom
 {
@@ -89,6 +90,15 @@ public:
     {
         if (path.empty()) return false;
         if (path.find("..") != std::string::npos) return false;
+        if (path.find('\0') != std::string::npos) return false;
+        if (path.find("%2e%2e") != std::string::npos) return false;
+        if (path.find("%2E%2E") != std::string::npos) return false;
+        if (path.find("%2e%2E") != std::string::npos) return false;
+        if (path.find("%2E%2e") != std::string::npos) return false;
+        if (path.find("%2f") != std::string::npos) return false;
+        if (path.find("%2F") != std::string::npos) return false;
+        if (path.find("%5c") != std::string::npos) return false;
+        if (path.find("%5C") != std::string::npos) return false;
 #ifdef _WIN32
         if (path.size() >= 2 && path[1] == ':') return false;
 #else

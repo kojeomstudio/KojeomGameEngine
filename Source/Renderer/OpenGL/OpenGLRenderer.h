@@ -10,6 +10,8 @@
 #include <stb_image_write.h>
 #include <vector>
 #include <unordered_map>
+#include <algorithm>
+#include <array>
 #include <string>
 
 namespace Kojeom
@@ -75,6 +77,7 @@ struct UniformLocations
     GLint pointLightIntensities = -1;
     GLint lightSpaceMatrix = -1;
     GLint shadowMap = -1;
+    GLint normalMatrix = -1;
 };
 
 class OpenGLRenderer : public IRendererBackend
@@ -151,6 +154,8 @@ public:
         if (m_postProcessShader.program) { glDeleteProgram(m_postProcessShader.program); m_postProcessShader.program = 0; }
         if (m_defaultAlbedoTexture) { glDeleteTextures(1, &m_defaultAlbedoTexture); m_defaultAlbedoTexture = 0; }
         if (m_defaultNormalTexture) { glDeleteTextures(1, &m_defaultNormalTexture); m_defaultNormalTexture = 0; }
+        if (m_screenQuadVAO) { glDeleteVertexArrays(1, &m_screenQuadVAO); m_screenQuadVAO = 0; }
+        if (m_screenQuadVBO) { glDeleteBuffers(1, &m_screenQuadVBO); m_screenQuadVBO = 0; }
 
         DestroyFramebuffer();
         DestroyShadowMap();
@@ -383,6 +388,53 @@ public:
     AssetHandle GetDefaultAlbedoTextureHandle() const override { return m_defaultAlbedoTextureHandle; }
 
 private:
+    struct FrustumPlane
+    {
+        Vec3 normal;
+        float d;
+    };
+
+    std::array<FrustumPlane, 6> ExtractFrustumPlanes(const Mat4& vp) const
+    {
+        std::array<FrustumPlane, 6> planes;
+        for (int i = 0; i < 6; ++i)
+        {
+            int col = (i >> 1);
+            float sign = (i & 1) ? 1.0f : -1.0f;
+            planes[i].normal.x = vp[0][col] * sign + (i & 1 ? 0.0f : vp[0][3]);
+            planes[i].normal.y = vp[1][col] * sign + (i & 1 ? 0.0f : vp[1][3]);
+            planes[i].normal.z = vp[2][col] * sign + (i & 1 ? 0.0f : vp[2][3]);
+            planes[i].d        = vp[3][col] * sign + (i & 1 ? 0.0f : vp[3][3]);
+        }
+
+        for (int i = 0; i < 6; ++i)
+        {
+            float len = glm::length(planes[i].normal);
+            if (len > 0.0001f)
+            {
+                planes[i].normal /= len;
+                planes[i].d /= len;
+            }
+        }
+        return planes;
+    }
+
+    bool IsSphereInFrustum(const std::array<FrustumPlane, 6>& planes,
+        const Vec3& center, float radius) const
+    {
+        for (int i = 0; i < 6; ++i)
+        {
+            float dist = glm::dot(planes[i].normal, center) + planes[i].d;
+            if (dist < -radius) return false;
+        }
+        return true;
+    }
+
+    Mat3 ComputeNormalMatrix(const Mat4& modelMatrix) const
+    {
+        return glm::mat3(glm::transpose(glm::inverse(modelMatrix)));
+    }
+
     void RenderStaticMeshes(const RenderScene& scene)
     {
         if (!m_pbrShader.program) return;
@@ -396,10 +448,21 @@ private:
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
 
+        auto frustumPlanes = ExtractFrustumPlanes(scene.camera.viewProjectionMatrix);
+
         for (const auto& cmd : scene.staticDrawCommands)
         {
             if (m_pbrUniforms.model >= 0)
                 glUniformMatrix4fv(m_pbrUniforms.model, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+
+            if (m_pbrUniforms.normalMatrix >= 0)
+            {
+                Mat3 normalMat = ComputeNormalMatrix(cmd.worldMatrix);
+                glUniformMatrix3fv(m_pbrUniforms.normalMatrix, 1, GL_FALSE, &normalMat[0][0]);
+            }
+
+            Vec3 worldPos = Vec3(cmd.worldMatrix * Vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            if (!IsSphereInFrustum(frustumPlanes, worldPos, 100.0f)) continue;
 
             SetMaterialUniforms(cmd.materialHandle, m_pbrUniforms);
 
@@ -447,6 +510,12 @@ private:
             if (m_skinnedUniforms.model >= 0)
                 glUniformMatrix4fv(m_skinnedUniforms.model, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
 
+            if (m_skinnedUniforms.normalMatrix >= 0)
+            {
+                Mat3 normalMat = ComputeNormalMatrix(cmd.worldMatrix);
+                glUniformMatrix3fv(m_skinnedUniforms.normalMatrix, 1, GL_FALSE, &normalMat[0][0]);
+            }
+
             GLint boneLoc = m_skinnedUniforms.boneMatrices;
             auto it = m_boneMatricesCache.find(cmd.boneMatricesHandle);
             if (boneLoc >= 0 && it != m_boneMatricesCache.end())
@@ -492,10 +561,21 @@ private:
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
 
+        auto terrainFrustum = ExtractFrustumPlanes(scene.camera.viewProjectionMatrix);
+
         for (const auto& cmd : scene.terrainDrawCommands)
         {
             if (m_pbrUniforms.model >= 0)
                 glUniformMatrix4fv(m_pbrUniforms.model, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+
+            if (m_pbrUniforms.normalMatrix >= 0)
+            {
+                Mat3 normalMat = ComputeNormalMatrix(cmd.worldMatrix);
+                glUniformMatrix3fv(m_pbrUniforms.normalMatrix, 1, GL_FALSE, &normalMat[0][0]);
+            }
+
+            Vec3 terrainPos = Vec3(cmd.worldMatrix * Vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            if (!IsSphereInFrustum(terrainFrustum, terrainPos, 200.0f)) continue;
 
             SetMaterialUniforms(cmd.materialHandle, m_pbrUniforms);
 
@@ -522,9 +602,9 @@ private:
             CreateShadowMap(2048, 2048);
 
         float nearP = 0.1f;
-        float farP = 50.0f;
-        Mat4 lightProj = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, nearP, farP);
-        Mat4 lightView = glm::lookAt(-scene.light.direction * 25.0f,
+        float farP = 100.0f;
+        Mat4 lightProj = glm::ortho(-30.0f, 30.0f, -30.0f, 30.0f, nearP, farP);
+        Mat4 lightView = glm::lookAt(-scene.light.direction * 30.0f,
             Vec3(0.0f), Vec3(0.0f, 1.0f, 0.0f));
         m_lightSpaceMatrix = lightProj * lightView;
 
@@ -803,6 +883,7 @@ private:
 
             uniform mat4 uViewProjection;
             uniform mat4 uModel;
+            uniform mat3 uNormalMatrix;
 
             out vec3 vWorldPos;
             out vec3 vNormal;
@@ -812,7 +893,7 @@ private:
             {
                 vec4 worldPos = uModel * vec4(aPosition, 1.0);
                 vWorldPos = worldPos.xyz;
-                vNormal = mat3(transpose(inverse(uModel))) * aNormal;
+                vNormal = uNormalMatrix * aNormal;
                 vTexCoord = aTexCoord;
                 gl_Position = uViewProjection * worldPos;
             }
@@ -994,6 +1075,7 @@ private:
             uniform mat4 uViewProjection;
             uniform mat4 uModel;
             uniform mat4 uBoneMatrices[128];
+            uniform mat3 uNormalMatrix;
 
             out vec3 vWorldPos;
             out vec3 vNormal;
@@ -1015,7 +1097,7 @@ private:
 
                 vec4 worldPos = uModel * skinnedPos;
                 vWorldPos = worldPos.xyz;
-                vNormal = mat3(transpose(inverse(uModel))) * skinnedNormal.xyz;
+                vNormal = uNormalMatrix * skinnedNormal.xyz;
                 vTexCoord = aTexCoord;
                 gl_Position = uViewProjection * worldPos;
             }
@@ -1305,6 +1387,7 @@ private:
             m_pbrUniforms.pointLightIntensities = cache(m_pbrShader.program, "uPointLightIntensities[0]");
             m_pbrUniforms.lightSpaceMatrix = cache(m_pbrShader.program, "uLightSpaceMatrix");
             m_pbrUniforms.shadowMap = cache(m_pbrShader.program, "uShadowMap");
+            m_pbrUniforms.normalMatrix = cache(m_pbrShader.program, "uNormalMatrix");
         }
 
         if (m_skinnedShader.program)
@@ -1327,6 +1410,7 @@ private:
             m_skinnedUniforms.boneMatrices = cache(m_skinnedShader.program, "uBoneMatrices[0]");
             m_skinnedUniforms.lightSpaceMatrix = cache(m_skinnedShader.program, "uLightSpaceMatrix");
             m_skinnedUniforms.shadowMap = cache(m_skinnedShader.program, "uShadowMap");
+            m_skinnedUniforms.normalMatrix = cache(m_skinnedShader.program, "uNormalMatrix");
         }
     }
 
