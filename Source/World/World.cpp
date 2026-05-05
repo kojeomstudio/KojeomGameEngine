@@ -16,5 +16,7 @@ void AnimatorComponent::Tick(float deltaSeconds)
 
     internalAnimator.Tick(deltaSeconds);
     playbackTime = internalAnimator.GetPlaybackTime();
+
+    cachedSkinMatrices = internalAnimator.GetSkinMatrices();
 }
 }

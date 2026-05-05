@@ -138,10 +138,9 @@ public:
     }
 
     AssetHandle UploadMesh(const std::vector<float>& vertices, const std::vector<uint32_t>& indices,
-        int vertexStride = 8)
+        int vertexStride = 8) override
     {
-        static AssetHandle nextHandle = 1;
-        AssetHandle handle = nextHandle++;
+        AssetHandle handle = GenerateHandle();
 
         GLMeshData mesh{};
         mesh.indexCount = static_cast<uint32_t>(indices.size());
@@ -177,10 +176,9 @@ public:
     }
 
     AssetHandle UploadSkinnedMesh(const std::vector<float>& vertices,
-        const std::vector<uint32_t>& indices)
+        const std::vector<uint32_t>& indices) override
     {
-        static AssetHandle nextHandle = 5000;
-        AssetHandle handle = nextHandle++;
+        AssetHandle handle = GenerateHandle();
 
         GLMeshData mesh{};
         mesh.indexCount = static_cast<uint32_t>(indices.size());
@@ -221,10 +219,9 @@ public:
         return handle;
     }
 
-    AssetHandle UploadTexture(int width, int height, int channels, const uint8_t* data)
+    AssetHandle UploadTexture(int width, int height, int channels, const uint8_t* data) override
     {
-        static AssetHandle nextHandle = 1000;
-        AssetHandle handle = nextHandle++;
+        AssetHandle handle = GenerateHandle();
 
         GLTextureData tex{};
         tex.width = width;
@@ -254,7 +251,7 @@ public:
         AssetHandle albedoTexHandle = INVALID_HANDLE, bool hasTex = false) override
     {
         static AssetHandle nextHandle = 8000;
-        AssetHandle handle = nextHandle++;
+        AssetHandle handle = GenerateHandle();
         GLMaterialData mat;
         mat.albedo = albedo;
         mat.metallic = metallic;
@@ -367,6 +364,8 @@ private:
                     GL_FALSE, &it->second[0][0][0]);
             }
 
+            SetSkinnedMaterialUniforms(cmd.materialHandle);
+
             GLMeshData mesh;
             auto meshIt = m_meshCache.find(cmd.skeletalMeshHandle);
             if (meshIt != m_meshCache.end()) mesh = meshIt->second;
@@ -439,6 +438,7 @@ private:
         GLint lightDirLoc = glGetUniformLocation(m_skinnedShader.program, "uLightDirection");
         GLint lightColorLoc = glGetUniformLocation(m_skinnedShader.program, "uLightColor");
         GLint lightIntLoc = glGetUniformLocation(m_skinnedShader.program, "uLightIntensity");
+        GLint ambientLoc = glGetUniformLocation(m_skinnedShader.program, "uAmbientColor");
 
         if (vpLoc >= 0)
             glUniformMatrix4fv(vpLoc, 1, GL_FALSE, &scene.camera.viewProjectionMatrix[0][0]);
@@ -450,6 +450,35 @@ private:
             glUniform3fv(lightColorLoc, 1, &scene.light.color[0]);
         if (lightIntLoc >= 0)
             glUniform1f(lightIntLoc, scene.light.intensity);
+        if (ambientLoc >= 0)
+            glUniform3fv(ambientLoc, 1, &scene.light.ambientColor[0]);
+    }
+
+    void SetSkinnedMaterialUniforms(AssetHandle materialHandle)
+    {
+        GLint albedoLoc = glGetUniformLocation(m_skinnedShader.program, "uAlbedo");
+        GLint metallicLoc = glGetUniformLocation(m_skinnedShader.program, "uMetallic");
+        GLint roughnessLoc = glGetUniformLocation(m_skinnedShader.program, "uRoughness");
+        GLint aoLoc = glGetUniformLocation(m_skinnedShader.program, "uAO");
+
+        if (materialHandle != INVALID_HANDLE)
+        {
+            auto matIt = m_materialCache.find(materialHandle);
+            if (matIt != m_materialCache.end())
+            {
+                const auto& mat = matIt->second;
+                if (albedoLoc >= 0) glUniform3fv(albedoLoc, 1, &mat.albedo[0]);
+                if (metallicLoc >= 0) glUniform1f(metallicLoc, mat.metallic);
+                if (roughnessLoc >= 0) glUniform1f(roughnessLoc, mat.roughness);
+                if (aoLoc >= 0) glUniform1f(aoLoc, mat.ao);
+                return;
+            }
+        }
+
+        if (albedoLoc >= 0) glUniform3f(albedoLoc, 0.8f, 0.6f, 0.4f);
+        if (metallicLoc >= 0) glUniform1f(metallicLoc, 0.0f);
+        if (roughnessLoc >= 0) glUniform1f(roughnessLoc, 0.5f);
+        if (aoLoc >= 0) glUniform1f(aoLoc, 1.0f);
     }
 
     void SetMaterialUniforms(AssetHandle materialHandle)
@@ -659,20 +688,73 @@ private:
             uniform vec3 uLightDirection;
             uniform vec3 uLightColor;
             uniform float uLightIntensity;
+            uniform vec3 uAmbientColor;
+
+            uniform vec3 uAlbedo;
+            uniform float uMetallic;
+            uniform float uRoughness;
+            uniform float uAO;
 
             out vec4 FragColor;
 
+            const float PI = 3.14159265359;
+
+            float DistributionGGX(vec3 N, vec3 H, float roughness)
+            {
+                float a = roughness * roughness;
+                float a2 = a * a;
+                float NdotH = max(dot(N, H), 0.0);
+                float NdotH2 = NdotH * NdotH;
+                float denom = NdotH2 * (a2 - 1.0) + 1.0;
+                return a2 / (PI * denom * denom + 0.0001);
+            }
+
+            float GeometrySchlickGGX(float NdotV, float roughness)
+            {
+                float r = roughness + 1.0;
+                float k = (r * r) / 8.0;
+                return NdotV / (NdotV * (1.0 - k) + k);
+            }
+
+            float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+            {
+                float NdotV = max(dot(N, V), 0.0);
+                float NdotL = max(dot(N, L), 0.0);
+                return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
+            }
+
+            vec3 fresnelSchlick(float cosTheta, vec3 F0)
+            {
+                return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+            }
+
             void main()
             {
+                vec3 albedo = uAlbedo;
                 vec3 N = normalize(vNormal);
+                vec3 V = normalize(uCameraPos - vWorldPos);
                 vec3 L = normalize(-uLightDirection);
+                vec3 H = normalize(V + L);
+
+                vec3 F0 = mix(vec3(0.04), albedo, uMetallic);
+
+                float D = DistributionGGX(N, H, uRoughness);
+                float G = GeometrySmith(N, V, L, uRoughness);
+                vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+                vec3 numerator = D * G * F;
+                float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+                vec3 specular = numerator / denominator;
+
+                vec3 kS = F;
+                vec3 kD = (vec3(1.0) - kS) * (1.0 - uMetallic);
+
                 float NdotL = max(dot(N, L), 0.0);
+                vec3 Lo = (kD * albedo / PI + specular) * uLightColor * uLightIntensity * NdotL;
 
-                vec3 baseColor = vec3(0.8, 0.6, 0.4);
-                vec3 ambient = vec3(0.15);
-                vec3 diffuse = uLightColor * NdotL * uLightIntensity;
+                vec3 ambient = uAmbientColor * albedo * uAO;
+                vec3 color = ambient + Lo;
 
-                vec3 color = baseColor * (ambient + diffuse);
                 color = color / (color + vec3(1.0));
                 color = pow(color, vec3(1.0 / 2.2));
                 FragColor = vec4(color, 1.0);
@@ -817,6 +899,11 @@ public:
     std::unordered_map<AssetHandle, std::vector<Mat4>> m_boneMatricesCache;
 
 private:
+    AssetHandle GenerateHandle()
+    {
+        return ++m_nextHandle;
+    }
+
     GLShaderProgram m_pbrShader{};
     GLShaderProgram m_skinnedShader{};
     GLMeshData m_defaultMesh{};
@@ -828,5 +915,6 @@ private:
     std::unordered_map<AssetHandle, GLMeshData> m_meshCache;
     std::unordered_map<AssetHandle, GLTextureData> m_textureCache;
     std::unordered_map<AssetHandle, GLMaterialData> m_materialCache;
+    AssetHandle m_nextHandle = 0;
 };
 }

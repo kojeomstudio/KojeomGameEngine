@@ -16,10 +16,10 @@ public:
     float Tick()
     {
         auto now = std::chrono::high_resolution_clock::now();
-        float delta = std::chrono::duration<float>(now - m_last).count();
+        m_lastDelta = std::chrono::duration<float>(now - m_last).count();
         m_last = now;
-        m_elapsed += delta;
-        return delta;
+        m_elapsed += m_lastDelta;
+        return m_lastDelta;
     }
 
     float GetElapsedSeconds() const { return m_elapsed; }

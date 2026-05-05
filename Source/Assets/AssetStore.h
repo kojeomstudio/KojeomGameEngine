@@ -130,6 +130,12 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Path validation failed for mesh: {}", path);
+            return INVALID_HANDLE;
+        }
+
         auto it = m_meshPaths.find(path);
         if (it != m_meshPaths.end()) return it->second;
 
@@ -165,6 +171,12 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Path validation failed for skinned mesh: {}", path);
+            return INVALID_HANDLE;
+        }
+
         auto it = m_skinnedMeshPaths.find(path);
         if (it != m_skinnedMeshPaths.end()) return it->second;
 
@@ -186,6 +198,12 @@ public:
     AssetHandle LoadTexture(const std::string& path)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Path validation failed for texture: {}", path);
+            return INVALID_HANDLE;
+        }
 
         auto it = m_texturePaths.find(path);
         if (it != m_texturePaths.end()) return it->second;

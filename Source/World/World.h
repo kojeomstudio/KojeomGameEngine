@@ -81,6 +81,7 @@ struct AnimatorComponent : public IComponent
 
     Animator internalAnimator;
     bool needsInit = true;
+    std::vector<Mat4> cachedSkinMatrices;
 
     void Tick(float deltaSeconds) override;
 };
@@ -254,6 +255,10 @@ public:
                 cmd.materialHandle = sm->materialHandle;
                 cmd.worldMatrix = entity->GetTransform()->transform.ToMatrix();
                 cmd.boneCount = sm->boneCount;
+                if (anim && !anim->cachedSkinMatrices.empty())
+                {
+                    cmd.boneCount = static_cast<uint32_t>(anim->cachedSkinMatrices.size());
+                }
                 if (anim && anim->boneMatricesHandle != INVALID_HANDLE)
                 {
                     cmd.boneMatricesHandle = anim->boneMatricesHandle;
@@ -361,11 +366,22 @@ public:
             {
                 auto* mr = entity->AddComponent<MeshRendererComponent>();
                 std::string meshPath = entJson["mesh"].get<std::string>();
-                if (assetStore)
+                if (assetStore && renderer)
                 {
-                    mr->meshHandle = assetStore->LoadMesh(meshPath);
-                    if (mr->meshHandle == INVALID_HANDLE)
-                        result.warnings.push_back("Failed to load mesh: " + meshPath);
+                    if (meshPath == "$default_cube")
+                    {
+                        mr->meshHandle = renderer->GetDefaultCubeHandle();
+                    }
+                    else if (meshPath == "$default_plane")
+                    {
+                        mr->meshHandle = renderer->GetDefaultPlaneHandle();
+                    }
+                    else
+                    {
+                        mr->meshHandle = assetStore->LoadMesh(meshPath);
+                        if (mr->meshHandle == INVALID_HANDLE)
+                            result.warnings.push_back("Failed to load mesh: " + meshPath);
+                    }
                 }
             }
 
@@ -413,6 +429,46 @@ public:
                             heights[i] = terJson["heights"][i].get<float>();
                     }
                     tc->terrainHandle = assetStore->CreateTerrain("terrain", tw, th, tc->cellSize, maxH, heights);
+                }
+            }
+
+            if (entJson.contains("skeletalMesh") && assetStore)
+            {
+                const auto& smJson = entJson["skeletalMesh"];
+                std::string meshPath = smJson.value("path", "");
+                std::string skeletonPath = smJson.value("skeleton", "");
+
+                AssetHandle skelHandle = INVALID_HANDLE;
+                if (!skeletonPath.empty())
+                    skelHandle = assetStore->LoadSkeleton(skeletonPath);
+
+                auto* smComp = entity->AddComponent<SkeletalMeshComponent>();
+                if (!meshPath.empty())
+                {
+                    smComp->skeletalMeshHandle = assetStore->LoadSkinnedMesh(meshPath);
+                    if (smComp->skeletalMeshHandle != INVALID_HANDLE)
+                    {
+                        auto* skelMesh = assetStore->GetSkinnedMesh(smComp->skeletalMeshHandle);
+                        if (skelMesh)
+                            smComp->boneCount = static_cast<uint32_t>(
+                                skelMesh->vertices.empty() ? 0 : 128);
+                    }
+                }
+
+                if (entJson.contains("animation") && skelHandle != INVALID_HANDLE)
+                {
+                    const auto& animJson = entJson["animation"];
+                    std::string clipPath = animJson.value("clip", "");
+                    if (!clipPath.empty())
+                    {
+                        auto* animComp = entity->AddComponent<AnimatorComponent>();
+                        animComp->skeletonHandle = skelHandle;
+                        animComp->currentClipHandle = assetStore->LoadAnimationClip(clipPath, skelHandle);
+                        animComp->loop = animJson.value("loop", true);
+                        animComp->speed = animJson.value("speed", 1.0f);
+                        animComp->playing = animJson.value("autoPlay", true);
+                        animComp->needsInit = true;
+                    }
                 }
             }
         }

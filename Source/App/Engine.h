@@ -163,6 +163,8 @@ public:
 
         m_world->Tick(delta);
 
+        UploadAnimatorBoneMatrices();
+
         RenderScene scene = m_world->BuildRenderScene();
         m_renderer->Render(scene);
 
@@ -257,6 +259,54 @@ public:
             AssetHandle gpuMesh = GenerateTerrainMesh(terrain);
             tc->terrainHandle = gpuMesh;
         }
+
+        for (const auto& entity : m_world->GetEntities())
+        {
+            auto* sm = entity->GetSkeletalMeshComponent();
+            if (!sm || sm->skeletalMeshHandle == INVALID_HANDLE) continue;
+
+            auto* skelMesh = m_assetStore->GetSkinnedMesh(sm->skeletalMeshHandle);
+            if (!skelMesh) continue;
+
+            std::vector<float> flatVerts;
+            flatVerts.reserve(skelMesh->vertices.size() * 14);
+            for (const auto& v : skelMesh->vertices)
+            {
+                flatVerts.insert(flatVerts.end(),
+                    { v.position.x, v.position.y, v.position.z,
+                      v.normal.x, v.normal.y, v.normal.z,
+                      v.uv.x, v.uv.y,
+                      v.boneWeights.x, v.boneWeights.y, v.boneWeights.z, v.boneWeights.w,
+                      static_cast<float>(v.boneIndices.x), static_cast<float>(v.boneIndices.y),
+                      static_cast<float>(v.boneIndices.z), static_cast<float>(v.boneIndices.w) });
+            }
+
+            AssetHandle gpuHandle = m_renderer->UploadSkinnedMesh(flatVerts, skelMesh->indices);
+            sm->skeletalMeshHandle = gpuHandle;
+
+            if (sm->materialHandle != INVALID_HANDLE)
+            {
+                auto* matData = m_assetStore->GetMaterial(sm->materialHandle);
+                if (matData)
+                {
+                    sm->materialHandle = m_renderer->RegisterMaterial(
+                        matData->albedo, matData->metallic, matData->roughness);
+                }
+            }
+
+            auto* anim = entity->GetAnimatorComponent();
+            if (anim && anim->needsInit)
+            {
+                auto* skelData = m_assetStore->GetSkeleton(anim->skeletonHandle);
+                auto* clipData = m_assetStore->GetAnimationClip(anim->currentClipHandle);
+                if (skelData && clipData)
+                {
+                    anim->internalAnimator.SetSkeleton(&skelData->skeleton);
+                    anim->internalAnimator.SetClip(&clipData->clip);
+                    anim->needsInit = false;
+                }
+            }
+        }
     }
 
     bool IsRunning() const { return m_running; }
@@ -328,6 +378,27 @@ private:
         return m_renderer->UploadMesh(vertices, indices);
     }
 
+    void UploadAnimatorBoneMatrices()
+    {
+        for (const auto& entity : m_world->GetEntities())
+        {
+            auto* anim = entity->GetAnimatorComponent();
+            if (!anim || anim->cachedSkinMatrices.empty()) continue;
+
+            if (anim->boneMatricesHandle == INVALID_HANDLE)
+            {
+                anim->boneMatricesHandle = GenerateBoneHandle();
+            }
+
+            m_renderer->UploadBoneMatrices(anim->boneMatricesHandle, anim->cachedSkinMatrices);
+        }
+    }
+
+    AssetHandle GenerateBoneHandle()
+    {
+        return ++m_nextBoneHandle;
+    }
+
     AppConfig m_config;
     std::unique_ptr<GlfwWindow> m_window;
     std::unique_ptr<GlfwInput> m_input;
@@ -336,5 +407,6 @@ private:
     std::unique_ptr<World> m_world;
     Clock m_clock;
     bool m_running = false;
+    AssetHandle m_nextBoneHandle = 0;
 };
 }

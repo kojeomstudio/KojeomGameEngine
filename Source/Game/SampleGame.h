@@ -170,62 +170,17 @@ private:
         AssetHandle terrainHandle = assetStore->CreateTerrain("TestTerrain", terrainW, terrainH,
             cellSize, maxH, heights);
 
-        auto* terrain = assetStore->GetTerrain(terrainHandle);
-        if (!terrain) return;
-
-        std::vector<float> vertices;
-        std::vector<uint32_t> indices;
-        int w = terrain->width;
-        int h = terrain->height;
-        float cs = terrain->cellSize;
-
-        for (int z = 0; z < h; ++z)
-        {
-            for (int x = 0; x < w; ++x)
-            {
-                float px = static_cast<float>(x) * cs;
-                float pz = static_cast<float>(z) * cs;
-                float py = terrain->GetHeight(x, z);
-
-                float hL = terrain->GetHeight(std::max(0, x - 1), z);
-                float hR = terrain->GetHeight(std::min(w - 1, x + 1), z);
-                float hD = terrain->GetHeight(x, std::max(0, z - 1));
-                float hU = terrain->GetHeight(x, std::min(h - 1, z + 1));
-                Vec3 normal = glm::normalize(Vec3(hL - hR, 2.0f * cs, hD - hU));
-
-                float u = static_cast<float>(x) / static_cast<float>(w - 1);
-                float v = static_cast<float>(z) / static_cast<float>(h - 1);
-
-                vertices.insert(vertices.end(), { px, py, pz, normal.x, normal.y, normal.z, u, v });
-            }
-        }
-
-        for (int z = 0; z < h - 1; ++z)
-        {
-            for (int x = 0; x < w - 1; ++x)
-            {
-                uint32_t topLeft = static_cast<uint32_t>(z * w + x);
-                uint32_t topRight = topLeft + 1;
-                uint32_t bottomLeft = topLeft + static_cast<uint32_t>(w);
-                uint32_t bottomRight = bottomLeft + 1;
-
-                indices.insert(indices.end(), { topLeft, bottomLeft, topRight });
-                indices.insert(indices.end(), { topRight, bottomLeft, bottomRight });
-            }
-        }
-
-        AssetHandle gpuMeshHandle = renderer->UploadMesh(vertices, indices);
-
-        AssetHandle terrainMatHandle = renderer->RegisterMaterial(
-            Vec3(0.3f, 0.6f, 0.2f), 0.0f, 0.9f);
-
         auto* terrainEntity = world->CreateEntity("Terrain");
         terrainEntity->GetTransform()->transform.position = Vec3(
             -static_cast<float>(terrainW) * cellSize * 0.5f,
             -1.0f,
             -static_cast<float>(terrainH) * cellSize * 0.5f);
         auto* tc = terrainEntity->AddComponent<TerrainComponent>();
-        tc->terrainHandle = gpuMeshHandle;
+        tc->terrainHandle = terrainHandle;
+        tc->cellSize = cellSize;
+
+        AssetHandle terrainMatHandle = renderer->RegisterMaterial(
+            Vec3(0.3f, 0.6f, 0.2f), 0.0f, 0.9f);
         tc->materialHandle = terrainMatHandle;
     }
 

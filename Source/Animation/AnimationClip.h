@@ -300,10 +300,19 @@ public:
 
     void ClearNodes() { m_nodes.clear(); }
 
+    void Tick(float deltaSeconds)
+    {
+        m_playbackTime += deltaSeconds * m_speed;
+    }
+
+    void SetSpeed(float speed) { m_speed = speed; }
+    float GetPlaybackTime() const { return m_playbackTime; }
+
     Pose Sample(float blendParam) const
     {
         if (!m_skeleton || m_nodes.empty()) return Pose();
-        if (m_nodes.size() == 1) return m_nodes[0].clip->Sample(0.0f, *m_skeleton);
+        if (m_nodes.size() == 1)
+            return m_nodes[0].clip->Sample(m_playbackTime, *m_skeleton);
 
         size_t lowerIdx = 0;
         for (size_t i = 0; i < m_nodes.size() - 1; ++i)
@@ -323,8 +332,8 @@ public:
         float t = (range > 0.0001f) ? (blendParam - lower.position) / range : 0.0f;
         t = glm::clamp(t, 0.0f, 1.0f);
 
-        Pose lowerPose = lower.clip->Sample(0.0f, *m_skeleton);
-        Pose upperPose = upper.clip->Sample(0.0f, *m_skeleton);
+        Pose lowerPose = lower.clip->Sample(m_playbackTime, *m_skeleton);
+        Pose upperPose = upper.clip->Sample(m_playbackTime, *m_skeleton);
 
         Pose result(m_skeleton->GetBoneCount());
         for (size_t i = 0; i < m_skeleton->GetBoneCount(); ++i)
@@ -339,5 +348,7 @@ public:
 private:
     const Skeleton* m_skeleton = nullptr;
     std::vector<BlendNode> m_nodes;
+    float m_playbackTime = 0.0f;
+    float m_speed = 1.0f;
 };
 }
