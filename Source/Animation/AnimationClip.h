@@ -74,10 +74,52 @@ public:
     void AddEvent(const AnimationEvent& event) { m_events.push_back(event); }
     const std::vector<AnimationEvent>& GetEvents() const { return m_events; }
 
+    std::vector<std::string> Validate(int32_t expectedBoneCount) const
+    {
+        std::vector<std::string> issues;
+        if (m_duration < 0.0f)
+            issues.push_back("Clip '" + m_name + "' has negative duration");
+        if (m_ticksPerSecond <= 0.0f)
+            issues.push_back("Clip '" + m_name + "' has invalid ticks per second");
+        for (size_t i = 0; i < m_channels.size(); ++i)
+        {
+            const auto& ch = m_channels[i];
+            if (ch.boneIndex < 0 || ch.boneIndex >= expectedBoneCount)
+                issues.push_back("Channel " + std::to_string(i) + " (" + ch.boneName +
+                    ") has invalid bone index " + std::to_string(ch.boneIndex));
+            if (ch.positionKeys.empty() && ch.rotationKeys.empty() && ch.scaleKeys.empty())
+                issues.push_back("Channel " + std::to_string(i) + " (" + ch.boneName +
+                    ") has no keys");
+            for (size_t k = 1; k < ch.positionKeys.size(); ++k)
+            {
+                if (ch.positionKeys[k].time < ch.positionKeys[k - 1].time)
+                {
+                    issues.push_back("Channel " + std::to_string(i) + " position keys not sorted");
+                    break;
+                }
+            }
+            for (size_t k = 1; k < ch.rotationKeys.size(); ++k)
+            {
+                if (ch.rotationKeys[k].time < ch.rotationKeys[k - 1].time)
+                {
+                    issues.push_back("Channel " + std::to_string(i) + " rotation keys not sorted");
+                    break;
+                }
+            }
+        }
+        return issues;
+    }
+
     Pose Sample(float timeSeconds, const Skeleton& skeleton) const
     {
         Pose pose(skeleton.GetBoneCount());
         float clipTime = GetDurationSeconds();
+
+        if (clipTime < 0.0001f)
+        {
+            pose.ComputeGlobalTransforms(skeleton);
+            return pose;
+        }
 
         float sampleTime = timeSeconds;
         if (sampleTime > clipTime)
@@ -96,6 +138,11 @@ public:
             transform.position = SampleVectorKeys(channel.positionKeys, sampleTime);
             transform.rotation = SampleQuatKeys(channel.rotationKeys, sampleTime);
             transform.scale = SampleVectorKeys(channel.scaleKeys, sampleTime);
+
+            if (glm::length(transform.rotation) < 0.001f)
+                transform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            else
+                transform.rotation = glm::normalize(transform.rotation);
 
             pose.GetLocalTransform(channel.boneIndex) = transform;
         }

@@ -49,6 +49,7 @@ struct UniformLocations
     GLint normalMatrix = -1;
     GLint ambientGroundColor = -1;
     GLint ambientGroundBlend = -1;
+    GLint brdfLUT = -1;
 };
 
 class OpenGLRenderer : public IRendererBackend
@@ -319,6 +320,7 @@ private:
             m_pbrUniforms.normalMatrix = cache(pbr, "uNormalMatrix");
             m_pbrUniforms.ambientGroundColor = cache(pbr, "uAmbientGroundColor");
             m_pbrUniforms.ambientGroundBlend = cache(pbr, "uAmbientGroundBlend");
+            m_pbrUniforms.brdfLUT = cache(pbr, "uBRDFLUT");
         }
 
         GLuint skinned = m_shaderManager.GetProgram("skinned");
@@ -506,6 +508,14 @@ private:
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
 
+        if (m_pbrUniforms.brdfLUT >= 0 && m_brdfLUT)
+        {
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, m_brdfLUT);
+            glUniform1i(m_pbrUniforms.brdfLUT, 4);
+            glActiveTexture(GL_TEXTURE0);
+        }
+
         auto frustumPlanes = ExtractFrustumPlanes(scene.camera.viewProjectionMatrix);
 
         for (const auto& cmd : scene.staticDrawCommands)
@@ -540,6 +550,12 @@ private:
         m_textureManager.UnbindTexture(GL_TEXTURE2);
         m_textureManager.UnbindTexture(GL_TEXTURE1);
         m_textureManager.UnbindTexture(GL_TEXTURE0);
+        if (m_brdfLUT)
+        {
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glActiveTexture(GL_TEXTURE0);
+        }
         glUseProgram(0);
     }
 
@@ -1312,6 +1328,8 @@ private:
             uniform mat4 uLightSpaceMatrix;
             uniform sampler2D uShadowMap;
 
+            uniform sampler2D uBRDFLUT;
+
             uniform int uPointLightCount;
             uniform vec3 uPointLightPositions[4];
             uniform vec3 uPointLightColors[4];
@@ -1445,8 +1463,11 @@ private:
                     float dist = length(lightVec);
                     if (dist > uPointLightRanges[i]) continue;
                     L = lightVec / dist;
-                    float attenuation = 1.0 - (dist / uPointLightRanges[i]);
-                    attenuation = attenuation * attenuation;
+                    float distSq = dist * dist;
+                    float cutoffRadius = uPointLightRanges[i];
+                    float attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * distSq);
+                    float cutoffFade = 1.0 - smoothstep(cutoffRadius * 0.8, cutoffRadius, dist);
+                    attenuation *= cutoffFade;
                     radiance = uPointLightColors[i] * uPointLightIntensities[i] * attenuation;
                     Lo += CalcLighting(L, radiance, N, V, albedo, 0.0);
                 }
@@ -1457,7 +1478,11 @@ private:
 
                 float hemisphere = 0.5 + 0.5 * N.y;
                 vec3 hemisphereColor = mix(uAmbientGroundColor, uAmbientColor, hemisphere);
-                vec3 ambient = hemisphereColor * kD * albedo * ao;
+                vec3 diffuseAmbient = hemisphereColor * kD * albedo * ao;
+
+                vec2 brdf = texture(uBRDFLUT, vec2(NdotV, roughness)).rg;
+                vec3 specularAmbient = F * brdf.x + brdf.y;
+                vec3 ambient = diffuseAmbient + specularAmbient * hemisphereColor * ao;
 
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
                 vec3 color = ambient + Lo + emissiveContrib;
@@ -1541,6 +1566,16 @@ private:
             uniform float uExposure;
             uniform bool uUseBloom;
 
+            vec3 ACESFilm(vec3 x)
+            {
+                float a = 2.51;
+                float b = 0.03;
+                float c = 2.43;
+                float d = 0.59;
+                float e = 0.14;
+                return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+            }
+
             void main()
             {
                 vec3 color = texture(uSceneTexture, vTexCoord).rgb;
@@ -1551,7 +1586,8 @@ private:
                     color += bloomColor;
                 }
 
-                color = vec3(1.0) - exp(-color * uExposure);
+                color *= uExposure;
+                color = ACESFilm(color);
                 color = pow(color, vec3(1.0 / 2.2));
 
                 FragColor = vec4(color, 1.0);

@@ -279,8 +279,36 @@ public:
         dump["terrainDrawCommands"] = scene.terrainDrawCommands.size();
         dump["camera"]["valid"] = scene.camera.viewProjectionMatrix != Mat4(1.0f);
         dump["camera"]["position"] = { scene.camera.position.x, scene.camera.position.y, scene.camera.position.z };
+        dump["camera"]["forward"] = { scene.camera.forward.x, scene.camera.forward.y, scene.camera.forward.z };
         dump["entities"] = result.entities;
         dump["totalDrawCalls"] = result.drawCalls;
+
+        nlohmann::json entityList = nlohmann::json::array();
+        for (const auto& entity : engine.GetWorld()->GetEntities())
+        {
+            nlohmann::json e;
+            e["name"] = entity->GetName();
+            auto* transform = entity->GetTransform();
+            e["position"] = { transform->transform.position.x, transform->transform.position.y, transform->transform.position.z };
+            auto* mr = entity->GetMeshRendererComponent();
+            if (mr && mr->meshHandle != INVALID_HANDLE)
+                e["meshHandle"] = mr->meshHandle;
+            auto* tc = entity->GetTerrainComponent();
+            if (tc && tc->terrainHandle != INVALID_HANDLE)
+                e["terrainHandle"] = tc->terrainHandle;
+            auto* sm = entity->GetSkeletalMeshComponent();
+            if (sm && sm->skeletalMeshHandle != INVALID_HANDLE)
+                e["skeletalMeshHandle"] = sm->skeletalMeshHandle;
+            entityList.push_back(e);
+        }
+        dump["entityDetails"] = entityList;
+
+        nlohmann::json lightInfo;
+        lightInfo["direction"] = { scene.light.direction.x, scene.light.direction.y, scene.light.direction.z };
+        lightInfo["color"] = { scene.light.color.x, scene.light.color.y, scene.light.color.z };
+        lightInfo["intensity"] = scene.light.intensity;
+        lightInfo["pointLightCount"] = scene.light.pointLightCount;
+        dump["light"] = lightInfo;
 
         std::string dumpPath = engine.GetConfig().resultJsonPath;
         if (dumpPath.empty()) dumpPath = "scene_dump.json";
@@ -344,17 +372,25 @@ public:
             {
                 bool allBlack = true;
                 size_t pixelCount = static_cast<size_t>(imgW) * imgH * 3;
+                double totalBrightness = 0.0;
+                size_t sampleCount = 0;
                 for (size_t i = 0; i < pixelCount; i += 3)
                 {
-                    if (pixels[i] != 0 || pixels[i + 1] != 0 || pixels[i + 2] != 0)
-                    {
+                    uint8_t r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+                    if (r != 0 || g != 0 || b != 0)
                         allBlack = false;
-                        break;
-                    }
+                    totalBrightness += (r * 0.299 + g * 0.587 + b * 0.114);
+                    sampleCount++;
                 }
+                double avgBrightness = (sampleCount > 0) ? (totalBrightness / sampleCount) : 0.0;
                 if (allBlack)
                 {
                     result.warnings.push_back("Screenshot appears to be completely black");
+                }
+                else if (avgBrightness < 5.0)
+                {
+                    result.warnings.push_back("Screenshot is very dark (avg brightness: " +
+                        std::to_string(static_cast<int>(avgBrightness)) + "/255)");
                 }
                 stbi_image_free(pixels);
             }
@@ -424,6 +460,77 @@ public:
     }
 };
 
+class MaterialDumpMode : public IAppMode
+{
+public:
+    int Run(Engine& engine) override
+    {
+        TestResult result;
+        result.mode = "material-dump";
+        result.backend = engine.GetConfig().backend;
+        result.scene = engine.GetConfig().scenePath;
+
+        engine.TickOneFrame();
+
+        auto* assetStore = engine.GetAssetStore();
+        auto stats = assetStore->GetStats();
+
+        nlohmann::json matDump;
+        matDump["totalMaterials"] = stats.materialCount;
+        matDump["totalTextures"] = stats.textureCount;
+
+        nlohmann::json materials = nlohmann::json::array();
+
+        for (const auto& entity : engine.GetWorld()->GetEntities())
+        {
+            auto* mr = entity->GetMeshRendererComponent();
+            AssetHandle matHandle = INVALID_HANDLE;
+            if (mr) matHandle = mr->materialHandle;
+
+            auto* sm = entity->GetSkeletalMeshComponent();
+            if (sm && sm->materialHandle != INVALID_HANDLE)
+                matHandle = sm->materialHandle;
+
+            if (matHandle == INVALID_HANDLE) continue;
+
+            auto* matData = assetStore->GetMaterial(matHandle);
+            if (!matData) continue;
+
+            nlohmann::json matJson;
+            matJson["entity"] = entity->GetName();
+            matJson["handle"] = matHandle;
+            matJson["albedo"] = { matData->albedo.x, matData->albedo.y, matData->albedo.z };
+            matJson["metallic"] = matData->metallic;
+            matJson["roughness"] = matData->roughness;
+            matJson["ao"] = matData->ao;
+            matJson["emissive"] = { matData->emissive.x, matData->emissive.y, matData->emissive.z };
+            if (!matData->albedoTexturePath.empty())
+                matJson["albedoTexture"] = matData->albedoTexturePath;
+            if (!matData->normalTexturePath.empty())
+                matJson["normalTexture"] = matData->normalTexturePath;
+            if (!matData->metallicRoughnessTexturePath.empty())
+                matJson["metallicRoughnessTexture"] = matData->metallicRoughnessTexturePath;
+            materials.push_back(matJson);
+        }
+
+        matDump["materials"] = materials;
+        result.entities = static_cast<int>(engine.GetWorld()->GetEntityCount());
+        result.loadedAssets = static_cast<int>(stats.materialCount);
+        result.success = true;
+
+        std::string dumpPath = engine.GetConfig().resultJsonPath;
+        if (dumpPath.empty()) dumpPath = "material_dump.json";
+        FileSystem::WriteTextFile(dumpPath, matDump.dump(2));
+
+        if (!engine.GetConfig().resultJsonPath.empty())
+            result.WriteToFile(engine.GetConfig().resultJsonPath);
+
+        KE_LOG_INFO("Material dump: {} materials for {} entities",
+            stats.materialCount, result.entities);
+        return 0;
+    }
+};
+
 inline std::unique_ptr<IAppMode> CreateAppMode(AppConfig::Mode mode)
 {
     switch (mode)
@@ -435,6 +542,7 @@ inline std::unique_ptr<IAppMode> CreateAppMode(AppConfig::Mode mode)
     case AppConfig::Mode::SceneDump: return std::make_unique<SceneDumpMode>();
     case AppConfig::Mode::ScreenshotCompare: return std::make_unique<ScreenshotCompareMode>();
     case AppConfig::Mode::Benchmark: return std::make_unique<BenchmarkMode>();
+    case AppConfig::Mode::MaterialDump: return std::make_unique<MaterialDumpMode>();
     }
     return std::make_unique<GameMode>();
 }
