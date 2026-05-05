@@ -230,6 +230,19 @@ jobs:
           echo "Asset validation passed"
           cat Saved/TestResults/assets.json
 
+      - name: Run headless smoke test
+        run: |
+          sudo apt-get install -y -qq xvfb
+          xvfb-run ./build/bin/Simple3DEngine --mode smoke --scene Scenes/TestScene.json --frames 10 --hidden-window --result-json Saved/TestResults/smoke.json
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "Smoke test failed with exit code $EXIT_CODE"
+            cat Saved/TestResults/smoke.json || true
+            exit 1
+          fi
+          echo "Smoke test passed"
+          cat Saved/TestResults/smoke.json
+
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest

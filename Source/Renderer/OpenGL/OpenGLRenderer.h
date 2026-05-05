@@ -126,6 +126,19 @@ public:
         CacheUniformLocations();
         CreateDefaultMesh();
         CreateDefaultTextures();
+
+        int fbWidth = 0, fbHeight = 0;
+        GLFWwindow* win = static_cast<GLFWwindow*>(windowHandle);
+        glfwGetFramebufferSize(win, &fbWidth, &fbHeight);
+        if (fbWidth > 0 && fbHeight > 0)
+        {
+            m_windowWidth = fbWidth;
+            m_windowHeight = fbHeight;
+            glViewport(0, 0, fbWidth, fbHeight);
+            CreateFramebuffer(fbWidth, fbHeight);
+            CreateBloomFBOs(fbWidth, fbHeight);
+        }
+
         KE_LOG_INFO("OpenGL Renderer initialized");
         return true;
     }
@@ -156,6 +169,7 @@ public:
         if (m_pbrShader.program) { glDeleteProgram(m_pbrShader.program); m_pbrShader.program = 0; }
         if (m_skinnedShader.program) { glDeleteProgram(m_skinnedShader.program); m_skinnedShader.program = 0; }
         if (m_shadowShader.program) { glDeleteProgram(m_shadowShader.program); m_shadowShader.program = 0; }
+        if (m_shadowSkinnedShader.program) { glDeleteProgram(m_shadowSkinnedShader.program); m_shadowSkinnedShader.program = 0; }
         if (m_postProcessShader.program) { glDeleteProgram(m_postProcessShader.program); m_postProcessShader.program = 0; }
         if (m_bloomExtractShader.program) { glDeleteProgram(m_bloomExtractShader.program); m_bloomExtractShader.program = 0; }
         if (m_bloomBlurShader.program) { glDeleteProgram(m_bloomBlurShader.program); m_bloomBlurShader.program = 0; }
@@ -392,9 +406,17 @@ public:
     bool SaveScreenshot(const std::string& path, int width, int height) override
     {
         if (width <= 0 || height <= 0) return false;
+        if (path.empty()) return false;
+
+        GLint prevFBO = 0;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glFlush();
 
         std::vector<uint8_t> pixels(static_cast<size_t>(width) * height * 3);
         glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+        glBindFramebuffer(GL_FRAMEBUFFER, prevFBO);
 
         stbi_flip_vertically_on_write(1);
         int res = stbi_write_png(path.c_str(), width, height, 3, pixels.data(), width * 3);
@@ -672,10 +694,15 @@ private:
             }
         }
 
-        if (m_skinnedShader.program)
+        if (m_shadowSkinnedShader.program)
         {
-            GLint skinnedModelLoc = glGetUniformLocation(m_shadowShader.program, "uModel");
-            GLint skinnedBoneLoc = glGetUniformLocation(m_shadowShader.program, "uBoneMatrices[0]");
+            glUseProgram(m_shadowSkinnedShader.program);
+            GLint skinnedLightSpaceLoc = glGetUniformLocation(m_shadowSkinnedShader.program, "uLightSpaceMatrix");
+            if (skinnedLightSpaceLoc >= 0)
+                glUniformMatrix4fv(skinnedLightSpaceLoc, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
+
+            GLint skinnedModelLoc = glGetUniformLocation(m_shadowSkinnedShader.program, "uModel");
+            GLint skinnedBoneLoc = glGetUniformLocation(m_shadowSkinnedShader.program, "uBoneMatrices[0]");
             for (const auto& cmd : scene.skinnedDrawCommands)
             {
                 if (skinnedModelLoc >= 0)
@@ -1451,7 +1478,32 @@ private:
 
     void CreateShadowShader()
     {
-        const char* vertexSrc = R"(
+        const char* staticVertSrc = R"(
+            #version 450 core
+            layout(location = 0) in vec3 aPosition;
+
+            uniform mat4 uLightSpaceMatrix;
+            uniform mat4 uModel;
+
+            void main()
+            {
+                gl_Position = uLightSpaceMatrix * uModel * vec4(aPosition, 1.0);
+            }
+        )";
+
+        const char* fragmentSrc = R"(
+            #version 450 core
+            void main()
+            {
+            }
+        )";
+
+        GLuint svs = CompileShader(GL_VERTEX_SHADER, staticVertSrc);
+        GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fragmentSrc);
+        if (svs && fs)
+            m_shadowShader.program = LinkProgram(svs, fs);
+
+        const char* skinnedVertSrc = R"(
             #version 450 core
             layout(location = 0) in vec3 aPosition;
             layout(location = 3) in vec4 aBoneWeights;
@@ -1463,33 +1515,24 @@ private:
 
             void main()
             {
-                vec4 skinnedPos = vec4(aPosition, 1.0);
-                if (aBoneWeights.x + aBoneWeights.y + aBoneWeights.z + aBoneWeights.w > 0.0)
-                {
-                    ivec4 boneIdx = ivec4(aBoneIndices);
-                    mat4 skinMatrix =
-                        aBoneWeights.x * uBoneMatrices[boneIdx.x] +
-                        aBoneWeights.y * uBoneMatrices[boneIdx.y] +
-                        aBoneWeights.z * uBoneMatrices[boneIdx.z] +
-                        aBoneWeights.w * uBoneMatrices[boneIdx.w];
-                    skinnedPos = skinMatrix * vec4(aPosition, 1.0);
-                }
+                ivec4 boneIdx = ivec4(aBoneIndices);
+                vec4 weights = aBoneWeights;
+
+                mat4 skinMatrix =
+                    weights.x * uBoneMatrices[boneIdx.x] +
+                    weights.y * uBoneMatrices[boneIdx.y] +
+                    weights.z * uBoneMatrices[boneIdx.z] +
+                    weights.w * uBoneMatrices[boneIdx.w];
+
+                vec4 skinnedPos = skinMatrix * vec4(aPosition, 1.0);
                 gl_Position = uLightSpaceMatrix * uModel * skinnedPos;
             }
         )";
 
-        const char* fragmentSrc = R"(
-            #version 450 core
-            void main()
-            {
-            }
-        )";
-
-        GLuint vs = CompileShader(GL_VERTEX_SHADER, vertexSrc);
-        GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fragmentSrc);
-        if (!vs || !fs) return;
-
-        m_shadowShader.program = LinkProgram(vs, fs);
+        GLuint skvs = CompileShader(GL_VERTEX_SHADER, skinnedVertSrc);
+        GLuint fs2 = CompileShader(GL_FRAGMENT_SHADER, fragmentSrc);
+        if (skvs && fs2)
+            m_shadowSkinnedShader.program = LinkProgram(skvs, fs2);
     }
 
     void CreatePostProcessShader()
@@ -1823,6 +1866,7 @@ private:
     GLShaderProgram m_pbrShader{};
     GLShaderProgram m_skinnedShader{};
     GLShaderProgram m_shadowShader{};
+    GLShaderProgram m_shadowSkinnedShader{};
     GLShaderProgram m_postProcessShader{};
     GLShaderProgram m_bloomExtractShader{};
     GLShaderProgram m_bloomBlurShader{};

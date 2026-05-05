@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cstdint>
 #include <algorithm>
+#include <sys/stat.h>
 
 namespace Kojeom
 {
@@ -40,6 +41,7 @@ public:
 
     static bool WriteTextFile(const std::string& path, const std::string& content)
     {
+        if (!ValidatePath(path)) return false;
         std::ofstream f(path);
         if (!f.is_open()) return false;
         f << content;
@@ -48,6 +50,7 @@ public:
 
     static bool WriteBinaryFile(const std::string& path, const std::vector<uint8_t>& data)
     {
+        if (!ValidatePath(path)) return false;
         std::ofstream f(path, std::ios::binary);
         if (!f.is_open()) return false;
         f.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
@@ -130,6 +133,32 @@ public:
             }
         }
         return result;
+    }
+
+    static bool CreateDirectory(const std::string& path)
+    {
+        if (path.empty()) return false;
+        std::string normalized = NormalizePath(path);
+        std::vector<std::string> parts;
+        std::istringstream iss(normalized);
+        std::string part;
+        while (std::getline(iss, part, '/'))
+        {
+            if (!part.empty())
+                parts.push_back(part);
+        }
+        std::string current;
+        for (const auto& p : parts)
+        {
+            current += p + "/";
+            struct stat st;
+            if (stat(current.c_str(), &st) != 0)
+            {
+                if (mkdir(current.c_str(), 0755) != 0 && errno != EEXIST)
+                    return false;
+            }
+        }
+        return true;
     }
 };
 }

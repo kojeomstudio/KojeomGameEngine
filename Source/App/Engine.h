@@ -62,6 +62,9 @@ struct TestResult
 
     bool WriteToFile(const std::string& path) const
     {
+        auto parentDir = FileSystem::GetDirectory(path);
+        if (!parentDir.empty())
+            FileSystem::CreateDirectory(parentDir);
         auto json = ToJson().dump(2);
         return FileSystem::WriteTextFile(path, json);
     }
@@ -71,7 +74,7 @@ class Engine
 {
 public:
     Engine() = default;
-    ~Engine() { Shutdown(); }
+    ~Engine() { if (m_running) Shutdown(); }
 
     bool Initialize(const AppConfig& config)
     {
@@ -150,6 +153,7 @@ public:
 
     void Shutdown()
     {
+        if (!m_running && !m_window && !m_renderer) return;
         m_running = false;
         m_world.reset();
         m_assetStore.reset();
