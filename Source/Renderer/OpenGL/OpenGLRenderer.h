@@ -436,6 +436,12 @@ private:
 
         SetSkinnedUniforms(scene);
 
+        if (m_skinnedUniforms.shadowMap >= 0) glUniform1i(m_skinnedUniforms.shadowMap, 2);
+        if (m_skinnedUniforms.lightSpaceMatrix >= 0 && m_shadowShader.program)
+            glUniformMatrix4fv(m_skinnedUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
+
         for (const auto& cmd : scene.skinnedDrawCommands)
         {
             if (m_skinnedUniforms.model >= 0)
@@ -464,6 +470,12 @@ private:
             }
         }
 
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
         glUseProgram(0);
     }
 
@@ -555,6 +567,32 @@ private:
                 glBindVertexArray(it->second.vao);
                 glDrawElements(GL_TRIANGLES, it->second.indexCount, GL_UNSIGNED_INT, nullptr);
                 glBindVertexArray(0);
+            }
+        }
+
+        if (m_skinnedShader.program)
+        {
+            GLint skinnedModelLoc = glGetUniformLocation(m_shadowShader.program, "uModel");
+            GLint skinnedBoneLoc = glGetUniformLocation(m_shadowShader.program, "uBoneMatrices[0]");
+            for (const auto& cmd : scene.skinnedDrawCommands)
+            {
+                if (skinnedModelLoc >= 0)
+                    glUniformMatrix4fv(skinnedModelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+
+                auto boneIt = m_boneMatricesCache.find(cmd.boneMatricesHandle);
+                if (skinnedBoneLoc >= 0 && boneIt != m_boneMatricesCache.end())
+                {
+                    glUniformMatrix4fv(skinnedBoneLoc, static_cast<GLsizei>(boneIt->second.size()),
+                        GL_FALSE, &boneIt->second[0][0][0]);
+                }
+
+                auto meshIt = m_meshCache.find(cmd.skeletalMeshHandle);
+                if (meshIt != m_meshCache.end() && meshIt->second.vao)
+                {
+                    glBindVertexArray(meshIt->second.vao);
+                    glDrawElements(GL_TRIANGLES, meshIt->second.indexCount, GL_UNSIGNED_INT, nullptr);
+                    glBindVertexArray(0);
+                }
             }
         }
 
@@ -690,6 +728,15 @@ private:
                 if (m_skinnedUniforms.metallic >= 0) glUniform1f(m_skinnedUniforms.metallic, mat.metallic);
                 if (m_skinnedUniforms.roughness >= 0) glUniform1f(m_skinnedUniforms.roughness, mat.roughness);
                 if (m_skinnedUniforms.ao >= 0) glUniform1f(m_skinnedUniforms.ao, mat.ao);
+                if (m_skinnedUniforms.emissive >= 0) glUniform3fv(m_skinnedUniforms.emissive, 1, &mat.emissive[0]);
+                if (m_skinnedUniforms.emissiveStrength >= 0) glUniform1f(m_skinnedUniforms.emissiveStrength, mat.emissiveStrength);
+                if (m_skinnedUniforms.useAlbedoTexture >= 0) glUniform1i(m_skinnedUniforms.useAlbedoTexture, mat.hasAlbedoTexture ? 1 : 0);
+                if (mat.hasAlbedoTexture && mat.albedoTexture)
+                {
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, mat.albedoTexture);
+                    if (m_skinnedUniforms.albedoTexture >= 0) glUniform1i(m_skinnedUniforms.albedoTexture, 0);
+                }
                 return;
             }
         }
@@ -698,6 +745,9 @@ private:
         if (m_skinnedUniforms.metallic >= 0) glUniform1f(m_skinnedUniforms.metallic, 0.0f);
         if (m_skinnedUniforms.roughness >= 0) glUniform1f(m_skinnedUniforms.roughness, 0.5f);
         if (m_skinnedUniforms.ao >= 0) glUniform1f(m_skinnedUniforms.ao, 1.0f);
+        if (m_skinnedUniforms.emissive >= 0) glUniform3f(m_skinnedUniforms.emissive, 0.0f, 0.0f, 0.0f);
+        if (m_skinnedUniforms.emissiveStrength >= 0) glUniform1f(m_skinnedUniforms.emissiveStrength, 0.0f);
+        if (m_skinnedUniforms.useAlbedoTexture >= 0) glUniform1i(m_skinnedUniforms.useAlbedoTexture, 0);
     }
 
     void SetMaterialUniforms(AssetHandle materialHandle, const UniformLocations& locs)
@@ -987,6 +1037,13 @@ private:
             uniform float uMetallic;
             uniform float uRoughness;
             uniform float uAO;
+            uniform vec3 uEmissive;
+            uniform float uEmissiveStrength;
+            uniform bool uUseAlbedoTexture;
+            uniform sampler2D uAlbedoTexture;
+
+            uniform mat4 uLightSpaceMatrix;
+            uniform sampler2D uShadowMap;
 
             out vec4 FragColor;
 
@@ -1021,11 +1078,38 @@ private:
                 return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
             }
 
+            float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+            {
+                vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+                projCoords = projCoords * 0.5 + 0.5;
+                if (projCoords.z > 1.0) return 0.0;
+                float closestDepth = texture(uShadowMap, projCoords.xy).r;
+                float currentDepth = projCoords.z;
+                float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
+                float shadow = 0.0;
+                vec2 texelSize = 1.0 / textureSize(uShadowMap, 0);
+                for (int x = -1; x <= 1; ++x)
+                {
+                    for (int y = -1; y <= 1; ++y)
+                    {
+                        float pcfDepth = texture(uShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+                        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+                    }
+                }
+                shadow /= 9.0;
+                return shadow;
+            }
+
             void main()
             {
-                vec3 albedo = uAlbedo;
+                vec3 albedo = uUseAlbedoTexture ? texture(uAlbedoTexture, vTexCoord).rgb : uAlbedo;
+
                 vec3 N = normalize(vNormal);
                 vec3 V = normalize(uCameraPos - vWorldPos);
+
+                vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(vWorldPos, 1.0);
+                float shadow = ShadowCalculation(fragPosLightSpace, N, normalize(-uLightDirection));
+
                 vec3 L = normalize(-uLightDirection);
                 vec3 H = normalize(V + L);
 
@@ -1043,13 +1127,12 @@ private:
                 vec3 kD = (vec3(1.0) - kS) * (1.0 - uMetallic);
 
                 float NdotL = max(dot(N, L), 0.0);
-                vec3 Lo = (kD * albedo / PI + specular) * uLightColor * uLightIntensity * NdotL;
+                vec3 Lo = (1.0 - shadow) * (kD * albedo / PI + specular) * uLightColor * uLightIntensity * NdotL;
 
                 vec3 ambient = uAmbientColor * albedo * uAO;
-                vec3 color = ambient + Lo;
+                vec3 emissiveContrib = uEmissive * uEmissiveStrength;
+                vec3 color = ambient + Lo + emissiveContrib;
 
-                color = color / (color + vec3(1.0));
-                color = pow(color, vec3(1.0 / 2.2));
                 FragColor = vec4(color, 1.0);
             }
         )";
@@ -1237,7 +1320,13 @@ private:
             m_skinnedUniforms.metallic = cache(m_skinnedShader.program, "uMetallic");
             m_skinnedUniforms.roughness = cache(m_skinnedShader.program, "uRoughness");
             m_skinnedUniforms.ao = cache(m_skinnedShader.program, "uAO");
+            m_skinnedUniforms.emissive = cache(m_skinnedShader.program, "uEmissive");
+            m_skinnedUniforms.emissiveStrength = cache(m_skinnedShader.program, "uEmissiveStrength");
+            m_skinnedUniforms.useAlbedoTexture = cache(m_skinnedShader.program, "uUseAlbedoTexture");
+            m_skinnedUniforms.albedoTexture = cache(m_skinnedShader.program, "uAlbedoTexture");
             m_skinnedUniforms.boneMatrices = cache(m_skinnedShader.program, "uBoneMatrices[0]");
+            m_skinnedUniforms.lightSpaceMatrix = cache(m_skinnedShader.program, "uLightSpaceMatrix");
+            m_skinnedUniforms.shadowMap = cache(m_skinnedShader.program, "uShadowMap");
         }
     }
 
@@ -1246,13 +1335,27 @@ private:
         const char* vertexSrc = R"(
             #version 450 core
             layout(location = 0) in vec3 aPosition;
+            layout(location = 3) in vec4 aBoneWeights;
+            layout(location = 4) in vec4 aBoneIndices;
 
             uniform mat4 uLightSpaceMatrix;
             uniform mat4 uModel;
+            uniform mat4 uBoneMatrices[128];
 
             void main()
             {
-                gl_Position = uLightSpaceMatrix * uModel * vec4(aPosition, 1.0);
+                vec4 skinnedPos = vec4(aPosition, 1.0);
+                if (aBoneWeights.x + aBoneWeights.y + aBoneWeights.z + aBoneWeights.w > 0.0)
+                {
+                    ivec4 boneIdx = ivec4(aBoneIndices);
+                    mat4 skinMatrix =
+                        aBoneWeights.x * uBoneMatrices[boneIdx.x] +
+                        aBoneWeights.y * uBoneMatrices[boneIdx.y] +
+                        aBoneWeights.z * uBoneMatrices[boneIdx.z] +
+                        aBoneWeights.w * uBoneMatrices[boneIdx.w];
+                    skinnedPos = skinMatrix * vec4(aPosition, 1.0);
+                }
+                gl_Position = uLightSpaceMatrix * uModel * skinnedPos;
             }
         )";
 

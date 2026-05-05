@@ -508,7 +508,7 @@ public:
     bool HasDefaultLight() const { return m_defaultLight.has_value(); }
     const LightData& GetDefaultLight() const { return m_defaultLight.value(); }
 
-    bool SaveToJson(const std::string& scenePath) const
+    bool SaveToJson(const std::string& scenePath, const AssetStore* assetStore = nullptr) const
     {
         nlohmann::json sceneJson;
 
@@ -521,6 +521,22 @@ public:
             sceneJson["light"]["intensity"] = m_defaultLight->intensity;
             sceneJson["light"]["ambient"] = {
                 m_defaultLight->ambientColor.x, m_defaultLight->ambientColor.y, m_defaultLight->ambientColor.z };
+
+            if (m_defaultLight->pointLightCount > 0)
+            {
+                nlohmann::json pointLightsJson = nlohmann::json::array();
+                for (int i = 0; i < m_defaultLight->pointLightCount; ++i)
+                {
+                    nlohmann::json pl;
+                    const auto& light = m_defaultLight->pointLights[i];
+                    pl["position"] = { light.position.x, light.position.y, light.position.z };
+                    pl["color"] = { light.color.x, light.color.y, light.color.z };
+                    pl["range"] = light.range;
+                    pl["intensity"] = light.intensity;
+                    pointLightsJson.push_back(pl);
+                }
+                sceneJson["light"]["pointLights"] = pointLightsJson;
+            }
         }
 
         nlohmann::json entitiesJson = nlohmann::json::array();
@@ -555,9 +571,34 @@ public:
             auto* mr = entity->GetMeshRendererComponent();
             if (mr)
             {
-                entJson["mesh"] = "$mesh";
-                if (mr->materialHandle != INVALID_HANDLE)
-                    entJson["material"] = "$material";
+                if (assetStore)
+                {
+                    std::string meshPath = assetStore->FindMeshPath(mr->meshHandle);
+                    entJson["mesh"] = meshPath.empty() ? "$default_cube" : meshPath;
+                }
+                else
+                {
+                    entJson["mesh"] = "$default_cube";
+                }
+
+                if (mr->materialHandle != INVALID_HANDLE && assetStore)
+                {
+                    auto* matData = assetStore->GetMaterial(mr->materialHandle);
+                    if (matData)
+                    {
+                        nlohmann::json matJson;
+                        matJson["albedo"] = { matData->albedo.x, matData->albedo.y, matData->albedo.z };
+                        matJson["metallic"] = matData->metallic;
+                        matJson["roughness"] = matData->roughness;
+                        matJson["ao"] = matData->ao;
+                        matJson["emissive"] = { matData->emissive.x, matData->emissive.y, matData->emissive.z };
+                        if (!matData->albedoTexturePath.empty())
+                            matJson["albedoTexture"] = matData->albedoTexturePath;
+                        if (!matData->normalTexturePath.empty())
+                            matJson["normalTexture"] = matData->normalTexturePath;
+                        entJson["material"] = matJson;
+                    }
+                }
             }
 
             auto* tc = entity->GetTerrainComponent();
@@ -567,9 +608,31 @@ public:
             }
 
             auto* sm = entity->GetSkeletalMeshComponent();
+            auto* anim = entity->GetAnimatorComponent();
             if (sm)
             {
-                entJson["skeletalMesh"]["path"] = "$skelmesh";
+                if (assetStore)
+                {
+                    std::string skelMeshPath = assetStore->FindSkinnedMeshPath(sm->skeletalMeshHandle);
+                    entJson["skeletalMesh"]["path"] = skelMeshPath.empty() ? "$skelmesh" : skelMeshPath;
+                }
+                else
+                {
+                    entJson["skeletalMesh"]["path"] = "$skelmesh";
+                }
+            }
+            if (anim && assetStore)
+            {
+                std::string skelPath = assetStore->FindSkeletonPath(anim->skeletonHandle);
+                std::string clipPath = assetStore->FindAnimationClipPath(anim->currentClipHandle);
+                if (!skelPath.empty()) entJson["skeletalMesh"]["skeleton"] = skelPath;
+                if (!clipPath.empty())
+                {
+                    entJson["animation"]["clip"] = clipPath;
+                    entJson["animation"]["loop"] = anim->loop;
+                    entJson["animation"]["speed"] = anim->speed;
+                    entJson["animation"]["autoPlay"] = anim->playing;
+                }
             }
 
             entitiesJson.push_back(entJson);

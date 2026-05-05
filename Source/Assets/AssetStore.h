@@ -155,9 +155,8 @@ public:
             loaded = LoadGLTFStaticMesh(path, meshData);
         else if (ext == ".fbx" || ext == ".FBX")
         {
-            m_meshPaths.erase(path);
             m_mutex.unlock();
-            return LoadFBX(path);
+            return LoadFBXInternal(path);
         }
         else
         {
@@ -797,7 +796,12 @@ public:
     AssetHandle LoadFBX(const std::string& path)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+        return LoadFBXInternal(path);
+    }
 
+private:
+    AssetHandle LoadFBXInternal(const std::string& path)
+    {
         if (!FileSystem::ValidatePath(path))
         {
             KE_LOG_ERROR("Path validation failed for FBX: {}", path);
@@ -893,6 +897,7 @@ public:
         return handle;
     }
 
+public:
     AssetHandle GetMaterialForMesh(AssetHandle meshHandle) const
     {
         auto it = m_meshMaterialMap.find(meshHandle);
@@ -968,6 +973,41 @@ public:
         m_terrainPaths.clear();
         m_skeletonPaths.clear();
         m_animationClipPaths.clear();
+    }
+
+    std::string FindMeshPath(AssetHandle handle) const
+    {
+        for (const auto& [path, h] : m_meshPaths)
+            if (h == handle) return path;
+        return "";
+    }
+
+    std::string FindSkinnedMeshPath(AssetHandle handle) const
+    {
+        for (const auto& [path, h] : m_skinnedMeshPaths)
+            if (h == handle) return path;
+        return "";
+    }
+
+    std::string FindSkeletonPath(AssetHandle handle) const
+    {
+        for (const auto& [path, h] : m_skeletonPaths)
+            if (h == handle) return path;
+        return "";
+    }
+
+    std::string FindAnimationClipPath(AssetHandle handle) const
+    {
+        for (const auto& [path, h] : m_animationClipPaths)
+            if (h == handle) return path;
+        return "";
+    }
+
+    std::string FindTexturePath(AssetHandle handle) const
+    {
+        for (const auto& [path, h] : m_texturePaths)
+            if (h == handle) return path;
+        return "";
     }
 
 private:
