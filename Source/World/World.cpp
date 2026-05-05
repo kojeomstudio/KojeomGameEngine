@@ -4,10 +4,32 @@
 
 namespace Kojeom
 {
+AssetStore* World::s_assetStore = nullptr;
+
 void AnimatorComponent::Tick(float deltaSeconds)
 {
     if (!playing) return;
     if (skeletonHandle == INVALID_HANDLE || currentClipHandle == INVALID_HANDLE) return;
+
+    if (needsInit)
+    {
+        needsInit = false;
+        AssetStore* store = World::GetAssetStore();
+        if (store)
+        {
+            auto* skelData = store->GetSkeleton(skeletonHandle);
+            auto* clipData = store->GetAnimationClip(currentClipHandle);
+            if (skelData && clipData)
+            {
+                internalAnimator.SetSkeleton(&skelData->skeleton);
+                internalAnimator.SetClip(&clipData->clip);
+                internalAnimator.SetLoop(loop);
+                internalAnimator.SetSpeed(speed);
+
+                stateMachine.SetSkeleton(&skelData->skeleton);
+            }
+        }
+    }
 
     if (useStateMachine)
     {

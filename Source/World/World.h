@@ -306,6 +306,13 @@ public:
     const std::vector<std::unique_ptr<Entity>>& GetEntities() const { return m_entities; }
     size_t GetEntityCount() const { return m_entities.size(); }
 
+    void SetAssetStore(AssetStore* store)
+    {
+        m_assetStore = store;
+        s_assetStore = store;
+    }
+    static AssetStore* GetAssetStore() { return s_assetStore; }
+
     void Clear()
     {
         m_entities.clear();
@@ -691,5 +698,6 @@ private:
     std::unordered_map<EntityId, Entity*> m_entityMap;
     std::optional<LightData> m_defaultLight;
     const AssetStore* m_assetStore = nullptr;
+    static AssetStore* s_assetStore;
 };
 }

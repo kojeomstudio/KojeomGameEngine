@@ -1024,6 +1024,137 @@ public:
         return "";
     }
 
+    struct AssetStats
+    {
+        size_t meshCount = 0;
+        size_t skinnedMeshCount = 0;
+        size_t textureCount = 0;
+        size_t materialCount = 0;
+        size_t terrainCount = 0;
+        size_t skeletonCount = 0;
+        size_t animationClipCount = 0;
+        size_t totalVertexCount = 0;
+        size_t totalIndexCount = 0;
+        size_t totalTextureBytes = 0;
+    };
+
+    AssetStats GetStats() const
+    {
+        AssetStats stats;
+        stats.meshCount = m_meshes.size();
+        stats.skinnedMeshCount = m_skinnedMeshes.size();
+        stats.textureCount = m_textures.size();
+        stats.materialCount = m_materials.size();
+        stats.terrainCount = m_terrains.size();
+        stats.skeletonCount = m_skeletons.size();
+        stats.animationClipCount = m_animationClips.size();
+
+        for (const auto& [h, mesh] : m_meshes)
+        {
+            stats.totalVertexCount += mesh.vertices.size();
+            stats.totalIndexCount += mesh.indices.size();
+        }
+        for (const auto& [h, mesh] : m_skinnedMeshes)
+        {
+            stats.totalVertexCount += mesh.vertices.size();
+            stats.totalIndexCount += mesh.indices.size();
+        }
+        for (const auto& [h, tex] : m_textures)
+        {
+            stats.totalTextureBytes += tex.pixels.size();
+        }
+        return stats;
+    }
+
+    bool UnloadMesh(AssetHandle handle)
+    {
+        auto it = m_meshes.find(handle);
+        if (it == m_meshes.end()) return false;
+        m_meshes.erase(it);
+        for (auto pathIt = m_meshPaths.begin(); pathIt != m_meshPaths.end(); ++pathIt)
+        {
+            if (pathIt->second == handle) { m_meshPaths.erase(pathIt); break; }
+        }
+        m_meshMaterialMap.erase(handle);
+        return true;
+    }
+
+    bool UnloadTexture(AssetHandle handle)
+    {
+        auto it = m_textures.find(handle);
+        if (it == m_textures.end()) return false;
+        m_textures.erase(it);
+        for (auto pathIt = m_texturePaths.begin(); pathIt != m_texturePaths.end(); ++pathIt)
+        {
+            if (pathIt->second == handle) { m_texturePaths.erase(pathIt); break; }
+        }
+        return true;
+    }
+
+    bool UnloadAnimationClip(AssetHandle handle)
+    {
+        auto it = m_animationClips.find(handle);
+        if (it == m_animationClips.end()) return false;
+        m_animationClips.erase(it);
+        for (auto pathIt = m_animationClipPaths.begin(); pathIt != m_animationClipPaths.end(); ++pathIt)
+        {
+            if (pathIt->second == handle) { m_animationClipPaths.erase(pathIt); break; }
+        }
+        return true;
+    }
+
+    std::vector<std::string> ValidateAllAssets() const
+    {
+        std::vector<std::string> issues;
+
+        for (const auto& [h, mesh] : m_meshes)
+        {
+            if (mesh.vertices.empty())
+                issues.push_back("Mesh handle " + std::to_string(h) + " has no vertices");
+            if (mesh.indices.size() % 3 != 0)
+                issues.push_back("Mesh handle " + std::to_string(h) + " has non-triangle indices");
+            for (size_t i = 0; i < mesh.indices.size(); ++i)
+            {
+                if (mesh.indices[i] >= mesh.vertices.size())
+                {
+                    issues.push_back("Mesh handle " + std::to_string(h) + " has out-of-range index at " + std::to_string(i));
+                    break;
+                }
+            }
+        }
+
+        for (const auto& [h, mesh] : m_skinnedMeshes)
+        {
+            if (mesh.vertices.empty())
+                issues.push_back("SkinnedMesh handle " + std::to_string(h) + " has no vertices");
+            for (const auto& v : mesh.vertices)
+            {
+                float total = v.boneWeights.x + v.boneWeights.y + v.boneWeights.z + v.boneWeights.w;
+                if (total < 0.001f || total > 1.01f)
+                {
+                    issues.push_back("SkinnedMesh handle " + std::to_string(h) + " has invalid bone weights");
+                    break;
+                }
+            }
+        }
+
+        for (const auto& [h, skel] : m_skeletons)
+        {
+            if (!skel.skeleton.Validate())
+                issues.push_back("Skeleton handle " + std::to_string(h) + " validation failed");
+        }
+
+        for (const auto& [h, tex] : m_textures)
+        {
+            if (tex.width <= 0 || tex.height <= 0)
+                issues.push_back("Texture handle " + std::to_string(h) + " has invalid dimensions");
+            if (tex.pixels.empty())
+                issues.push_back("Texture handle " + std::to_string(h) + " has no pixel data");
+        }
+
+        return issues;
+    }
+
 private:
     bool LoadOBJMesh(const std::string& path, MeshData& outMesh)
     {
