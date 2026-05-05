@@ -149,6 +149,22 @@ public:
                             else if (!FileSystem::FileExists(texPath))
                                 result.errors.push_back("Metallic-roughness texture not found: " + texPath);
                         }
+                        if (mat.contains("emissiveTexture"))
+                        {
+                            std::string texPath = mat["emissiveTexture"].get<std::string>();
+                            if (!FileSystem::ValidatePath(texPath))
+                                result.errors.push_back("Invalid emissive texture path: " + texPath);
+                            else if (!FileSystem::FileExists(texPath))
+                                result.errors.push_back("Emissive texture not found: " + texPath);
+                        }
+                        if (mat.contains("aoTexture"))
+                        {
+                            std::string texPath = mat["aoTexture"].get<std::string>();
+                            if (!FileSystem::ValidatePath(texPath))
+                                result.errors.push_back("Invalid AO texture path: " + texPath);
+                            else if (!FileSystem::FileExists(texPath))
+                                result.errors.push_back("AO texture not found: " + texPath);
+                        }
                     }
                     if (entity.contains("skeleton"))
                     {
@@ -504,12 +520,17 @@ public:
             matJson["roughness"] = matData->roughness;
             matJson["ao"] = matData->ao;
             matJson["emissive"] = { matData->emissive.x, matData->emissive.y, matData->emissive.z };
+            matJson["emissiveStrength"] = matData->emissiveStrength;
             if (!matData->albedoTexturePath.empty())
                 matJson["albedoTexture"] = matData->albedoTexturePath;
             if (!matData->normalTexturePath.empty())
                 matJson["normalTexture"] = matData->normalTexturePath;
             if (!matData->metallicRoughnessTexturePath.empty())
                 matJson["metallicRoughnessTexture"] = matData->metallicRoughnessTexturePath;
+            if (!matData->emissiveTexturePath.empty())
+                matJson["emissiveTexture"] = matData->emissiveTexturePath;
+            if (!matData->aoTexturePath.empty())
+                matJson["aoTexture"] = matData->aoTexturePath;
             materials.push_back(matJson);
         }
 

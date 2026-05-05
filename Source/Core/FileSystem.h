@@ -93,6 +93,7 @@ public:
     static bool ValidatePath(const std::string& path)
     {
         if (path.empty()) return false;
+        if (path.size() > 4096) return false;
         if (path.find("..") != std::string::npos) return false;
         if (path.find('\0') != std::string::npos) return false;
         if (path.find("%2e%2e") != std::string::npos) return false;
@@ -103,6 +104,10 @@ public:
         if (path.find("%2F") != std::string::npos) return false;
         if (path.find("%5c") != std::string::npos) return false;
         if (path.find("%5C") != std::string::npos) return false;
+        if (path.find("..%2f") != std::string::npos) return false;
+        if (path.find("..%2F") != std::string::npos) return false;
+        if (path.find("..%5c") != std::string::npos) return false;
+        if (path.find("..%5C") != std::string::npos) return false;
 #ifdef _WIN32
         if (path.size() >= 2 && path[1] == ':') return false;
 #else

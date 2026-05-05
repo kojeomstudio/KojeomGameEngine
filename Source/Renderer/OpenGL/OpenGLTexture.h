@@ -40,7 +40,7 @@ public:
     OpenGLTexture() = default;
     ~OpenGLTexture() { ClearAll(); }
 
-    AssetHandle UploadTexture(int width, int height, int channels, const uint8_t* data, AssetHandle preassignedHandle = INVALID_HANDLE)
+    AssetHandle UploadTexture(int width, int height, int channels, const uint8_t* data, AssetHandle preassignedHandle = INVALID_HANDLE, bool sRGB = false)
     {
         if (width <= 0 || height <= 0 || !data) return INVALID_HANDLE;
 
@@ -54,11 +54,11 @@ public:
         glBindTexture(GL_TEXTURE_2D, tex.texture);
 
         GLenum format = GL_RGB;
-        GLenum internalFormat = GL_RGB8;
+        GLenum internalFormat = sRGB ? GL_SRGB8 : GL_RGB8;
         if (channels == 4)
         {
             format = GL_RGBA;
-            internalFormat = GL_RGBA8;
+            internalFormat = sRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8;
         }
         else if (channels == 1)
         {
@@ -73,6 +73,8 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glBindTexture(GL_TEXTURE_2D, 0);

@@ -23,6 +23,12 @@ struct QuatKey
     glm::quat value = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 };
 
+enum class AnimationInterpolation
+{
+    Linear,
+    Step
+};
+
 struct AnimationChannel
 {
     int32_t boneIndex = -1;
@@ -30,6 +36,7 @@ struct AnimationChannel
     std::vector<VectorKey> positionKeys;
     std::vector<QuatKey> rotationKeys;
     std::vector<VectorKey> scaleKeys;
+    AnimationInterpolation interpolation = AnimationInterpolation::Linear;
 };
 
 struct AnimationEvent
@@ -135,9 +142,18 @@ public:
 
             BoneTransform transform;
 
-            transform.position = SampleVectorKeys(channel.positionKeys, sampleTime);
-            transform.rotation = SampleQuatKeys(channel.rotationKeys, sampleTime);
-            transform.scale = SampleVectorKeys(channel.scaleKeys, sampleTime);
+            if (channel.interpolation == AnimationInterpolation::Step)
+            {
+                transform.position = SampleVectorKeysStep(channel.positionKeys, sampleTime);
+                transform.rotation = SampleQuatKeysStep(channel.rotationKeys, sampleTime);
+                transform.scale = SampleVectorKeysStep(channel.scaleKeys, sampleTime);
+            }
+            else
+            {
+                transform.position = SampleVectorKeys(channel.positionKeys, sampleTime);
+                transform.rotation = SampleQuatKeys(channel.rotationKeys, sampleTime);
+                transform.scale = SampleVectorKeys(channel.scaleKeys, sampleTime);
+            }
 
             if (glm::length(transform.rotation) < 0.001f)
                 transform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -197,6 +213,23 @@ private:
         return glm::mix(a.value, b.value, t);
     }
 
+    static glm::vec3 SampleVectorKeysStep(const std::vector<VectorKey>& keys, float time)
+    {
+        if (keys.empty()) return glm::vec3(0.0f);
+        if (keys.size() == 1) return keys[0].value;
+
+        size_t idx = 0;
+        for (size_t i = 0; i < keys.size() - 1; ++i)
+        {
+            if (time >= keys[i].time && time < keys[i + 1].time)
+            {
+                idx = i;
+                break;
+            }
+        }
+        return keys[idx].value;
+    }
+
     static glm::quat SampleQuatKeys(const std::vector<QuatKey>& keys, float time)
     {
         if (keys.empty()) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -223,6 +256,23 @@ private:
         }
 
         return glm::slerp(a.value, b.value, t);
+    }
+
+    static glm::quat SampleQuatKeysStep(const std::vector<QuatKey>& keys, float time)
+    {
+        if (keys.empty()) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        if (keys.size() == 1) return keys[0].value;
+
+        size_t idx = 0;
+        for (size_t i = 0; i < keys.size() - 1; ++i)
+        {
+            if (time >= keys[i].time && time < keys[i + 1].time)
+            {
+                idx = i;
+                break;
+            }
+        }
+        return keys[idx].value;
     }
 
     std::string m_name;

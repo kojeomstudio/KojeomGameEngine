@@ -259,7 +259,7 @@ public:
                         auto* texData = m_assetStore->GetTexture(texHandle);
                         if (texData)
                         {
-                            albedoTexHandle = m_renderer->UploadTexture(
+                            albedoTexHandle = m_renderer->UploadTextureSRGB(
                                 texData->width, texData->height, texData->channels, texData->pixels.data());
                             hasTex = true;
                         }
@@ -336,7 +336,7 @@ public:
                         auto* texData = m_assetStore->GetTexture(texHandle);
                         if (texData)
                         {
-                            albedoTexHandle = m_renderer->UploadTexture(
+                            albedoTexHandle = m_renderer->UploadTextureSRGB(
                                 texData->width, texData->height, texData->channels, texData->pixels.data());
                             hasTex = true;
                         }

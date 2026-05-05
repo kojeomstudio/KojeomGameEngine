@@ -179,6 +179,13 @@ public:
         return handle;
     }
 
+    AssetHandle UploadTextureSRGB(int width, int height, int channels, const uint8_t* data) override
+    {
+        AssetHandle handle = GenerateHandle();
+        m_textureManager.UploadTexture(width, height, channels, data, handle, true);
+        return handle;
+    }
+
     AssetHandle RegisterMaterial(const Vec3& albedo, float metallic, float roughness,
         AssetHandle albedoTexHandle = INVALID_HANDLE, bool hasTex = false,
         AssetHandle normalTexHandle = INVALID_HANDLE, bool hasNormalTex = false,

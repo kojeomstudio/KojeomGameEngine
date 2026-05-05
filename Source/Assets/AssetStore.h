@@ -78,9 +78,12 @@ struct MaterialData
     float roughness = 0.5f;
     float ao = 1.0f;
     glm::vec3 emissive = glm::vec3(0.0f);
+    float emissiveStrength = 1.0f;
     std::string albedoTexturePath;
     std::string normalTexturePath;
     std::string metallicRoughnessTexturePath;
+    std::string emissiveTexturePath;
+    std::string aoTexturePath;
 };
 
 struct TerrainData
@@ -469,6 +472,11 @@ public:
             animChannel.boneIndex = boneIndex;
             animChannel.boneName = targetNode.name;
 
+            if (sampler.interpolation == "STEP")
+                animChannel.interpolation = AnimationInterpolation::Step;
+            else
+                animChannel.interpolation = AnimationInterpolation::Linear;
+
             const auto& timeAcc = model.accessors[sampler.input];
             const auto& timeBuf = model.bufferViews[timeAcc.bufferView];
             const float* times = reinterpret_cast<const float*>(
@@ -519,7 +527,26 @@ public:
             clipData.clip.AddChannel(animChannel);
         }
 
-        clipData.clip.SetTicksPerSecond(30.0f);
+        float ticksPerSecond = 30.0f;
+        if (!model.animations.empty())
+        {
+            const auto& sampler = anim.samplers[0];
+            const auto& timeAcc = model.accessors[sampler.input];
+            const auto& timeBuf = model.bufferViews[timeAcc.bufferView];
+            const float* times = reinterpret_cast<const float*>(
+                &model.buffers[timeBuf.buffer].data[timeBuf.byteOffset + timeAcc.byteOffset]);
+            if (timeAcc.count >= 2 && times[timeAcc.count - 1] > times[0])
+            {
+                float duration = times[timeAcc.count - 1] - times[0];
+                if (duration > 0.0f)
+                {
+                    float measuredTPS = static_cast<float>(timeAcc.count - 1) / duration;
+                    if (measuredTPS > 1.0f && measuredTPS < 1000.0f)
+                        ticksPerSecond = measuredTPS;
+                }
+            }
+        }
+        clipData.clip.SetTicksPerSecond(ticksPerSecond);
 
         AssetHandle handle = m_nextHandle++;
         m_animationClipPaths[path] = handle;
@@ -535,9 +562,12 @@ public:
         float metallicFactor = 0.0f;
         float roughnessFactor = 0.5f;
         glm::vec3 emissiveFactor = glm::vec3(0.0f);
+        float emissiveStrength = 1.0f;
         std::string albedoTexturePath;
         std::string normalTexturePath;
         std::string metallicRoughnessTexturePath;
+        std::string emissiveTexturePath;
+        std::string aoTexturePath;
         bool hasMaterial = false;
     };
 
@@ -587,6 +617,10 @@ public:
             info.normalTexturePath = resolveTexturePath(mat.normalTexture.index);
         if (mat.values.count("metallicRoughnessTexture"))
             info.metallicRoughnessTexturePath = resolveTexturePath(mat.values.at("metallicRoughnessTexture").TextureIndex());
+        if (mat.emissiveTexture.index >= 0)
+            info.emissiveTexturePath = resolveTexturePath(mat.emissiveTexture.index);
+        if (mat.occlusionTexture.index >= 0)
+            info.aoTexturePath = resolveTexturePath(mat.occlusionTexture.index);
 
         return info;
     }
@@ -790,9 +824,12 @@ public:
                 matData.metallic = matInfo.metallicFactor;
                 matData.roughness = matInfo.roughnessFactor;
                 matData.emissive = matInfo.emissiveFactor;
+                matData.emissiveStrength = matInfo.emissiveStrength;
                 matData.albedoTexturePath = matInfo.albedoTexturePath;
                 matData.normalTexturePath = matInfo.normalTexturePath;
                 matData.metallicRoughnessTexturePath = matInfo.metallicRoughnessTexturePath;
+                matData.emissiveTexturePath = matInfo.emissiveTexturePath;
+                matData.aoTexturePath = matInfo.aoTexturePath;
 
                 AssetHandle matHandle = m_nextHandle++;
                 m_materials[matHandle] = matData;

@@ -26,6 +26,8 @@ public:
         const std::vector<uint32_t>& indices) = 0;
     virtual AssetHandle UploadTexture(int width, int height, int channels,
         const uint8_t* data) = 0;
+    virtual AssetHandle UploadTextureSRGB(int width, int height, int channels,
+        const uint8_t* data) = 0;
     virtual AssetHandle RegisterMaterial(const Vec3& albedo, float metallic,
         float roughness, AssetHandle albedoTexHandle = INVALID_HANDLE,
         bool hasTex = false, AssetHandle normalTexHandle = INVALID_HANDLE,
@@ -100,6 +102,13 @@ public:
     {
         if (!m_backend) return INVALID_HANDLE;
         return m_backend->UploadTexture(width, height, channels, data);
+    }
+
+    AssetHandle UploadTextureSRGB(int width, int height, int channels,
+        const uint8_t* data)
+    {
+        if (!m_backend) return INVALID_HANDLE;
+        return m_backend->UploadTextureSRGB(width, height, channels, data);
     }
 
     AssetHandle RegisterMaterial(const Vec3& albedo, float metallic,
