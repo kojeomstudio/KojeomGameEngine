@@ -169,23 +169,26 @@ public:
     {
         float delta = m_clock.Tick();
 
-        m_input->BeginFrame();
-        m_window->PollEvents();
+        if (m_input) m_input->BeginFrame();
+        if (m_window) m_window->PollEvents();
 
-        if (m_window->ShouldClose())
+        if (m_window && m_window->ShouldClose())
         {
             m_running = false;
             return delta;
         }
 
-        m_world->Tick(delta);
+        if (m_world) m_world->Tick(delta);
 
         UploadAnimatorBoneMatrices();
 
-        RenderScene scene = m_world->BuildRenderScene();
-        m_renderer->Render(scene);
+        if (m_renderer && m_world)
+        {
+            RenderScene scene = m_world->BuildRenderScene();
+            m_renderer->Render(scene);
+        }
 
-        m_window->SwapBuffers();
+        if (m_window) m_window->SwapBuffers();
 
         return delta;
     }
@@ -454,6 +457,7 @@ private:
 
     void UploadAnimatorBoneMatrices()
     {
+        if (!m_world || !m_renderer) return;
         for (const auto& entity : m_world->GetEntities())
         {
             auto* anim = entity->GetAnimatorComponent();

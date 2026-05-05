@@ -146,27 +146,26 @@ public:
 
     void Shutdown() override
     {
+        if (m_nextHandle == 0 && m_meshCache.empty() && m_textureCache.empty() &&
+            m_materialCache.empty() && !m_pbrShader.program)
+            return;
+
         for (auto& [handle, mesh] : m_meshCache)
         {
-            glDeleteVertexArrays(1, &mesh.vao);
-            glDeleteBuffers(1, &mesh.vbo);
-            glDeleteBuffers(1, &mesh.ibo);
+            if (mesh.vao) glDeleteVertexArrays(1, &mesh.vao);
+            if (mesh.vbo) glDeleteBuffers(1, &mesh.vbo);
+            if (mesh.ibo) glDeleteBuffers(1, &mesh.ibo);
         }
         m_meshCache.clear();
 
         for (auto& [handle, tex] : m_textureCache)
         {
-            glDeleteTextures(1, &tex.texture);
+            if (tex.texture) glDeleteTextures(1, &tex.texture);
         }
         m_textureCache.clear();
 
-        for (auto& [handle, mat] : m_materialCache)
-        {
-            if (mat.albedoTexture) glDeleteTextures(1, &mat.albedoTexture);
-            if (mat.normalTexture) glDeleteTextures(1, &mat.normalTexture);
-            if (mat.metallicRoughnessTexture) glDeleteTextures(1, &mat.metallicRoughnessTexture);
-        }
         m_materialCache.clear();
+        m_boneMatricesCache.clear();
 
         if (m_pbrShader.program) { glDeleteProgram(m_pbrShader.program); m_pbrShader.program = 0; }
         if (m_skinnedShader.program) { glDeleteProgram(m_skinnedShader.program); m_skinnedShader.program = 0; }
@@ -179,6 +178,10 @@ public:
         if (m_defaultNormalTexture) { glDeleteTextures(1, &m_defaultNormalTexture); m_defaultNormalTexture = 0; }
         if (m_screenQuadVAO) { glDeleteVertexArrays(1, &m_screenQuadVAO); m_screenQuadVAO = 0; }
         if (m_screenQuadVBO) { glDeleteBuffers(1, &m_screenQuadVBO); m_screenQuadVBO = 0; }
+
+        m_defaultCubeHandle = INVALID_HANDLE;
+        m_defaultPlaneHandle = INVALID_HANDLE;
+        m_defaultAlbedoTextureHandle = INVALID_HANDLE;
 
         DestroyFramebuffer();
         DestroyBloomFBOs();
@@ -1167,6 +1170,11 @@ private:
                 return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
             }
 
+            vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+            {
+                return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+            }
+
             vec3 CalcLighting(vec3 L, vec3 radiance, vec3 N, vec3 V, vec3 albedo, float shadow)
             {
                 vec3 H = normalize(V + L);
@@ -1197,8 +1205,11 @@ private:
                     metallic = mrSample.b * metallic;
                 }
 
+                roughness = clamp(roughness, 0.04, 1.0);
+
                 vec3 N = GetNormal();
                 vec3 V = normalize(uCameraPos - vWorldPos);
+                float NdotV = max(dot(N, V), 0.0);
 
                 vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(vWorldPos, 1.0);
                 float shadow = ShadowCalculation(fragPosLightSpace, N, normalize(-uLightDirection));
@@ -1219,7 +1230,11 @@ private:
                     Lo += CalcLighting(L, radiance, N, V, albedo, 0.0);
                 }
 
-                vec3 ambient = uAmbientColor * albedo * ao;
+                vec3 F0 = mix(vec3(0.04), albedo, metallic);
+                vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
+                vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+                vec3 ambient = uAmbientColor * kD * albedo * ao;
+
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
                 vec3 color = ambient + Lo + emissiveContrib;
 
@@ -1342,6 +1357,11 @@ private:
                 return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
             }
 
+            vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+            {
+                return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+            }
+
             float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
             {
                 vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -1412,8 +1432,11 @@ private:
                     metallic = mrSample.b * metallic;
                 }
 
+                roughness = clamp(roughness, 0.04, 1.0);
+
                 vec3 N = GetNormal();
                 vec3 V = normalize(uCameraPos - vWorldPos);
+                float NdotV = max(dot(N, V), 0.0);
 
                 vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(vWorldPos, 1.0);
                 float shadow = ShadowCalculation(fragPosLightSpace, N, normalize(-uLightDirection));
@@ -1434,7 +1457,11 @@ private:
                     Lo += CalcLighting(L, radiance, N, V, albedo, 0.0);
                 }
 
-                vec3 ambient = uAmbientColor * albedo * uAO;
+                vec3 F0 = mix(vec3(0.04), albedo, metallic);
+                vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
+                vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+                vec3 ambient = uAmbientColor * kD * albedo * uAO;
+
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
                 vec3 color = ambient + Lo + emissiveContrib;
 

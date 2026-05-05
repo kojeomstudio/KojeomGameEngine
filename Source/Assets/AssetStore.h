@@ -1080,16 +1080,29 @@ private:
                 {
                     int v = 0, vt = 0, vn = 0;
                     size_t p1 = face.find('/');
-                    if (p1 == std::string::npos) { v = std::stoi(face); return std::make_tuple(v, vt, vn); }
-                    v = std::stoi(face.substr(0, p1));
+                    if (p1 == std::string::npos)
+                    {
+                        try { v = std::stoi(face); } catch (...) { v = 0; }
+                        return std::make_tuple(v, vt, vn);
+                    }
+                    try { v = std::stoi(face.substr(0, p1)); } catch (...) { v = 0; }
                     size_t p2 = face.find('/', p1 + 1);
                     if (p2 == std::string::npos)
                     {
-                        if (p1 + 1 < face.size()) vt = std::stoi(face.substr(p1 + 1));
+                        if (p1 + 1 < face.size())
+                        {
+                            try { vt = std::stoi(face.substr(p1 + 1)); } catch (...) { vt = 0; }
+                        }
                         return std::make_tuple(v, vt, vn);
                     }
-                    if (p2 > p1 + 1) vt = std::stoi(face.substr(p1 + 1, p2 - p1 - 1));
-                    if (face.size() > p2 + 1) vn = std::stoi(face.substr(p2 + 1));
+                    if (p2 > p1 + 1)
+                    {
+                        try { vt = std::stoi(face.substr(p1 + 1, p2 - p1 - 1)); } catch (...) { vt = 0; }
+                    }
+                    if (face.size() > p2 + 1)
+                    {
+                        try { vn = std::stoi(face.substr(p2 + 1)); } catch (...) { vn = 0; }
+                    }
                     return std::make_tuple(v, vt, vn);
                 };
 
@@ -1102,9 +1115,14 @@ private:
                         ivn = static_cast<int>(normals.size()) + ivn + 1;
                     if (ivt < 0)
                         ivt = static_cast<int>(uvs.size()) + ivt + 1;
+                    if (iv <= 0 || iv > static_cast<int>(positions.size()))
+                    {
+                        KE_LOG_WARN("OBJ face vertex index out of range, using default");
+                        outMesh.vertices.push_back(Vertex{});
+                        return;
+                    }
                     Vertex vtx{};
-                    if (iv > 0 && iv <= static_cast<int>(positions.size()))
-                        vtx.position = positions[iv - 1];
+                    vtx.position = positions[iv - 1];
                     if (ivn > 0 && ivn <= static_cast<int>(normals.size()))
                         vtx.normal = normals[ivn - 1];
                     if (ivt > 0 && ivt <= static_cast<int>(uvs.size()))
@@ -1268,7 +1286,15 @@ private:
         }
 
         ComputeBounds(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
-        return !outMesh.vertices.empty();
+        ValidateDegenerateTriangles(outMesh.indices, outMesh.vertices);
+
+        if (outMesh.vertices.empty() || outMesh.indices.empty())
+        {
+            KE_LOG_ERROR("glTF mesh has no valid geometry: {}", path);
+            return false;
+        }
+
+        return true;
     }
 
     bool LoadGLTFSkinnedMesh(const std::string& path, SkinnedMeshData& outMesh)
@@ -1453,6 +1479,15 @@ private:
             }
         }
 
+        ComputeBoundsSkinned(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
+        ValidateAndFixWeights(outMesh);
+
+        if (outMesh.vertices.empty() || outMesh.indices.empty())
+        {
+            KE_LOG_ERROR("glTF skinned mesh has no valid geometry: {}", path);
+            return false;
+        }
+
         return !outMesh.vertices.empty();
     }
 
@@ -1465,6 +1500,52 @@ private:
             bMin = glm::min(bMin, v.position);
             bMax = glm::max(bMax, v.position);
         }
+    }
+
+    void ComputeBoundsSkinned(const std::vector<SkinnedVertex>& vertices, glm::vec3& bMin, glm::vec3& bMax)
+    {
+        if (vertices.empty()) return;
+        bMin = bMax = vertices[0].position;
+        for (const auto& v : vertices)
+        {
+            bMin = glm::min(bMin, v.position);
+            bMax = glm::max(bMax, v.position);
+        }
+    }
+
+    void ValidateAndFixWeights(SkinnedMeshData& mesh)
+    {
+        for (auto& v : mesh.vertices)
+        {
+            float total = v.boneWeights.x + v.boneWeights.y + v.boneWeights.z + v.boneWeights.w;
+            if (total < 0.001f)
+            {
+                v.boneWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                v.boneIndices = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+            }
+            else if (std::abs(total - 1.0f) > 0.01f)
+            {
+                v.boneWeights /= total;
+            }
+        }
+    }
+
+    void ValidateDegenerateTriangles(std::vector<uint32_t>& indices, const std::vector<Vertex>& vertices)
+    {
+        std::vector<uint32_t> cleaned;
+        cleaned.reserve(indices.size());
+        for (size_t i = 0; i + 2 < indices.size(); i += 3)
+        {
+            uint32_t i0 = indices[i];
+            uint32_t i1 = indices[i + 1];
+            uint32_t i2 = indices[i + 2];
+            if (i0 == i1 || i1 == i2 || i0 == i2) continue;
+            if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size()) continue;
+            cleaned.push_back(i0);
+            cleaned.push_back(i1);
+            cleaned.push_back(i2);
+        }
+        indices = std::move(cleaned);
     }
 
     AssetHandle m_nextHandle = 1;
