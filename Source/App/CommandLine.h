@@ -94,7 +94,7 @@ Options:
   --project <path>      Project directory path
   --scene <path>        Scene file path
   --backend <name>      Renderer backend (opengl, default: opengl)
-  --mode <mode>         Run mode: game, smoke, validate-assets, render-test, scene-dump, screenshot-compare, benchmark, material-dump
+   --mode <mode>         Run mode: game, smoke, validate-assets, render-test, scene-dump, screenshot-compare, benchmark, material-dump, scene-save
   --frames <count>      Number of frames to run (0 = unlimited)
   --headless            Run in headless mode (hidden window, no display)
   --hidden-window       Create hidden window

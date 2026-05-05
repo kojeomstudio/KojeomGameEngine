@@ -43,7 +43,9 @@ public:
     AssetHandle UploadTexture(int width, int height, int channels, const uint8_t* data, AssetHandle preassignedHandle = INVALID_HANDLE, bool sRGB = false)
     {
         if (width <= 0 || height <= 0 || !data) return INVALID_HANDLE;
+        if (channels < 1 || channels > 4) return INVALID_HANDLE;
 
+        size_t expectedSize = static_cast<size_t>(width) * height * channels;
         AssetHandle handle = (preassignedHandle != INVALID_HANDLE) ? preassignedHandle : GenerateHandle();
 
         GLTextureData tex{};
@@ -74,7 +76,8 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16);
+        if (GLAD_GL_EXT_texture_filter_anisotropic)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glBindTexture(GL_TEXTURE_2D, 0);

@@ -552,6 +552,45 @@ public:
     }
 };
 
+class SceneSaveMode : public IAppMode
+{
+public:
+    int Run(Engine& engine) override
+    {
+        TestResult result;
+        result.mode = "scene-save";
+        result.backend = engine.GetConfig().backend;
+        result.scene = engine.GetConfig().scenePath;
+
+        engine.TickOneFrame();
+
+        std::string savePath = engine.GetConfig().resultJsonPath;
+        if (savePath.empty()) savePath = "scene_saved.json";
+
+        auto parentDir = FileSystem::GetDirectory(savePath);
+        if (!parentDir.empty())
+            FileSystem::CreateDirectory(parentDir);
+
+        bool saved = engine.GetWorld()->SaveToJson(savePath, engine.GetAssetStore());
+        if (!saved)
+        {
+            result.errors.push_back("Failed to save scene to: " + savePath);
+            result.success = false;
+        }
+        else
+        {
+            result.success = true;
+            result.entities = static_cast<int>(engine.GetWorld()->GetEntityCount());
+            KE_LOG_INFO("Scene saved to: {} ({} entities)", savePath, result.entities);
+        }
+
+        if (!engine.GetConfig().resultJsonPath.empty())
+            result.WriteToFile(engine.GetConfig().resultJsonPath);
+
+        return result.success ? 0 : 6;
+    }
+};
+
 inline std::unique_ptr<IAppMode> CreateAppMode(AppConfig::Mode mode)
 {
     switch (mode)
@@ -564,6 +603,7 @@ inline std::unique_ptr<IAppMode> CreateAppMode(AppConfig::Mode mode)
     case AppConfig::Mode::ScreenshotCompare: return std::make_unique<ScreenshotCompareMode>();
     case AppConfig::Mode::Benchmark: return std::make_unique<BenchmarkMode>();
     case AppConfig::Mode::MaterialDump: return std::make_unique<MaterialDumpMode>();
+    case AppConfig::Mode::SceneSave: return std::make_unique<SceneSaveMode>();
     }
     return std::make_unique<GameMode>();
 }

@@ -102,6 +102,7 @@ public:
     {
         const auto& input = engine.GetInput()->GetState();
         auto* world = engine.GetWorld();
+        auto* assetStore = engine.GetAssetStore();
 
         Entity* cameraEntity = nullptr;
         for (size_t i = 0; i < world->GetEntityCount(); ++i)
@@ -144,6 +145,10 @@ public:
             m_cameraPitch = glm::clamp(m_cameraPitch, -89.0f, 89.0f);
         }
 
+        float terrainHeight = QueryTerrainHeight(m_cameraPosition, world, assetStore);
+        float minCameraY = terrainHeight + m_cameraHeightOffset;
+        m_cameraPosition.y = glm::max(m_cameraPosition.y, minCameraY);
+
         cam->cameraData.position = m_cameraPosition;
         cam->cameraData.forward = glm::normalize(Vec3(
             cos(glm::radians(m_cameraYaw)) * cos(glm::radians(m_cameraPitch)),
@@ -162,6 +167,27 @@ public:
                 transform->transform.rotation =
                     glm::angleAxis(glm::radians(m_rotationAngle), Vec3(0.0f, 1.0f, 0.0f));
             }
+
+            auto* tc = ent->GetTerrainComponent();
+            if (tc && tc->terrainHandle != INVALID_HANDLE && assetStore)
+            {
+                auto* terrain = assetStore->GetTerrain(tc->terrainHandle);
+                if (terrain)
+                {
+                    auto* transform = ent->GetTransform();
+                    Vec3 terrainPos = transform->transform.position;
+                    Vec3 worldCamPos = m_cameraPosition - terrainPos;
+                    if (worldCamPos.x >= 0.0f && worldCamPos.z >= 0.0f &&
+                        worldCamPos.x < terrain->width * terrain->cellSize &&
+                        worldCamPos.z < terrain->height * terrain->cellSize)
+                    {
+                        float h = terrain->GetHeightInterpolated(worldCamPos.x, worldCamPos.z) + terrainPos.y;
+                        m_cameraPosition.y = glm::max(m_cameraPosition.y, h + m_cameraHeightOffset);
+                        cam->cameraData.position = m_cameraPosition;
+                        cam->cameraData.UpdateMatrices();
+                    }
+                }
+            }
         }
     }
 
@@ -171,6 +197,30 @@ public:
     }
 
 private:
+    float QueryTerrainHeight(const Vec3& worldPos, World* world, AssetStore* assetStore)
+    {
+        if (!assetStore) return 0.0f;
+        for (size_t i = 0; i < world->GetEntityCount(); ++i)
+        {
+            auto& ent = world->GetEntities()[i];
+            auto* tc = ent->GetTerrainComponent();
+            if (!tc || tc->terrainHandle == INVALID_HANDLE) continue;
+            auto* terrain = assetStore->GetTerrain(tc->terrainHandle);
+            if (!terrain) continue;
+            auto* transform = ent->GetTransform();
+            Vec3 terrainOrigin = transform->transform.position;
+            float localX = worldPos.x - terrainOrigin.x;
+            float localZ = worldPos.z - terrainOrigin.z;
+            float terrainWorldW = terrain->width * terrain->cellSize;
+            float terrainWorldH = terrain->height * terrain->cellSize;
+            if (localX >= 0.0f && localZ >= 0.0f && localX < terrainWorldW && localZ < terrainWorldH)
+            {
+                return terrain->GetHeightInterpolated(localX, localZ) + terrainOrigin.y;
+            }
+        }
+        return 0.0f;
+    }
+
     void CreateTestTerrain(World* world, AssetStore* assetStore, Renderer* renderer)
     {
         int terrainW = 32;
@@ -214,5 +264,6 @@ private:
     float m_cameraYaw = -90.0f;
     float m_cameraPitch = -20.0f;
     float m_rotationAngle = 0.0f;
+    float m_cameraHeightOffset = 2.0f;
 };
 }

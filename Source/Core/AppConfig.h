@@ -17,7 +17,8 @@ struct AppConfig
         SceneDump,
         ScreenshotCompare,
         Benchmark,
-        MaterialDump
+        MaterialDump,
+        SceneSave
     };
 
     Mode mode = Mode::Game;
@@ -46,6 +47,7 @@ struct AppConfig
         case Mode::ScreenshotCompare: return "screenshot-compare";
         case Mode::Benchmark: return "benchmark";
         case Mode::MaterialDump: return "material-dump";
+        case Mode::SceneSave: return "scene-save";
         }
         return "unknown";
     }
@@ -60,6 +62,7 @@ struct AppConfig
         if (s == "screenshot-compare") return Mode::ScreenshotCompare;
         if (s == "benchmark") return Mode::Benchmark;
         if (s == "material-dump") return Mode::MaterialDump;
+        if (s == "scene-save") return Mode::SceneSave;
         return Mode::Game;
     }
 };

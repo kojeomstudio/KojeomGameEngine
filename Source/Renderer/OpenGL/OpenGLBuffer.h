@@ -27,6 +27,9 @@ public:
         const std::vector<uint32_t>& indices, int vertexStride,
         AssetHandle preassignedHandle)
     {
+        if (vertices.empty() || indices.empty()) return INVALID_HANDLE;
+        if (vertexStride < 3) return INVALID_HANDLE;
+
         AssetHandle handle = (preassignedHandle != INVALID_HANDLE) ? preassignedHandle : GenerateHandle();
 
         GLMeshData mesh{};
@@ -68,6 +71,8 @@ public:
     AssetHandle UploadSkinnedMesh(const std::vector<float>& vertices,
         const std::vector<uint32_t>& indices, AssetHandle preassignedHandle)
     {
+        if (vertices.empty() || indices.empty()) return INVALID_HANDLE;
+
         AssetHandle handle = (preassignedHandle != INVALID_HANDLE) ? preassignedHandle : GenerateHandle();
 
         GLMeshData mesh{};
