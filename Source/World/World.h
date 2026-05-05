@@ -80,6 +80,8 @@ struct AnimatorComponent : public IComponent
     AssetHandle boneMatricesHandle = INVALID_HANDLE;
 
     Animator internalAnimator;
+    AnimationStateMachine stateMachine;
+    bool useStateMachine = false;
     bool needsInit = true;
     std::vector<Mat4> cachedSkinMatrices;
 
@@ -178,6 +180,8 @@ class World
 public:
     World() = default;
 
+    void SetAssetStore(const AssetStore* assetStore) { m_assetStore = assetStore; }
+
     Entity* CreateEntity(const std::string& name = "Entity")
     {
         EntityId id = m_nextEntityId++;
@@ -233,6 +237,17 @@ public:
                 cmd.meshHandle = mr->meshHandle;
                 cmd.materialHandle = mr->materialHandle;
                 cmd.worldMatrix = entity->GetTransform()->transform.ToMatrix();
+
+                if (m_assetStore)
+                {
+                    auto* meshData = m_assetStore->GetMesh(mr->meshHandle);
+                    if (meshData)
+                    {
+                        cmd.boundsCenter = (meshData->boundsMin + meshData->boundsMax) * 0.5f;
+                        cmd.boundsRadius = glm::length(meshData->boundsMax - meshData->boundsMin) * 0.5f;
+                    }
+                }
+
                 scene.staticDrawCommands.push_back(cmd);
             }
 
@@ -243,8 +258,24 @@ public:
                 cmd.terrainHandle = tc->terrainHandle;
                 cmd.materialHandle = tc->materialHandle;
                 cmd.worldMatrix = entity->GetTransform()->transform.ToMatrix();
-                cmd.boundsCenter = Vec3(0.0f);
-                cmd.boundsRadius = 200.0f;
+
+                if (m_assetStore)
+                {
+                    auto* terrain = m_assetStore->GetTerrain(tc->terrainHandle);
+                    if (terrain)
+                    {
+                        float halfW = terrain->width * terrain->cellSize * 0.5f;
+                        float halfH = terrain->height * terrain->cellSize * 0.5f;
+                        cmd.boundsCenter = Vec3(halfW, terrain->maxHeight * 0.5f, halfH);
+                        cmd.boundsRadius = glm::length(Vec3(halfW, terrain->maxHeight, halfH));
+                    }
+                }
+                else
+                {
+                    cmd.boundsCenter = Vec3(0.0f);
+                    cmd.boundsRadius = 200.0f;
+                }
+
                 scene.terrainDrawCommands.push_back(cmd);
             }
 
@@ -659,5 +690,6 @@ private:
     std::vector<std::unique_ptr<Entity>> m_entities;
     std::unordered_map<EntityId, Entity*> m_entityMap;
     std::optional<LightData> m_defaultLight;
+    const AssetStore* m_assetStore = nullptr;
 };
 }

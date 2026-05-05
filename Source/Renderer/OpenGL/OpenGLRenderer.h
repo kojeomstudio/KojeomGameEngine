@@ -312,6 +312,8 @@ public:
 
     AssetHandle UploadTexture(int width, int height, int channels, const uint8_t* data) override
     {
+        if (width <= 0 || height <= 0 || !data) return INVALID_HANDLE;
+
         AssetHandle handle = GenerateHandle();
 
         GLTextureData tex{};
@@ -321,8 +323,19 @@ public:
         glGenTextures(1, &tex.texture);
         glBindTexture(GL_TEXTURE_2D, tex.texture);
 
-        GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
-        GLenum internalFormat = (channels == 4) ? GL_RGBA8 : GL_RGB8;
+        GLenum format = GL_RGB;
+        GLenum internalFormat = GL_RGB8;
+        if (channels == 4)
+        {
+            format = GL_RGBA;
+            internalFormat = GL_RGBA8;
+        }
+        else if (channels == 1)
+        {
+            format = GL_RED;
+            internalFormat = GL_R8;
+        }
+
         glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0,
             format, GL_UNSIGNED_BYTE, data);
 
@@ -441,25 +454,30 @@ private:
     std::array<FrustumPlane, 6> ExtractFrustumPlanes(const Mat4& vp) const
     {
         std::array<FrustumPlane, 6> planes;
-        for (int i = 0; i < 6; ++i)
-        {
-            int col = (i >> 1);
-            float sign = (i & 1) ? 1.0f : -1.0f;
-            planes[i].normal.x = vp[0][col] * sign + (i & 1 ? 0.0f : vp[0][3]);
-            planes[i].normal.y = vp[1][col] * sign + (i & 1 ? 0.0f : vp[1][3]);
-            planes[i].normal.z = vp[2][col] * sign + (i & 1 ? 0.0f : vp[2][3]);
-            planes[i].d        = vp[3][col] * sign + (i & 1 ? 0.0f : vp[3][3]);
-        }
 
-        for (int i = 0; i < 6; ++i)
+        auto extract = [&](int idx, const Vec4& a, const Vec4& b)
         {
-            float len = glm::length(planes[i].normal);
+            Vec4 p = a + b;
+            float len = glm::length(Vec3(p));
             if (len > 0.0001f)
             {
-                planes[i].normal /= len;
-                planes[i].d /= len;
+                planes[idx].normal = Vec3(p) / len;
+                planes[idx].d = p.w / len;
             }
-        }
+        };
+
+        Vec4 col0(vp[0][0], vp[1][0], vp[2][0], vp[3][0]);
+        Vec4 col1(vp[0][1], vp[1][1], vp[2][1], vp[3][1]);
+        Vec4 col2(vp[0][2], vp[1][2], vp[2][2], vp[3][2]);
+        Vec4 col3(vp[0][3], vp[1][3], vp[2][3], vp[3][3]);
+
+        extract(0, col3,  col0);
+        extract(1, col3, -col0);
+        extract(2, col3,  col1);
+        extract(3, col3, -col1);
+        extract(4, col3,  col2);
+        extract(5, col3, -col2);
+
         return planes;
     }
 

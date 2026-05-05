@@ -132,6 +132,7 @@ public:
 
         m_assetStore = std::make_unique<AssetStore>();
         m_world = std::make_unique<World>();
+        m_world->SetAssetStore(m_assetStore.get());
 
         m_clock.Reset();
         m_running = true;
@@ -145,6 +146,7 @@ public:
         m_config = config;
         m_assetStore = std::make_unique<AssetStore>();
         m_world = std::make_unique<World>();
+        m_world->SetAssetStore(m_assetStore.get());
         m_running = true;
 
         KE_LOG_INFO("Engine initialized in headless mode");

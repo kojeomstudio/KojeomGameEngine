@@ -218,13 +218,28 @@ public:
         auto it = m_texturePaths.find(path);
         if (it != m_texturePaths.end()) return it->second;
 
+        if (!FileSystem::FileExists(path))
+        {
+            KE_LOG_ERROR("Texture file not found: {}", path);
+            return INVALID_HANDLE;
+        }
+
         TextureData texData;
         stbi_set_flip_vertically_on_load(true);
         uint8_t* data = stbi_load(path.c_str(), &texData.width, &texData.height,
             &texData.channels, 0);
         if (!data)
         {
-            KE_LOG_ERROR("Failed to load texture: {}", path);
+            KE_LOG_ERROR("Failed to load texture: {} - {}", path, stbi_failure_reason());
+            return INVALID_HANDLE;
+        }
+
+        if (texData.width <= 0 || texData.height <= 0 || texData.channels <= 0 ||
+            texData.channels > 4)
+        {
+            KE_LOG_ERROR("Invalid texture dimensions/channels: {} ({}x{}, {}ch)",
+                path, texData.width, texData.height, texData.channels);
+            stbi_image_free(data);
             return INVALID_HANDLE;
         }
 
@@ -1081,6 +1096,12 @@ private:
                 auto addVertex = [&](const std::string& faceStr)
                 {
                     auto [iv, ivt, ivn] = parseFace(faceStr);
+                    if (iv < 0)
+                        iv = static_cast<int>(positions.size()) + iv + 1;
+                    if (ivn < 0)
+                        ivn = static_cast<int>(normals.size()) + ivn + 1;
+                    if (ivt < 0)
+                        ivt = static_cast<int>(uvs.size()) + ivt + 1;
                     Vertex vtx{};
                     if (iv > 0 && iv <= static_cast<int>(positions.size()))
                         vtx.position = positions[iv - 1];
