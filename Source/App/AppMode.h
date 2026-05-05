@@ -1,9 +1,7 @@
 #pragma once
 
-#include <glad/gl.h>
 #include "App/Engine.h"
 #include <chrono>
-#include <stb_image_write.h>
 
 namespace Kojeom
 {
@@ -90,18 +88,46 @@ public:
                     if (entity.contains("mesh"))
                     {
                         std::string meshPath = entity["mesh"].get<std::string>();
-                        if (!FileSystem::FileExists(meshPath))
+                        if (!FileSystem::ValidatePath(meshPath))
+                        {
+                            result.errors.push_back("Invalid mesh path (traversal): " + meshPath);
+                        }
+                        else if (!FileSystem::FileExists(meshPath))
+                        {
                             result.errors.push_back("Mesh not found: " + meshPath);
+                        }
                         else
+                        {
                             result.loadedAssets++;
+                        }
                     }
                     if (entity.contains("texture"))
                     {
                         std::string texPath = entity["texture"].get<std::string>();
-                        if (!FileSystem::FileExists(texPath))
+                        if (!FileSystem::ValidatePath(texPath))
+                        {
+                            result.errors.push_back("Invalid texture path (traversal): " + texPath);
+                        }
+                        else if (!FileSystem::FileExists(texPath))
+                        {
                             result.errors.push_back("Texture not found: " + texPath);
+                        }
                         else
+                        {
                             result.loadedAssets++;
+                        }
+                    }
+                    if (entity.contains("material"))
+                    {
+                        const auto& mat = entity["material"];
+                        if (mat.contains("albedoTexture"))
+                        {
+                            std::string texPath = mat["albedoTexture"].get<std::string>();
+                            if (!FileSystem::ValidatePath(texPath))
+                                result.errors.push_back("Invalid albedo texture path: " + texPath);
+                            else if (!FileSystem::FileExists(texPath))
+                                result.errors.push_back("Albedo texture not found: " + texPath);
+                        }
                     }
                 }
             }
@@ -155,7 +181,15 @@ public:
 
         if (!engine.GetConfig().screenshotPath.empty())
         {
-            result.success = SaveScreenshot(engine, engine.GetConfig().screenshotPath) && result.success;
+            int width, height;
+            engine.GetWindow()->GetSize(width, height);
+            bool saved = engine.GetRenderer()->SaveScreenshot(
+                engine.GetConfig().screenshotPath, width, height);
+            if (!saved)
+            {
+                result.errors.push_back("Failed to save screenshot");
+                result.success = false;
+            }
         }
 
         if (!engine.GetConfig().resultJsonPath.empty())
@@ -163,21 +197,6 @@ public:
 
         KE_LOG_INFO("Render test: {} frames, {} draw calls", result.frames, result.drawCalls);
         return result.success ? 0 : 6;
-    }
-
-private:
-    bool SaveScreenshot(Engine& engine, const std::string& path)
-    {
-        int width, height;
-        engine.GetWindow()->GetSize(width, height);
-        if (width <= 0 || height <= 0) return false;
-
-        std::vector<uint8_t> pixels(width * height * 3);
-        glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-
-        stbi_flip_vertically_on_write(1);
-        int res = stbi_write_png(path.c_str(), width, height, 3, pixels.data(), width * 3);
-        return res != 0;
     }
 };
 
@@ -202,6 +221,7 @@ public:
         dump["skinnedDrawCommands"] = scene.skinnedDrawCommands.size();
         dump["terrainDrawCommands"] = scene.terrainDrawCommands.size();
         dump["camera"]["valid"] = scene.camera.viewProjectionMatrix != Mat4(1.0f);
+        dump["camera"]["position"] = { scene.camera.position.x, scene.camera.position.y, scene.camera.position.z };
         dump["entities"] = result.entities;
         dump["totalDrawCalls"] = result.drawCalls;
 
@@ -222,6 +242,73 @@ public:
     }
 };
 
+class ScreenshotCompareMode : public IAppMode
+{
+public:
+    int Run(Engine& engine) override
+    {
+        TestResult result;
+        result.mode = "screenshot-compare";
+        result.backend = engine.GetConfig().backend;
+        result.scene = engine.GetConfig().scenePath;
+
+        int targetFrames = engine.GetConfig().frameLimit;
+        if (targetFrames <= 0) targetFrames = 3;
+
+        for (int i = 0; i < targetFrames && engine.IsRunning(); ++i)
+        {
+            engine.TickOneFrame();
+            result.frames++;
+        }
+
+        int width, height;
+        engine.GetWindow()->GetSize(width, height);
+
+        std::string screenshotPath = engine.GetConfig().screenshotPath;
+        if (screenshotPath.empty()) screenshotPath = "screenshot_compare.png";
+
+        bool saved = engine.GetRenderer()->SaveScreenshot(screenshotPath, width, height);
+        if (!saved)
+        {
+            result.errors.push_back("Failed to save screenshot for comparison");
+            result.success = false;
+            if (!engine.GetConfig().resultJsonPath.empty())
+                result.WriteToFile(engine.GetConfig().resultJsonPath);
+            return 6;
+        }
+
+        result.success = true;
+
+        if (FileSystem::FileExists(screenshotPath))
+        {
+            auto data = FileSystem::ReadBinaryFile(screenshotPath);
+            if (data.size() > 0)
+            {
+                bool allBlack = true;
+                for (size_t i = 0; i < data.size(); i += 3)
+                {
+                    if (data[i] != 0 || data[i + 1] != 0 || data[i + 2] != 0)
+                    {
+                        allBlack = false;
+                        break;
+                    }
+                }
+                if (allBlack)
+                {
+                    result.warnings.push_back("Screenshot appears to be completely black");
+                }
+            }
+        }
+
+        if (!engine.GetConfig().resultJsonPath.empty())
+            result.WriteToFile(engine.GetConfig().resultJsonPath);
+
+        KE_LOG_INFO("Screenshot compare: {} frames rendered, screenshot saved to {}",
+            result.frames, screenshotPath);
+        return result.success ? 0 : 6;
+    }
+};
+
 class BenchmarkMode : public IAppMode
 {
 public:
@@ -236,9 +323,17 @@ public:
         result.backend = engine.GetConfig().backend;
         result.scene = engine.GetConfig().scenePath;
 
+        float minFrameMs = std::numeric_limits<float>::max();
+        float maxFrameMs = 0.0f;
+
         for (int i = 0; i < targetFrames && engine.IsRunning(); ++i)
         {
+            auto frameStart = std::chrono::high_resolution_clock::now();
             engine.TickOneFrame();
+            auto frameEnd = std::chrono::high_resolution_clock::now();
+            float frameMs = std::chrono::duration<float, std::milli>(frameEnd - frameStart).count();
+            minFrameMs = std::min(minFrameMs, frameMs);
+            maxFrameMs = std::max(maxFrameMs, frameMs);
             result.frames++;
         }
 
@@ -250,11 +345,16 @@ public:
         result.success = (result.frames == targetFrames);
 
         if (!engine.GetConfig().resultJsonPath.empty())
-            result.WriteToFile(engine.GetConfig().resultJsonPath);
+        {
+            auto j = result.ToJson();
+            j["minFrameMs"] = minFrameMs;
+            j["maxFrameMs"] = maxFrameMs;
+            FileSystem::WriteTextFile(engine.GetConfig().resultJsonPath, j.dump(2));
+        }
 
-        KE_LOG_INFO("Benchmark: {} frames in {:.2f}s ({:.1f} ms/frame, {:.1f} FPS)",
+        KE_LOG_INFO("Benchmark: {} frames in {:.2f}s ({:.1f} ms/frame, {:.1f} FPS, min={:.1f}ms, max={:.1f}ms)",
             result.frames, result.durationSeconds, result.averageFrameMs,
-            result.frames / result.durationSeconds);
+            result.frames / result.durationSeconds, minFrameMs, maxFrameMs);
 
         return result.success ? 0 : 5;
     }

@@ -87,9 +87,39 @@ public:
 
     static bool ValidatePath(const std::string& path)
     {
-        if (path.find("..") != std::string::npos) return false;
         if (path.empty()) return false;
+        if (path.find("..") != std::string::npos) return false;
+#ifdef _WIN32
+        if (path.size() >= 2 && path[1] == ':') return false;
+#else
+        if (!path.empty() && path[0] == '/') return false;
+#endif
         return true;
+    }
+
+    static std::string SanitizePath(const std::string& path)
+    {
+        std::string result = NormalizePath(path);
+        if (result.find("..") != std::string::npos)
+        {
+            std::vector<std::string> parts;
+            std::istringstream iss(result);
+            std::string part;
+            while (std::getline(iss, part, '/'))
+            {
+                if (part == ".." && !parts.empty())
+                    parts.pop_back();
+                else if (part != "." && !part.empty())
+                    parts.push_back(part);
+            }
+            result.clear();
+            for (size_t i = 0; i < parts.size(); ++i)
+            {
+                if (i > 0) result += "/";
+                result += parts[i];
+            }
+        }
+        return result;
     }
 };
 }

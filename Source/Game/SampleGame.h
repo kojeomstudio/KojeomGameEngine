@@ -5,7 +5,6 @@
 #include "Core/Log.h"
 #include "Platform/IInput.h"
 #include "Assets/AssetStore.h"
-#include "Renderer/OpenGL/OpenGLRenderer.h"
 
 namespace Kojeom
 {
@@ -17,7 +16,6 @@ public:
         auto* world = engine.GetWorld();
         auto* assetStore = engine.GetAssetStore();
         auto* renderer = engine.GetRenderer();
-        auto* glBackend = static_cast<OpenGLRenderer*>(renderer->GetBackend());
 
         LightData light;
         light.direction = Vec3(0.3f, -1.0f, -0.5f);
@@ -40,65 +38,34 @@ public:
         camComp->cameraData.UpdateMatrices();
         camComp->isActive = true;
 
-        MaterialData cubeMat;
-        cubeMat.albedo = Vec3(0.8f, 0.3f, 0.2f);
-        cubeMat.metallic = 0.1f;
-        cubeMat.roughness = 0.4f;
-        AssetHandle cubeMatHandle = assetStore->RegisterMaterial(cubeMat);
-        if (glBackend)
-        {
-            AssetHandle glMat = glBackend->RegisterGLMaterial(cubeMat.albedo, cubeMat.metallic, cubeMat.roughness);
-            cubeMatHandle = glMat;
-        }
+        AssetHandle cubeMatHandle = renderer->RegisterMaterial(
+            Vec3(0.8f, 0.3f, 0.2f), 0.1f, 0.4f);
 
         auto* cubeEntity = world->CreateEntity("Cube");
         cubeEntity->GetTransform()->transform.position = Vec3(0.0f, 1.0f, 0.0f);
         auto* cubeMr = cubeEntity->AddComponent<MeshRendererComponent>();
-        if (glBackend)
-        {
-            cubeMr->meshHandle = glBackend->GetDefaultCubeHandle();
-            cubeMr->materialHandle = cubeMatHandle;
-        }
+        cubeMr->meshHandle = renderer->GetDefaultCubeHandle();
+        cubeMr->materialHandle = cubeMatHandle;
 
-        MaterialData blueMat;
-        blueMat.albedo = Vec3(0.2f, 0.4f, 0.8f);
-        blueMat.metallic = 0.2f;
-        blueMat.roughness = 0.3f;
-        AssetHandle blueMatHandle = INVALID_HANDLE;
-        if (glBackend)
-        {
-            blueMatHandle = glBackend->RegisterGLMaterial(blueMat.albedo, blueMat.metallic, blueMat.roughness);
-        }
+        AssetHandle blueMatHandle = renderer->RegisterMaterial(
+            Vec3(0.2f, 0.4f, 0.8f), 0.2f, 0.3f);
 
         auto* cube2Entity = world->CreateEntity("BlueCube");
         cube2Entity->GetTransform()->transform.position = Vec3(3.0f, 1.0f, -2.0f);
         auto* cube2Mr = cube2Entity->AddComponent<MeshRendererComponent>();
-        if (glBackend)
-        {
-            cube2Mr->meshHandle = glBackend->GetDefaultCubeHandle();
-            cube2Mr->materialHandle = blueMatHandle;
-        }
+        cube2Mr->meshHandle = renderer->GetDefaultCubeHandle();
+        cube2Mr->materialHandle = blueMatHandle;
 
-        MaterialData floorMat;
-        floorMat.albedo = Vec3(0.4f, 0.4f, 0.4f);
-        floorMat.metallic = 0.0f;
-        floorMat.roughness = 0.8f;
-        AssetHandle floorMatHandle = INVALID_HANDLE;
-        if (glBackend)
-        {
-            floorMatHandle = glBackend->RegisterGLMaterial(floorMat.albedo, floorMat.metallic, floorMat.roughness);
-        }
+        AssetHandle floorMatHandle = renderer->RegisterMaterial(
+            Vec3(0.4f, 0.4f, 0.4f), 0.0f, 0.8f);
 
         auto* floorEntity = world->CreateEntity("Floor");
         floorEntity->GetTransform()->transform.position = Vec3(0.0f, 0.0f, 0.0f);
         auto* floorMr = floorEntity->AddComponent<MeshRendererComponent>();
-        if (glBackend)
-        {
-            floorMr->meshHandle = glBackend->GetDefaultPlaneHandle();
-            floorMr->materialHandle = floorMatHandle;
-        }
+        floorMr->meshHandle = renderer->GetDefaultPlaneHandle();
+        floorMr->materialHandle = floorMatHandle;
 
-        CreateTestTerrain(world, assetStore, glBackend);
+        CreateTestTerrain(world, assetStore, renderer);
 
         m_cameraPosition = Vec3(0.0f, 5.0f, 12.0f);
         m_cameraYaw = -90.0f;
@@ -180,7 +147,7 @@ public:
     }
 
 private:
-    void CreateTestTerrain(World* world, AssetStore* assetStore, OpenGLRenderer* glBackend)
+    void CreateTestTerrain(World* world, AssetStore* assetStore, Renderer* renderer)
     {
         int terrainW = 32;
         int terrainH = 32;
@@ -203,48 +170,28 @@ private:
         AssetHandle terrainHandle = assetStore->CreateTerrain("TestTerrain", terrainW, terrainH,
             cellSize, maxH, heights);
 
-        if (glBackend)
-        {
-            auto gpuMeshHandle = GenerateTerrainMeshGPU(glBackend, assetStore, terrainHandle, terrainW, terrainH, cellSize);
-
-            MaterialData terrainMat;
-            terrainMat.albedo = Vec3(0.3f, 0.6f, 0.2f);
-            terrainMat.roughness = 0.9f;
-            AssetHandle terrainMatHandle = glBackend->RegisterGLMaterial(terrainMat.albedo, terrainMat.metallic, terrainMat.roughness);
-
-            auto* terrainEntity = world->CreateEntity("Terrain");
-            terrainEntity->GetTransform()->transform.position = Vec3(
-                -static_cast<float>(terrainW) * cellSize * 0.5f,
-                -1.0f,
-                -static_cast<float>(terrainH) * cellSize * 0.5f);
-            auto* tc = terrainEntity->AddComponent<TerrainComponent>();
-            tc->terrainHandle = gpuMeshHandle;
-            tc->materialHandle = terrainMatHandle;
-        }
-    }
-
-    AssetHandle GenerateTerrainMeshGPU(OpenGLRenderer* glBackend, AssetStore* assetStore,
-        AssetHandle terrainHandle, int w, int h, float cellSize)
-    {
         auto* terrain = assetStore->GetTerrain(terrainHandle);
-        if (!terrain) return INVALID_HANDLE;
+        if (!terrain) return;
 
         std::vector<float> vertices;
         std::vector<uint32_t> indices;
+        int w = terrain->width;
+        int h = terrain->height;
+        float cs = terrain->cellSize;
 
         for (int z = 0; z < h; ++z)
         {
             for (int x = 0; x < w; ++x)
             {
-                float px = static_cast<float>(x) * cellSize;
-                float pz = static_cast<float>(z) * cellSize;
+                float px = static_cast<float>(x) * cs;
+                float pz = static_cast<float>(z) * cs;
                 float py = terrain->GetHeight(x, z);
 
                 float hL = terrain->GetHeight(std::max(0, x - 1), z);
                 float hR = terrain->GetHeight(std::min(w - 1, x + 1), z);
                 float hD = terrain->GetHeight(x, std::max(0, z - 1));
                 float hU = terrain->GetHeight(x, std::min(h - 1, z + 1));
-                Vec3 normal = glm::normalize(Vec3(hL - hR, 2.0f * cellSize, hD - hU));
+                Vec3 normal = glm::normalize(Vec3(hL - hR, 2.0f * cs, hD - hU));
 
                 float u = static_cast<float>(x) / static_cast<float>(w - 1);
                 float v = static_cast<float>(z) / static_cast<float>(h - 1);
@@ -267,7 +214,19 @@ private:
             }
         }
 
-        return glBackend->UploadMesh(vertices, indices);
+        AssetHandle gpuMeshHandle = renderer->UploadMesh(vertices, indices);
+
+        AssetHandle terrainMatHandle = renderer->RegisterMaterial(
+            Vec3(0.3f, 0.6f, 0.2f), 0.0f, 0.9f);
+
+        auto* terrainEntity = world->CreateEntity("Terrain");
+        terrainEntity->GetTransform()->transform.position = Vec3(
+            -static_cast<float>(terrainW) * cellSize * 0.5f,
+            -1.0f,
+            -static_cast<float>(terrainH) * cellSize * 0.5f);
+        auto* tc = terrainEntity->AddComponent<TerrainComponent>();
+        tc->terrainHandle = gpuMeshHandle;
+        tc->materialHandle = terrainMatHandle;
     }
 
     Vec3 m_cameraPosition = Vec3(0.0f, 5.0f, 12.0f);

@@ -39,6 +39,13 @@ struct AnimationEvent
     std::string stringValue;
 };
 
+struct RootMotionData
+{
+    glm::vec3 deltaPosition = glm::vec3(0.0f);
+    glm::quat deltaRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    bool hasRootMotion = false;
+};
+
 class AnimationClip
 {
 public:
@@ -195,6 +202,11 @@ public:
     void SetSpeed(float speed) { m_speed = speed; }
     void Seek(float time) { m_playbackTime = time; }
     void SetEventCallback(EventCallback callback) { m_eventCallback = callback; }
+    void SetRootMotionBone(int32_t boneIndex) { m_rootMotionBone = boneIndex; }
+    void SetRootMotionEnabled(bool enabled) { m_rootMotionEnabled = enabled; }
+
+    RootMotionData GetRootMotionDelta() const { return m_rootMotionDelta; }
+    bool IsRootMotionEnabled() const { return m_rootMotionEnabled; }
 
     void Tick(float deltaSeconds)
     {
@@ -231,6 +243,17 @@ public:
         }
 
         m_currentPose = m_currentClip->Sample(m_playbackTime, *m_skeleton);
+
+        if (m_rootMotionEnabled && m_rootMotionBone >= 0 &&
+            m_rootMotionBone < static_cast<int32_t>(m_skeleton->GetBoneCount()))
+        {
+            auto& boneTransform = m_currentPose.GetGlobalTransform(m_rootMotionBone);
+            m_rootMotionDelta.deltaPosition = boneTransform.position - m_prevRootPosition;
+            m_rootMotionDelta.deltaRotation = boneTransform.rotation * glm::inverse(m_prevRootRotation);
+            m_rootMotionDelta.hasRootMotion = true;
+            m_prevRootPosition = boneTransform.position;
+            m_prevRootRotation = boneTransform.rotation;
+        }
     }
 
     Pose GetCurrentPose() const { return m_currentPose; }
@@ -252,6 +275,11 @@ private:
     bool m_loop = true;
     bool m_playing = false;
     EventCallback m_eventCallback;
+    bool m_rootMotionEnabled = false;
+    int32_t m_rootMotionBone = -1;
+    glm::vec3 m_prevRootPosition = glm::vec3(0.0f);
+    glm::quat m_prevRootRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    RootMotionData m_rootMotionDelta;
 };
 
 class BlendTree

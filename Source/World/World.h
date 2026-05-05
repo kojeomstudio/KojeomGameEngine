@@ -77,6 +77,10 @@ struct AnimatorComponent : public IComponent
     float speed = 1.0f;
     bool loop = true;
     bool playing = false;
+    AssetHandle boneMatricesHandle = INVALID_HANDLE;
+
+    Animator internalAnimator;
+    bool needsInit = true;
 
     void Tick(float deltaSeconds) override;
 };
@@ -242,6 +246,7 @@ public:
             }
 
             auto* sm = entity->GetSkeletalMeshComponent();
+            auto* anim = entity->GetAnimatorComponent();
             if (sm && sm->skeletalMeshHandle != INVALID_HANDLE)
             {
                 SkinnedDrawCommand cmd;
@@ -249,6 +254,10 @@ public:
                 cmd.materialHandle = sm->materialHandle;
                 cmd.worldMatrix = entity->GetTransform()->transform.ToMatrix();
                 cmd.boneCount = sm->boneCount;
+                if (anim && anim->boneMatricesHandle != INVALID_HANDLE)
+                {
+                    cmd.boneMatricesHandle = anim->boneMatricesHandle;
+                }
                 scene.skinnedDrawCommands.push_back(cmd);
             }
         }
@@ -419,6 +428,57 @@ public:
     void SetDefaultLight(const LightData& light) { m_defaultLight = light; }
     bool HasDefaultLight() const { return m_defaultLight.has_value(); }
     const LightData& GetDefaultLight() const { return m_defaultLight.value(); }
+
+    bool SaveToJson(const std::string& scenePath) const
+    {
+        nlohmann::json sceneJson;
+
+        if (m_defaultLight)
+        {
+            sceneJson["light"]["direction"] = {
+                m_defaultLight->direction.x, m_defaultLight->direction.y, m_defaultLight->direction.z };
+            sceneJson["light"]["color"] = {
+                m_defaultLight->color.x, m_defaultLight->color.y, m_defaultLight->color.z };
+            sceneJson["light"]["intensity"] = m_defaultLight->intensity;
+            sceneJson["light"]["ambient"] = {
+                m_defaultLight->ambientColor.x, m_defaultLight->ambientColor.y, m_defaultLight->ambientColor.z };
+        }
+
+        nlohmann::json entitiesJson = nlohmann::json::array();
+        for (const auto& entity : m_entities)
+        {
+            nlohmann::json entJson;
+            entJson["name"] = entity->GetName();
+
+            auto* transform = entity->GetTransform();
+            entJson["transform"]["position"] = {
+                transform->transform.position.x,
+                transform->transform.position.y,
+                transform->transform.position.z };
+            glm::vec3 euler = glm::eulerAngles(transform->transform.rotation);
+            entJson["transform"]["rotation"] = { euler.x, euler.y, euler.z };
+            entJson["transform"]["scale"] = {
+                transform->transform.scale.x,
+                transform->transform.scale.y,
+                transform->transform.scale.z };
+
+            auto* cam = entity->GetCameraComponent();
+            if (cam)
+            {
+                entJson["camera"]["active"] = cam->isActive;
+                entJson["camera"]["fov"] = cam->cameraData.fov;
+                entJson["camera"]["near"] = cam->cameraData.nearPlane;
+                entJson["camera"]["far"] = cam->cameraData.farPlane;
+                entJson["camera"]["forward"] = {
+                    cam->cameraData.forward.x, cam->cameraData.forward.y, cam->cameraData.forward.z };
+            }
+
+            entitiesJson.push_back(entJson);
+        }
+        sceneJson["entities"] = entitiesJson;
+
+        return FileSystem::WriteTextFile(scenePath, sceneJson.dump(2));
+    }
 
 private:
     EntityId m_nextEntityId = 1;

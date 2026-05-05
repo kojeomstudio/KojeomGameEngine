@@ -3,8 +3,6 @@
 #include <string>
 #include <functional>
 
-struct GLFWwindow;
-
 namespace Kojeom
 {
 struct WindowDesc

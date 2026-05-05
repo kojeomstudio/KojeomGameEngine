@@ -12,6 +12,8 @@
 #include "Core/StringId.h"
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
+#include "Animation/Skeleton.h"
+#include "Animation/AnimationClip.h"
 
 #include <tiny_gltf.h>
 
@@ -106,6 +108,19 @@ struct TerrainData
         float h1 = glm::mix(h01, h11, fx);
         return glm::mix(h0, h1, fz);
     }
+};
+
+struct SkeletonData
+{
+    Skeleton skeleton;
+    std::string name;
+};
+
+struct AnimationClipData
+{
+    AnimationClip clip;
+    std::string name;
+    std::string skeletonPath;
 };
 
 class AssetStore
@@ -263,6 +278,214 @@ public:
         return handle;
     }
 
+    AssetHandle LoadSkeleton(const std::string& path)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        auto it = m_skeletonPaths.find(path);
+        if (it != m_skeletonPaths.end()) return it->second;
+
+        tinygltf::Model model;
+        tinygltf::TinyGLTF loader;
+        std::string err, warn;
+
+        bool ret = false;
+        if (FileSystem::GetExtension(path) == ".glb")
+            ret = loader.LoadBinaryFromFile(&model, &err, &warn, path);
+        else
+            ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+
+        if (!ret)
+        {
+            KE_LOG_ERROR("glTF load failed for skeleton: {} - {}", path, err);
+            return INVALID_HANDLE;
+        }
+        if (!warn.empty()) KE_LOG_WARN("glTF warning: {}", warn);
+
+        SkeletonData skelData;
+        skelData.name = FileSystem::GetFileName(path);
+
+        if (model.skins.empty())
+        {
+            KE_LOG_ERROR("glTF has no skins: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        const auto& skin = model.skins[0];
+
+        int boneCount = static_cast<int>(skin.joints.size());
+        for (int i = 0; i < boneCount; ++i)
+        {
+            Bone bone;
+            bone.name = model.nodes[skin.joints[i]].name;
+            bone.parentIndex = -1;
+            skelData.skeleton.AddBone(bone);
+        }
+
+        for (int i = 0; i < boneCount; ++i)
+        {
+            int nodeIdx = skin.joints[i];
+            const auto& node = model.nodes[nodeIdx];
+            for (int child : node.children)
+            {
+                for (int j = 0; j < boneCount; ++j)
+                {
+                    if (skin.joints[j] == child)
+                    {
+                        auto& bones = const_cast<std::vector<Bone>&>(skelData.skeleton.GetBones());
+                        bones[j].parentIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (skin.inverseBindMatrices >= 0)
+        {
+            const auto& acc = model.accessors[skin.inverseBindMatrices];
+            const auto& bufView = model.bufferViews[acc.bufferView];
+            const auto& buf = model.buffers[bufView.buffer];
+            const float* data = reinterpret_cast<const float*>(
+                &buf.data[bufView.byteOffset + acc.byteOffset]);
+
+            auto& bones = const_cast<std::vector<Bone>&>(skelData.skeleton.GetBones());
+            for (int i = 0; i < boneCount; ++i)
+            {
+                glm::mat4 mat;
+                memcpy(&mat, data + i * 16, sizeof(float) * 16);
+                bones[i].inverseBindMatrix = glm::transpose(mat);
+            }
+        }
+
+        if (!skelData.skeleton.Validate())
+        {
+            KE_LOG_ERROR("Skeleton validation failed: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        AssetHandle handle = m_nextHandle++;
+        m_skeletonPaths[path] = handle;
+        m_skeletons[handle] = std::move(skelData);
+        KE_LOG_INFO("Loaded skeleton: {} ({} bones)", path, boneCount);
+        return handle;
+    }
+
+    AssetHandle LoadAnimationClip(const std::string& path, AssetHandle skeletonHandle)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        auto it = m_animationClipPaths.find(path);
+        if (it != m_animationClipPaths.end()) return it->second;
+
+        auto* skelData = GetSkeleton(skeletonHandle);
+        if (!skelData)
+        {
+            KE_LOG_ERROR("Invalid skeleton handle for animation: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        tinygltf::Model model;
+        tinygltf::TinyGLTF loader;
+        std::string err, warn;
+
+        bool ret = false;
+        if (FileSystem::GetExtension(path) == ".glb")
+            ret = loader.LoadBinaryFromFile(&model, &err, &warn, path);
+        else
+            ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+
+        if (!ret)
+        {
+            KE_LOG_ERROR("glTF load failed for animation: {} - {}", path, err);
+            return INVALID_HANDLE;
+        }
+        if (!warn.empty()) KE_LOG_WARN("glTF warning: {}", warn);
+
+        if (model.animations.empty())
+        {
+            KE_LOG_ERROR("glTF has no animations: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        AnimationClipData clipData;
+        clipData.name = FileSystem::GetFileName(path);
+        clipData.skeletonPath = path;
+
+        const auto& anim = model.animations[0];
+        clipData.clip.SetName(anim.name.empty() ? "unnamed" : anim.name);
+
+        for (const auto& channel : anim.channels)
+        {
+            const auto& sampler = anim.samplers[channel.sampler];
+            const auto& targetNode = model.nodes[channel.target_node];
+
+            int32_t boneIndex = skelData->skeleton.FindBoneIndex(targetNode.name);
+            if (boneIndex < 0) continue;
+
+            AnimationChannel animChannel;
+            animChannel.boneIndex = boneIndex;
+            animChannel.boneName = targetNode.name;
+
+            const auto& timeAcc = model.accessors[sampler.input];
+            const auto& timeBuf = model.bufferViews[timeAcc.bufferView];
+            const float* times = reinterpret_cast<const float*>(
+                &model.buffers[timeBuf.buffer].data[timeBuf.byteOffset + timeAcc.byteOffset]);
+
+            float maxTime = 0.0f;
+            for (int t = 0; t < static_cast<int>(timeAcc.count); ++t)
+                maxTime = std::max(maxTime, times[t]);
+            if (maxTime > clipData.clip.GetDuration())
+                clipData.clip.SetDuration(maxTime);
+
+            const auto& valAcc = model.accessors[sampler.output];
+            const auto& valBuf = model.bufferViews[valAcc.bufferView];
+            const float* values = reinterpret_cast<const float*>(
+                &model.buffers[valBuf.buffer].data[valBuf.byteOffset + valAcc.byteOffset]);
+
+            if (channel.target_path == "translation")
+            {
+                for (int t = 0; t < static_cast<int>(timeAcc.count); ++t)
+                {
+                    VectorKey key;
+                    key.time = times[t];
+                    key.value = glm::vec3(values[t * 3], values[t * 3 + 1], values[t * 3 + 2]);
+                    animChannel.positionKeys.push_back(key);
+                }
+            }
+            else if (channel.target_path == "rotation")
+            {
+                for (int t = 0; t < static_cast<int>(timeAcc.count); ++t)
+                {
+                    QuatKey key;
+                    key.time = times[t];
+                    key.value = glm::quat(values[t * 4 + 3], values[t * 4], values[t * 4 + 1], values[t * 4 + 2]);
+                    animChannel.rotationKeys.push_back(key);
+                }
+            }
+            else if (channel.target_path == "scale")
+            {
+                for (int t = 0; t < static_cast<int>(timeAcc.count); ++t)
+                {
+                    VectorKey key;
+                    key.time = times[t];
+                    key.value = glm::vec3(values[t * 3], values[t * 3 + 1], values[t * 3 + 2]);
+                    animChannel.scaleKeys.push_back(key);
+                }
+            }
+
+            clipData.clip.AddChannel(animChannel);
+        }
+
+        clipData.clip.SetTicksPerSecond(30.0f);
+
+        AssetHandle handle = m_nextHandle++;
+        m_animationClipPaths[path] = handle;
+        m_animationClips[handle] = std::move(clipData);
+        KE_LOG_INFO("Loaded animation clip: {} ({} channels, {:.2f}s)",
+            path, clipData.clip.GetChannelCount(), clipData.clip.GetDurationSeconds());
+        return handle;
+    }
+
     const MeshData* GetMesh(AssetHandle handle) const
     {
         auto it = m_meshes.find(handle);
@@ -293,6 +516,30 @@ public:
         return (it != m_terrains.end()) ? &it->second : nullptr;
     }
 
+    SkeletonData* GetSkeleton(AssetHandle handle)
+    {
+        auto it = m_skeletons.find(handle);
+        return (it != m_skeletons.end()) ? &it->second : nullptr;
+    }
+
+    const SkeletonData* GetSkeleton(AssetHandle handle) const
+    {
+        auto it = m_skeletons.find(handle);
+        return (it != m_skeletons.end()) ? &it->second : nullptr;
+    }
+
+    AnimationClipData* GetAnimationClip(AssetHandle handle)
+    {
+        auto it = m_animationClips.find(handle);
+        return (it != m_animationClips.end()) ? &it->second : nullptr;
+    }
+
+    const AnimationClipData* GetAnimationClip(AssetHandle handle) const
+    {
+        auto it = m_animationClips.find(handle);
+        return (it != m_animationClips.end()) ? &it->second : nullptr;
+    }
+
     void Clear()
     {
         m_meshes.clear();
@@ -300,10 +547,14 @@ public:
         m_textures.clear();
         m_materials.clear();
         m_terrains.clear();
+        m_skeletons.clear();
+        m_animationClips.clear();
         m_meshPaths.clear();
         m_skinnedMeshPaths.clear();
         m_texturePaths.clear();
         m_terrainPaths.clear();
+        m_skeletonPaths.clear();
+        m_animationClipPaths.clear();
     }
 
 private:
@@ -654,10 +905,14 @@ private:
     std::unordered_map<AssetHandle, TextureData> m_textures;
     std::unordered_map<AssetHandle, MaterialData> m_materials;
     std::unordered_map<AssetHandle, TerrainData> m_terrains;
+    std::unordered_map<AssetHandle, SkeletonData> m_skeletons;
+    std::unordered_map<AssetHandle, AnimationClipData> m_animationClips;
     std::unordered_map<std::string, AssetHandle> m_meshPaths;
     std::unordered_map<std::string, AssetHandle> m_skinnedMeshPaths;
     std::unordered_map<std::string, AssetHandle> m_texturePaths;
     std::unordered_map<std::string, AssetHandle> m_terrainPaths;
+    std::unordered_map<std::string, AssetHandle> m_skeletonPaths;
+    std::unordered_map<std::string, AssetHandle> m_animationClipPaths;
     std::mutex m_mutex;
 };
 }

@@ -7,10 +7,10 @@
 #include <GLFW/glfw3.h>
 #include "Renderer/Renderer.h"
 #include "Core/Log.h"
+#include <stb_image_write.h>
 #include <vector>
 #include <unordered_map>
 #include <string>
-#include <array>
 
 namespace Kojeom
 {
@@ -250,8 +250,8 @@ public:
         return handle;
     }
 
-    AssetHandle RegisterGLMaterial(const Vec3& albedo, float metallic, float roughness,
-        GLuint albedoTex = 0, bool hasTex = false)
+    AssetHandle RegisterMaterial(const Vec3& albedo, float metallic, float roughness,
+        AssetHandle albedoTexHandle = INVALID_HANDLE, bool hasTex = false) override
     {
         static AssetHandle nextHandle = 8000;
         AssetHandle handle = nextHandle++;
@@ -259,13 +259,23 @@ public:
         mat.albedo = albedo;
         mat.metallic = metallic;
         mat.roughness = roughness;
-        mat.albedoTexture = albedoTex;
         mat.hasAlbedoTexture = hasTex;
+        if (hasTex && albedoTexHandle != INVALID_HANDLE)
+        {
+            auto it = m_textureCache.find(albedoTexHandle);
+            if (it != m_textureCache.end())
+                mat.albedoTexture = it->second.texture;
+        }
         m_materialCache[handle] = mat;
         return handle;
     }
 
-    void RemoveMesh(AssetHandle handle)
+    void UploadBoneMatrices(AssetHandle handle, const std::vector<Mat4>& matrices) override
+    {
+        m_boneMatricesCache[handle] = matrices;
+    }
+
+    void RemoveMesh(AssetHandle handle) override
     {
         auto it = m_meshCache.find(handle);
         if (it != m_meshCache.end())
@@ -277,7 +287,7 @@ public:
         }
     }
 
-    void RemoveTexture(AssetHandle handle)
+    void RemoveTexture(AssetHandle handle) override
     {
         auto it = m_textureCache.find(handle);
         if (it != m_textureCache.end())
@@ -287,29 +297,23 @@ public:
         }
     }
 
+    bool SaveScreenshot(const std::string& path, int width, int height) override
+    {
+        if (width <= 0 || height <= 0) return false;
+
+        std::vector<uint8_t> pixels(static_cast<size_t>(width) * height * 3);
+        glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+        stbi_flip_vertically_on_write(1);
+        int res = stbi_write_png(path.c_str(), width, height, 3, pixels.data(), width * 3);
+        return res != 0;
+    }
+
     std::string GetName() const override { return "OpenGL 4.5"; }
 
-    const GLMeshData* GetMesh(AssetHandle handle) const
-    {
-        auto it = m_meshCache.find(handle);
-        return (it != m_meshCache.end()) ? &it->second : nullptr;
-    }
-
-    const GLTextureData* GetTexture(AssetHandle handle) const
-    {
-        auto it = m_textureCache.find(handle);
-        return (it != m_textureCache.end()) ? &it->second : nullptr;
-    }
-
-    const GLMaterialData* GetMaterial(AssetHandle handle) const
-    {
-        auto it = m_materialCache.find(handle);
-        return (it != m_materialCache.end()) ? &it->second : nullptr;
-    }
-
-    AssetHandle GetDefaultCubeHandle() const { return m_defaultCubeHandle; }
-    AssetHandle GetDefaultPlaneHandle() const { return m_defaultPlaneHandle; }
-    GLuint GetDefaultAlbedoTexture() const { return m_defaultAlbedoTexture; }
+    AssetHandle GetDefaultCubeHandle() const override { return m_defaultCubeHandle; }
+    AssetHandle GetDefaultPlaneHandle() const override { return m_defaultPlaneHandle; }
+    AssetHandle GetDefaultAlbedoTextureHandle() const override { return m_defaultAlbedoTextureHandle; }
 
 private:
     void RenderStaticMeshes(const RenderScene& scene)
@@ -458,19 +462,20 @@ private:
 
         if (materialHandle != INVALID_HANDLE)
         {
-            auto* mat = GetMaterial(materialHandle);
-            if (mat)
+            auto matIt = m_materialCache.find(materialHandle);
+            if (matIt != m_materialCache.end())
             {
-                if (albedoLoc >= 0) glUniform3fv(albedoLoc, 1, &mat->albedo[0]);
-                if (metallicLoc >= 0) glUniform1f(metallicLoc, mat->metallic);
-                if (roughnessLoc >= 0) glUniform1f(roughnessLoc, mat->roughness);
-                if (aoLoc >= 0) glUniform1f(aoLoc, mat->ao);
-                if (useTexLoc >= 0) glUniform1i(useTexLoc, mat->hasAlbedoTexture ? 1 : 0);
+                const auto& mat = matIt->second;
+                if (albedoLoc >= 0) glUniform3fv(albedoLoc, 1, &mat.albedo[0]);
+                if (metallicLoc >= 0) glUniform1f(metallicLoc, mat.metallic);
+                if (roughnessLoc >= 0) glUniform1f(roughnessLoc, mat.roughness);
+                if (aoLoc >= 0) glUniform1f(aoLoc, mat.ao);
+                if (useTexLoc >= 0) glUniform1i(useTexLoc, mat.hasAlbedoTexture ? 1 : 0);
 
-                if (mat->hasAlbedoTexture && mat->albedoTexture)
+                if (mat.hasAlbedoTexture && mat.albedoTexture)
                 {
                     glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, mat->albedoTexture);
+                    glBindTexture(GL_TEXTURE_2D, mat.albedoTexture);
                     GLint texLoc = glGetUniformLocation(m_pbrShader.program, "uAlbedoTexture");
                     if (texLoc >= 0) glUniform1i(texLoc, 0);
                 }
@@ -796,6 +801,8 @@ private:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glBindTexture(GL_TEXTURE_2D, 0);
 
+        m_defaultAlbedoTextureHandle = UploadTexture(2, 2, 4, white4x4);
+
         uint8_t normalDefault[] = { 128,128,255,255, 128,128,255,255,
                                     128,128,255,255, 128,128,255,255 };
         glGenTextures(1, &m_defaultNormalTexture);
@@ -817,6 +824,7 @@ private:
     AssetHandle m_defaultPlaneHandle = INVALID_HANDLE;
     GLuint m_defaultAlbedoTexture = 0;
     GLuint m_defaultNormalTexture = 0;
+    AssetHandle m_defaultAlbedoTextureHandle = INVALID_HANDLE;
     std::unordered_map<AssetHandle, GLMeshData> m_meshCache;
     std::unordered_map<AssetHandle, GLTextureData> m_textureCache;
     std::unordered_map<AssetHandle, GLMaterialData> m_materialCache;

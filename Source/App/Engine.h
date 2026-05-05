@@ -1,17 +1,11 @@
 #pragma once
 
-#include <glad/gl.h>
-#ifndef GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_NONE
-#endif
-#include <GLFW/glfw3.h>
 #include "Core/AppConfig.h"
 #include "Core/Log.h"
 #include "Core/FileSystem.h"
 #include "Platform/GlfwWindow.h"
 #include "Platform/GlfwInput.h"
 #include "Renderer/Renderer.h"
-#include "Renderer/OpenGL/OpenGLRenderer.h"
 #include "Assets/AssetStore.h"
 #include "World/World.h"
 #include "App/Clock.h"
@@ -22,6 +16,8 @@
 
 namespace Kojeom
 {
+std::unique_ptr<IRendererBackend> CreateOpenGLBackend();
+
 class Engine;
 
 class IAppMode
@@ -123,9 +119,9 @@ public:
         if (glfwRawMouseMotionSupported())
             glfwSetInputMode(glfwWin->GetGLFWWindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
-        auto rendererBackend = std::make_unique<OpenGLRenderer>();
         m_renderer = std::make_unique<Renderer>();
-        if (!m_renderer->Initialize(std::move(rendererBackend), glfwWin->GetGLFWWindow()))
+        auto backend = CreateRendererBackend(config.backend);
+        if (!m_renderer->Initialize(std::move(backend), glfwWin->GetGLFWWindow()))
         {
             KE_LOG_ERROR("Failed to initialize renderer");
             return false;
@@ -205,9 +201,6 @@ public:
 
     void UploadLoadedMeshesToGPU()
     {
-        auto* glBackend = static_cast<OpenGLRenderer*>(m_renderer->GetBackend());
-        if (!glBackend) return;
-
         for (const auto& entity : m_world->GetEntities())
         {
             auto* mr = entity->GetMeshRendererComponent();
@@ -226,7 +219,7 @@ public:
                       v.uv.x, v.uv.y });
             }
 
-            AssetHandle gpuHandle = glBackend->UploadMesh(flatVerts, meshData->indices);
+            AssetHandle gpuHandle = m_renderer->UploadMesh(flatVerts, meshData->indices);
             mr->meshHandle = gpuHandle;
 
             if (mr->materialHandle != INVALID_HANDLE)
@@ -234,7 +227,7 @@ public:
                 auto* matData = m_assetStore->GetMaterial(mr->materialHandle);
                 if (matData)
                 {
-                    GLuint albedoTex = 0;
+                    AssetHandle albedoTexHandle = INVALID_HANDLE;
                     bool hasTex = false;
                     if (!matData->albedoTexturePath.empty())
                     {
@@ -242,20 +235,27 @@ public:
                         auto* texData = m_assetStore->GetTexture(texHandle);
                         if (texData)
                         {
-                            AssetHandle gpuTex = glBackend->UploadTexture(
+                            albedoTexHandle = m_renderer->UploadTexture(
                                 texData->width, texData->height, texData->channels, texData->pixels.data());
-                            auto* gpuTexData = glBackend->GetTexture(gpuTex);
-                            if (gpuTexData)
-                            {
-                                albedoTex = gpuTexData->texture;
-                                hasTex = true;
-                            }
+                            hasTex = true;
                         }
                     }
-                    mr->materialHandle = glBackend->RegisterGLMaterial(
-                        matData->albedo, matData->metallic, matData->roughness, albedoTex, hasTex);
+                    mr->materialHandle = m_renderer->RegisterMaterial(
+                        matData->albedo, matData->metallic, matData->roughness, albedoTexHandle, hasTex);
                 }
             }
+        }
+
+        for (const auto& entity : m_world->GetEntities())
+        {
+            auto* tc = entity->GetTerrainComponent();
+            if (!tc || tc->terrainHandle == INVALID_HANDLE) continue;
+
+            auto* terrain = m_assetStore->GetTerrain(tc->terrainHandle);
+            if (!terrain) continue;
+
+            AssetHandle gpuMesh = GenerateTerrainMesh(terrain);
+            tc->terrainHandle = gpuMesh;
         }
     }
 
@@ -271,6 +271,63 @@ public:
     const AppConfig& GetConfig() const { return m_config; }
 
 private:
+    std::unique_ptr<IRendererBackend> CreateRendererBackend(const std::string& backendName)
+    {
+        if (backendName == "opengl")
+        {
+            return CreateOpenGLBackend();
+        }
+        KE_LOG_WARN("Unknown backend '{}', defaulting to OpenGL", backendName);
+        return CreateOpenGLBackend();
+    }
+
+    AssetHandle GenerateTerrainMesh(const TerrainData* terrain)
+    {
+        int w = terrain->width;
+        int h = terrain->height;
+        float cellSize = terrain->cellSize;
+
+        std::vector<float> vertices;
+        std::vector<uint32_t> indices;
+
+        for (int z = 0; z < h; ++z)
+        {
+            for (int x = 0; x < w; ++x)
+            {
+                float px = static_cast<float>(x) * cellSize;
+                float pz = static_cast<float>(z) * cellSize;
+                float py = terrain->GetHeight(x, z);
+
+                float hL = terrain->GetHeight(std::max(0, x - 1), z);
+                float hR = terrain->GetHeight(std::min(w - 1, x + 1), z);
+                float hD = terrain->GetHeight(x, std::max(0, z - 1));
+                float hU = terrain->GetHeight(x, std::min(h - 1, z + 1));
+                Vec3 normal = glm::normalize(Vec3(hL - hR, 2.0f * cellSize, hD - hU));
+
+                float u = static_cast<float>(x) / static_cast<float>(w - 1);
+                float v = static_cast<float>(z) / static_cast<float>(h - 1);
+
+                vertices.insert(vertices.end(), { px, py, pz, normal.x, normal.y, normal.z, u, v });
+            }
+        }
+
+        for (int z = 0; z < h - 1; ++z)
+        {
+            for (int x = 0; x < w - 1; ++x)
+            {
+                uint32_t topLeft = static_cast<uint32_t>(z * w + x);
+                uint32_t topRight = topLeft + 1;
+                uint32_t bottomLeft = topLeft + static_cast<uint32_t>(w);
+                uint32_t bottomRight = bottomLeft + 1;
+
+                indices.insert(indices.end(), { topLeft, bottomLeft, topRight });
+                indices.insert(indices.end(), { topRight, bottomLeft, bottomRight });
+            }
+        }
+
+        return m_renderer->UploadMesh(vertices, indices);
+    }
+
     AppConfig m_config;
     std::unique_ptr<GlfwWindow> m_window;
     std::unique_ptr<GlfwInput> m_input;
