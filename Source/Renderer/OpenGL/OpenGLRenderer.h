@@ -40,8 +40,34 @@ struct GLMaterialData
     float metallic = 0.0f;
     float roughness = 0.5f;
     float ao = 1.0f;
+    Vec3 emissive = Vec3(0.0f);
+    float emissiveStrength = 1.0f;
     GLuint albedoTexture = 0;
+    GLuint normalTexture = 0;
     bool hasAlbedoTexture = false;
+    bool hasNormalTexture = false;
+};
+
+struct UniformLocations
+{
+    GLint viewProjection = -1;
+    GLint model = -1;
+    GLint cameraPos = -1;
+    GLint lightDirection = -1;
+    GLint lightColor = -1;
+    GLint lightIntensity = -1;
+    GLint ambientColor = -1;
+    GLint albedo = -1;
+    GLint metallic = -1;
+    GLint roughness = -1;
+    GLint ao = -1;
+    GLint emissive = -1;
+    GLint emissiveStrength = -1;
+    GLint useAlbedoTexture = -1;
+    GLint useNormalTexture = -1;
+    GLint albedoTexture = -1;
+    GLint normalTexture = -1;
+    GLint boneMatrices = -1;
 };
 
 class OpenGLRenderer : public IRendererBackend
@@ -80,6 +106,7 @@ public:
 
         CreatePBRShader();
         CreateSkinnedShader();
+        CacheUniformLocations();
         CreateDefaultMesh();
         CreateDefaultTextures();
         KE_LOG_INFO("OpenGL Renderer initialized");
@@ -105,6 +132,7 @@ public:
         for (auto& [handle, mat] : m_materialCache)
         {
             if (mat.albedoTexture) glDeleteTextures(1, &mat.albedoTexture);
+            if (mat.normalTexture) glDeleteTextures(1, &mat.normalTexture);
         }
         m_materialCache.clear();
 
@@ -248,20 +276,30 @@ public:
     }
 
     AssetHandle RegisterMaterial(const Vec3& albedo, float metallic, float roughness,
-        AssetHandle albedoTexHandle = INVALID_HANDLE, bool hasTex = false) override
+        AssetHandle albedoTexHandle = INVALID_HANDLE, bool hasTex = false,
+        AssetHandle normalTexHandle = INVALID_HANDLE, bool hasNormalTex = false,
+        const Vec3& emissiveColor = Vec3(0.0f), float emissiveStr = 1.0f) override
     {
-        static AssetHandle nextHandle = 8000;
         AssetHandle handle = GenerateHandle();
         GLMaterialData mat;
         mat.albedo = albedo;
         mat.metallic = metallic;
         mat.roughness = roughness;
         mat.hasAlbedoTexture = hasTex;
+        mat.hasNormalTexture = hasNormalTex;
+        mat.emissive = emissiveColor;
+        mat.emissiveStrength = emissiveStr;
         if (hasTex && albedoTexHandle != INVALID_HANDLE)
         {
             auto it = m_textureCache.find(albedoTexHandle);
             if (it != m_textureCache.end())
                 mat.albedoTexture = it->second.texture;
+        }
+        if (hasNormalTex && normalTexHandle != INVALID_HANDLE)
+        {
+            auto it = m_textureCache.find(normalTexHandle);
+            if (it != m_textureCache.end())
+                mat.normalTexture = it->second.texture;
         }
         m_materialCache[handle] = mat;
         return handle;
@@ -318,15 +356,14 @@ private:
         if (!m_pbrShader.program) return;
         glUseProgram(m_pbrShader.program);
 
-        SetPBRUniforms(scene);
+        SetPBRUniforms(scene, m_pbrUniforms);
 
         for (const auto& cmd : scene.staticDrawCommands)
         {
-            GLint modelLoc = glGetUniformLocation(m_pbrShader.program, "uModel");
-            if (modelLoc >= 0)
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+            if (m_pbrUniforms.model >= 0)
+                glUniformMatrix4fv(m_pbrUniforms.model, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
 
-            SetMaterialUniforms(cmd.materialHandle);
+            SetMaterialUniforms(cmd.materialHandle, m_pbrUniforms);
 
             GLMeshData mesh = m_defaultMesh;
             auto it = m_meshCache.find(cmd.meshHandle);
@@ -340,6 +377,14 @@ private:
             }
         }
 
+        if (m_pbrUniforms.useNormalTexture >= 0)
+            glUniform1i(m_pbrUniforms.useNormalTexture, 0);
+        if (m_pbrUniforms.useAlbedoTexture >= 0)
+            glUniform1i(m_pbrUniforms.useAlbedoTexture, 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
         glUseProgram(0);
     }
 
@@ -352,11 +397,10 @@ private:
 
         for (const auto& cmd : scene.skinnedDrawCommands)
         {
-            GLint modelLoc = glGetUniformLocation(m_skinnedShader.program, "uModel");
-            if (modelLoc >= 0)
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+            if (m_skinnedUniforms.model >= 0)
+                glUniformMatrix4fv(m_skinnedUniforms.model, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
 
-            GLint boneLoc = glGetUniformLocation(m_skinnedShader.program, "uBoneMatrices[0]");
+            GLint boneLoc = m_skinnedUniforms.boneMatrices;
             auto it = m_boneMatricesCache.find(cmd.boneMatricesHandle);
             if (boneLoc >= 0 && it != m_boneMatricesCache.end())
             {
@@ -386,15 +430,14 @@ private:
         if (!m_pbrShader.program || scene.terrainDrawCommands.empty()) return;
         glUseProgram(m_pbrShader.program);
 
-        SetPBRUniforms(scene);
+        SetPBRUniforms(scene, m_pbrUniforms);
 
         for (const auto& cmd : scene.terrainDrawCommands)
         {
-            GLint modelLoc = glGetUniformLocation(m_pbrShader.program, "uModel");
-            if (modelLoc >= 0)
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+            if (m_pbrUniforms.model >= 0)
+                glUniformMatrix4fv(m_pbrUniforms.model, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
 
-            SetMaterialUniforms(cmd.materialHandle);
+            SetMaterialUniforms(cmd.materialHandle, m_pbrUniforms);
 
             auto it = m_meshCache.find(cmd.terrainHandle);
             if (it != m_meshCache.end() && it->second.vao)
@@ -408,115 +451,101 @@ private:
         glUseProgram(0);
     }
 
-    void SetPBRUniforms(const RenderScene& scene)
+    void SetPBRUniforms(const RenderScene& scene, const UniformLocations& locs)
     {
-        GLint vpLoc = glGetUniformLocation(m_pbrShader.program, "uViewProjection");
-        GLint camPosLoc = glGetUniformLocation(m_pbrShader.program, "uCameraPos");
-        GLint lightDirLoc = glGetUniformLocation(m_pbrShader.program, "uLightDirection");
-        GLint lightColorLoc = glGetUniformLocation(m_pbrShader.program, "uLightColor");
-        GLint lightIntLoc = glGetUniformLocation(m_pbrShader.program, "uLightIntensity");
-        GLint ambientLoc = glGetUniformLocation(m_pbrShader.program, "uAmbientColor");
-
-        if (vpLoc >= 0)
-            glUniformMatrix4fv(vpLoc, 1, GL_FALSE, &scene.camera.viewProjectionMatrix[0][0]);
-        if (camPosLoc >= 0)
-            glUniform3fv(camPosLoc, 1, &scene.camera.position[0]);
-        if (lightDirLoc >= 0)
-            glUniform3fv(lightDirLoc, 1, &scene.light.direction[0]);
-        if (lightColorLoc >= 0)
-            glUniform3fv(lightColorLoc, 1, &scene.light.color[0]);
-        if (lightIntLoc >= 0)
-            glUniform1f(lightIntLoc, scene.light.intensity);
-        if (ambientLoc >= 0)
-            glUniform3fv(ambientLoc, 1, &scene.light.ambientColor[0]);
+        if (locs.viewProjection >= 0)
+            glUniformMatrix4fv(locs.viewProjection, 1, GL_FALSE, &scene.camera.viewProjectionMatrix[0][0]);
+        if (locs.cameraPos >= 0)
+            glUniform3fv(locs.cameraPos, 1, &scene.camera.position[0]);
+        if (locs.lightDirection >= 0)
+            glUniform3fv(locs.lightDirection, 1, &scene.light.direction[0]);
+        if (locs.lightColor >= 0)
+            glUniform3fv(locs.lightColor, 1, &scene.light.color[0]);
+        if (locs.lightIntensity >= 0)
+            glUniform1f(locs.lightIntensity, scene.light.intensity);
+        if (locs.ambientColor >= 0)
+            glUniform3fv(locs.ambientColor, 1, &scene.light.ambientColor[0]);
     }
 
     void SetSkinnedUniforms(const RenderScene& scene)
     {
-        GLint vpLoc = glGetUniformLocation(m_skinnedShader.program, "uViewProjection");
-        GLint camPosLoc = glGetUniformLocation(m_skinnedShader.program, "uCameraPos");
-        GLint lightDirLoc = glGetUniformLocation(m_skinnedShader.program, "uLightDirection");
-        GLint lightColorLoc = glGetUniformLocation(m_skinnedShader.program, "uLightColor");
-        GLint lightIntLoc = glGetUniformLocation(m_skinnedShader.program, "uLightIntensity");
-        GLint ambientLoc = glGetUniformLocation(m_skinnedShader.program, "uAmbientColor");
-
-        if (vpLoc >= 0)
-            glUniformMatrix4fv(vpLoc, 1, GL_FALSE, &scene.camera.viewProjectionMatrix[0][0]);
-        if (camPosLoc >= 0)
-            glUniform3fv(camPosLoc, 1, &scene.camera.position[0]);
-        if (lightDirLoc >= 0)
-            glUniform3fv(lightDirLoc, 1, &scene.light.direction[0]);
-        if (lightColorLoc >= 0)
-            glUniform3fv(lightColorLoc, 1, &scene.light.color[0]);
-        if (lightIntLoc >= 0)
-            glUniform1f(lightIntLoc, scene.light.intensity);
-        if (ambientLoc >= 0)
-            glUniform3fv(ambientLoc, 1, &scene.light.ambientColor[0]);
+        if (m_skinnedUniforms.viewProjection >= 0)
+            glUniformMatrix4fv(m_skinnedUniforms.viewProjection, 1, GL_FALSE, &scene.camera.viewProjectionMatrix[0][0]);
+        if (m_skinnedUniforms.cameraPos >= 0)
+            glUniform3fv(m_skinnedUniforms.cameraPos, 1, &scene.camera.position[0]);
+        if (m_skinnedUniforms.lightDirection >= 0)
+            glUniform3fv(m_skinnedUniforms.lightDirection, 1, &scene.light.direction[0]);
+        if (m_skinnedUniforms.lightColor >= 0)
+            glUniform3fv(m_skinnedUniforms.lightColor, 1, &scene.light.color[0]);
+        if (m_skinnedUniforms.lightIntensity >= 0)
+            glUniform1f(m_skinnedUniforms.lightIntensity, scene.light.intensity);
+        if (m_skinnedUniforms.ambientColor >= 0)
+            glUniform3fv(m_skinnedUniforms.ambientColor, 1, &scene.light.ambientColor[0]);
     }
 
     void SetSkinnedMaterialUniforms(AssetHandle materialHandle)
     {
-        GLint albedoLoc = glGetUniformLocation(m_skinnedShader.program, "uAlbedo");
-        GLint metallicLoc = glGetUniformLocation(m_skinnedShader.program, "uMetallic");
-        GLint roughnessLoc = glGetUniformLocation(m_skinnedShader.program, "uRoughness");
-        GLint aoLoc = glGetUniformLocation(m_skinnedShader.program, "uAO");
-
         if (materialHandle != INVALID_HANDLE)
         {
             auto matIt = m_materialCache.find(materialHandle);
             if (matIt != m_materialCache.end())
             {
                 const auto& mat = matIt->second;
-                if (albedoLoc >= 0) glUniform3fv(albedoLoc, 1, &mat.albedo[0]);
-                if (metallicLoc >= 0) glUniform1f(metallicLoc, mat.metallic);
-                if (roughnessLoc >= 0) glUniform1f(roughnessLoc, mat.roughness);
-                if (aoLoc >= 0) glUniform1f(aoLoc, mat.ao);
+                if (m_skinnedUniforms.albedo >= 0) glUniform3fv(m_skinnedUniforms.albedo, 1, &mat.albedo[0]);
+                if (m_skinnedUniforms.metallic >= 0) glUniform1f(m_skinnedUniforms.metallic, mat.metallic);
+                if (m_skinnedUniforms.roughness >= 0) glUniform1f(m_skinnedUniforms.roughness, mat.roughness);
+                if (m_skinnedUniforms.ao >= 0) glUniform1f(m_skinnedUniforms.ao, mat.ao);
                 return;
             }
         }
 
-        if (albedoLoc >= 0) glUniform3f(albedoLoc, 0.8f, 0.6f, 0.4f);
-        if (metallicLoc >= 0) glUniform1f(metallicLoc, 0.0f);
-        if (roughnessLoc >= 0) glUniform1f(roughnessLoc, 0.5f);
-        if (aoLoc >= 0) glUniform1f(aoLoc, 1.0f);
+        if (m_skinnedUniforms.albedo >= 0) glUniform3f(m_skinnedUniforms.albedo, 0.8f, 0.6f, 0.4f);
+        if (m_skinnedUniforms.metallic >= 0) glUniform1f(m_skinnedUniforms.metallic, 0.0f);
+        if (m_skinnedUniforms.roughness >= 0) glUniform1f(m_skinnedUniforms.roughness, 0.5f);
+        if (m_skinnedUniforms.ao >= 0) glUniform1f(m_skinnedUniforms.ao, 1.0f);
     }
 
-    void SetMaterialUniforms(AssetHandle materialHandle)
+    void SetMaterialUniforms(AssetHandle materialHandle, const UniformLocations& locs)
     {
-        GLint albedoLoc = glGetUniformLocation(m_pbrShader.program, "uAlbedo");
-        GLint metallicLoc = glGetUniformLocation(m_pbrShader.program, "uMetallic");
-        GLint roughnessLoc = glGetUniformLocation(m_pbrShader.program, "uRoughness");
-        GLint aoLoc = glGetUniformLocation(m_pbrShader.program, "uAO");
-        GLint useTexLoc = glGetUniformLocation(m_pbrShader.program, "uUseAlbedoTexture");
-
         if (materialHandle != INVALID_HANDLE)
         {
             auto matIt = m_materialCache.find(materialHandle);
             if (matIt != m_materialCache.end())
             {
                 const auto& mat = matIt->second;
-                if (albedoLoc >= 0) glUniform3fv(albedoLoc, 1, &mat.albedo[0]);
-                if (metallicLoc >= 0) glUniform1f(metallicLoc, mat.metallic);
-                if (roughnessLoc >= 0) glUniform1f(roughnessLoc, mat.roughness);
-                if (aoLoc >= 0) glUniform1f(aoLoc, mat.ao);
-                if (useTexLoc >= 0) glUniform1i(useTexLoc, mat.hasAlbedoTexture ? 1 : 0);
+                if (locs.albedo >= 0) glUniform3fv(locs.albedo, 1, &mat.albedo[0]);
+                if (locs.metallic >= 0) glUniform1f(locs.metallic, mat.metallic);
+                if (locs.roughness >= 0) glUniform1f(locs.roughness, mat.roughness);
+                if (locs.ao >= 0) glUniform1f(locs.ao, mat.ao);
+                if (locs.emissive >= 0) glUniform3fv(locs.emissive, 1, &mat.emissive[0]);
+                if (locs.emissiveStrength >= 0) glUniform1f(locs.emissiveStrength, mat.emissiveStrength);
+                if (locs.useAlbedoTexture >= 0) glUniform1i(locs.useAlbedoTexture, mat.hasAlbedoTexture ? 1 : 0);
+                if (locs.useNormalTexture >= 0) glUniform1i(locs.useNormalTexture, mat.hasNormalTexture ? 1 : 0);
 
                 if (mat.hasAlbedoTexture && mat.albedoTexture)
                 {
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, mat.albedoTexture);
-                    GLint texLoc = glGetUniformLocation(m_pbrShader.program, "uAlbedoTexture");
-                    if (texLoc >= 0) glUniform1i(texLoc, 0);
+                    if (locs.albedoTexture >= 0) glUniform1i(locs.albedoTexture, 0);
+                }
+                if (mat.hasNormalTexture && mat.normalTexture)
+                {
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, mat.normalTexture);
+                    if (locs.normalTexture >= 0) glUniform1i(locs.normalTexture, 1);
                 }
                 return;
             }
         }
 
-        if (albedoLoc >= 0) glUniform3f(albedoLoc, 0.8f, 0.8f, 0.8f);
-        if (metallicLoc >= 0) glUniform1f(metallicLoc, 0.0f);
-        if (roughnessLoc >= 0) glUniform1f(roughnessLoc, 0.5f);
-        if (aoLoc >= 0) glUniform1f(aoLoc, 1.0f);
-        if (useTexLoc >= 0) glUniform1i(useTexLoc, 0);
+        if (locs.albedo >= 0) glUniform3f(locs.albedo, 0.8f, 0.8f, 0.8f);
+        if (locs.metallic >= 0) glUniform1f(locs.metallic, 0.0f);
+        if (locs.roughness >= 0) glUniform1f(locs.roughness, 0.5f);
+        if (locs.ao >= 0) glUniform1f(locs.ao, 1.0f);
+        if (locs.emissive >= 0) glUniform3f(locs.emissive, 0.0f, 0.0f, 0.0f);
+        if (locs.emissiveStrength >= 0) glUniform1f(locs.emissiveStrength, 0.0f);
+        if (locs.useAlbedoTexture >= 0) glUniform1i(locs.useAlbedoTexture, 0);
+        if (locs.useNormalTexture >= 0) glUniform1i(locs.useNormalTexture, 0);
     }
 
     void CreatePBRShader()
@@ -560,12 +589,35 @@ private:
             uniform float uMetallic;
             uniform float uRoughness;
             uniform float uAO;
+            uniform vec3 uEmissive;
+            uniform float uEmissiveStrength;
             uniform bool uUseAlbedoTexture;
+            uniform bool uUseNormalTexture;
             uniform sampler2D uAlbedoTexture;
+            uniform sampler2D uNormalTexture;
 
             out vec4 FragColor;
 
             const float PI = 3.14159265359;
+
+            vec3 GetNormal()
+            {
+                vec3 N = normalize(vNormal);
+                if (uUseNormalTexture)
+                {
+                    vec3 tangentNormal = texture(uNormalTexture, vTexCoord).rgb * 2.0 - 1.0;
+                    vec3 Q1 = dFdx(vWorldPos);
+                    vec3 Q2 = dFdy(vWorldPos);
+                    vec2 st1 = dFdx(vTexCoord);
+                    vec2 st2 = dFdy(vTexCoord);
+                    vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
+                    vec3 B = normalize(cross(N, T));
+                    if (dot(cross(N, T), B) < 0.0) T = -T;
+                    mat3 TBN = mat3(T, B, N);
+                    N = normalize(TBN * tangentNormal);
+                }
+                return N;
+            }
 
             float DistributionGGX(vec3 N, vec3 H, float roughness)
             {
@@ -600,7 +652,7 @@ private:
             {
                 vec3 albedo = uUseAlbedoTexture ? texture(uAlbedoTexture, vTexCoord).rgb : uAlbedo;
 
-                vec3 N = normalize(vNormal);
+                vec3 N = GetNormal();
                 vec3 V = normalize(uCameraPos - vWorldPos);
                 vec3 L = normalize(-uLightDirection);
                 vec3 H = normalize(V + L);
@@ -622,7 +674,10 @@ private:
                 vec3 Lo = (kD * albedo / PI + specular) * uLightColor * uLightIntensity * NdotL;
 
                 vec3 ambient = uAmbientColor * albedo * uAO;
-                vec3 color = ambient + Lo;
+
+                vec3 emissiveContrib = uEmissive * uEmissiveStrength;
+
+                vec3 color = ambient + Lo + emissiveContrib;
 
                 color = color / (color + vec3(1.0));
                 color = pow(color, vec3(1.0 / 2.2));
@@ -895,6 +950,52 @@ private:
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
+    void CacheUniformLocations()
+    {
+        auto cache = [](GLuint program, const char* name) -> GLint
+        {
+            GLint loc = glGetUniformLocation(program, name);
+            return loc;
+        };
+
+        if (m_pbrShader.program)
+        {
+            m_pbrUniforms.viewProjection = cache(m_pbrShader.program, "uViewProjection");
+            m_pbrUniforms.model = cache(m_pbrShader.program, "uModel");
+            m_pbrUniforms.cameraPos = cache(m_pbrShader.program, "uCameraPos");
+            m_pbrUniforms.lightDirection = cache(m_pbrShader.program, "uLightDirection");
+            m_pbrUniforms.lightColor = cache(m_pbrShader.program, "uLightColor");
+            m_pbrUniforms.lightIntensity = cache(m_pbrShader.program, "uLightIntensity");
+            m_pbrUniforms.ambientColor = cache(m_pbrShader.program, "uAmbientColor");
+            m_pbrUniforms.albedo = cache(m_pbrShader.program, "uAlbedo");
+            m_pbrUniforms.metallic = cache(m_pbrShader.program, "uMetallic");
+            m_pbrUniforms.roughness = cache(m_pbrShader.program, "uRoughness");
+            m_pbrUniforms.ao = cache(m_pbrShader.program, "uAO");
+            m_pbrUniforms.emissive = cache(m_pbrShader.program, "uEmissive");
+            m_pbrUniforms.emissiveStrength = cache(m_pbrShader.program, "uEmissiveStrength");
+            m_pbrUniforms.useAlbedoTexture = cache(m_pbrShader.program, "uUseAlbedoTexture");
+            m_pbrUniforms.useNormalTexture = cache(m_pbrShader.program, "uUseNormalTexture");
+            m_pbrUniforms.albedoTexture = cache(m_pbrShader.program, "uAlbedoTexture");
+            m_pbrUniforms.normalTexture = cache(m_pbrShader.program, "uNormalTexture");
+        }
+
+        if (m_skinnedShader.program)
+        {
+            m_skinnedUniforms.viewProjection = cache(m_skinnedShader.program, "uViewProjection");
+            m_skinnedUniforms.model = cache(m_skinnedShader.program, "uModel");
+            m_skinnedUniforms.cameraPos = cache(m_skinnedShader.program, "uCameraPos");
+            m_skinnedUniforms.lightDirection = cache(m_skinnedShader.program, "uLightDirection");
+            m_skinnedUniforms.lightColor = cache(m_skinnedShader.program, "uLightColor");
+            m_skinnedUniforms.lightIntensity = cache(m_skinnedShader.program, "uLightIntensity");
+            m_skinnedUniforms.ambientColor = cache(m_skinnedShader.program, "uAmbientColor");
+            m_skinnedUniforms.albedo = cache(m_skinnedShader.program, "uAlbedo");
+            m_skinnedUniforms.metallic = cache(m_skinnedShader.program, "uMetallic");
+            m_skinnedUniforms.roughness = cache(m_skinnedShader.program, "uRoughness");
+            m_skinnedUniforms.ao = cache(m_skinnedShader.program, "uAO");
+            m_skinnedUniforms.boneMatrices = cache(m_skinnedShader.program, "uBoneMatrices[0]");
+        }
+    }
+
 public:
     std::unordered_map<AssetHandle, std::vector<Mat4>> m_boneMatricesCache;
 
@@ -906,6 +1007,8 @@ private:
 
     GLShaderProgram m_pbrShader{};
     GLShaderProgram m_skinnedShader{};
+    UniformLocations m_pbrUniforms{};
+    UniformLocations m_skinnedUniforms{};
     GLMeshData m_defaultMesh{};
     AssetHandle m_defaultCubeHandle = INVALID_HANDLE;
     AssetHandle m_defaultPlaneHandle = INVALID_HANDLE;

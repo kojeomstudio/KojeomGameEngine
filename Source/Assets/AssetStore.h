@@ -19,6 +19,8 @@
 
 #include <stb_image.h>
 
+#include <algorithm>
+
 namespace Kojeom
 {
 struct Vertex
@@ -504,6 +506,290 @@ public:
         return handle;
     }
 
+    struct GLTFMaterialInfo
+    {
+        glm::vec4 baseColorFactor = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+        float metallicFactor = 0.0f;
+        float roughnessFactor = 0.5f;
+        glm::vec3 emissiveFactor = glm::vec3(0.0f);
+        std::string albedoTexturePath;
+        std::string normalTexturePath;
+        std::string metallicRoughnessTexturePath;
+        bool hasMaterial = false;
+    };
+
+    GLTFMaterialInfo ExtractGLTFMaterial(const tinygltf::Model& model, int materialIndex, const std::string& basePath)
+    {
+        GLTFMaterialInfo info;
+        if (materialIndex < 0 || materialIndex >= static_cast<int>(model.materials.size()))
+            return info;
+
+        const auto& mat = model.materials[materialIndex];
+        info.hasMaterial = true;
+
+        if (mat.values.count("baseColorFactor"))
+        {
+            auto& c = mat.values.at("baseColorFactor").number_array;
+            if (c.size() >= 3)
+                info.baseColorFactor = glm::vec4(static_cast<float>(c[0]), static_cast<float>(c[1]), static_cast<float>(c[2]),
+                    c.size() >= 4 ? static_cast<float>(c[3]) : 1.0f);
+        }
+        if (mat.values.count("metallicFactor"))
+            info.metallicFactor = static_cast<float>(mat.values.at("metallicFactor").number_value);
+        if (mat.values.count("roughnessFactor"))
+            info.roughnessFactor = static_cast<float>(mat.values.at("roughnessFactor").number_value);
+        if (mat.additionalValues.count("emissiveFactor"))
+        {
+            auto& e = mat.additionalValues.at("emissiveFactor").number_array;
+            if (e.size() >= 3)
+                info.emissiveFactor = glm::vec3(static_cast<float>(e[0]), static_cast<float>(e[1]), static_cast<float>(e[2]));
+        }
+
+        auto resolveTexturePath = [&](int textureIndex) -> std::string
+        {
+            if (textureIndex < 0 || textureIndex >= static_cast<int>(model.textures.size()))
+                return "";
+            const auto& texture = model.textures[textureIndex];
+            if (texture.source < 0 || texture.source >= static_cast<int>(model.images.size()))
+                return "";
+            const auto& image = model.images[texture.source];
+            if (!image.uri.empty())
+                return basePath + image.uri;
+            return "";
+        };
+
+        if (mat.values.count("baseColorTexture"))
+            info.albedoTexturePath = resolveTexturePath(mat.values.at("baseColorTexture").TextureIndex());
+        if (mat.normalTexture.index >= 0)
+            info.normalTexturePath = resolveTexturePath(mat.normalTexture.index);
+        if (mat.values.count("metallicRoughnessTexture"))
+            info.metallicRoughnessTexturePath = resolveTexturePath(mat.values.at("metallicRoughnessTexture").TextureIndex());
+
+        return info;
+    }
+
+    AssetHandle LoadGLTFWithMaterial(const std::string& path)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Path validation failed for glTF: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        auto it = m_meshPaths.find(path);
+        if (it != m_meshPaths.end()) return it->second;
+
+        tinygltf::Model model;
+        tinygltf::TinyGLTF loader;
+        std::string err, warn;
+
+        bool ret = false;
+        if (FileSystem::GetExtension(path) == ".glb")
+            ret = loader.LoadBinaryFromFile(&model, &err, &warn, path);
+        else
+            ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+
+        if (!ret)
+        {
+            KE_LOG_ERROR("glTF load failed: {} - {}", path, err);
+            return INVALID_HANDLE;
+        }
+        if (!warn.empty()) KE_LOG_WARN("glTF warning: {}", warn);
+
+        if (model.meshes.empty())
+        {
+            KE_LOG_ERROR("glTF has no meshes: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        std::string basePath = FileSystem::GetDirectory(path);
+
+        const auto& mesh = model.meshes[0];
+        MeshData meshData;
+        meshData.name = mesh.name;
+
+        int materialIndex = -1;
+
+        for (const auto& primitive : mesh.primitives)
+        {
+            if (materialIndex < 0 && primitive.material >= 0)
+                materialIndex = primitive.material;
+
+            if (!primitive.attributes.count("POSITION"))
+            {
+                KE_LOG_WARN("glTF primitive missing POSITION attribute, skipping");
+                continue;
+            }
+
+            const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
+            const auto& posBuf = model.bufferViews[posAcc.bufferView];
+            size_t posDataSize = model.buffers[posBuf.buffer].data.size();
+            size_t posOffset = posBuf.byteOffset + posAcc.byteOffset;
+            size_t requiredPosBytes = posAcc.count * 3 * sizeof(float);
+            if (posOffset + requiredPosBytes > posDataSize)
+            {
+                KE_LOG_ERROR("glTF position buffer out of bounds: {}", path);
+                return INVALID_HANDLE;
+            }
+            const float* posData = reinterpret_cast<const float*>(
+                &model.buffers[posBuf.buffer].data[posOffset]);
+
+            const float* normData = nullptr;
+            if (primitive.attributes.count("NORMAL") > 0)
+            {
+                const auto& normAcc = model.accessors[primitive.attributes.at("NORMAL")];
+                const auto& normBuf = model.bufferViews[normAcc.bufferView];
+                size_t normOffset = normBuf.byteOffset + normAcc.byteOffset;
+                size_t requiredNormBytes = normAcc.count * 3 * sizeof(float);
+                if (normOffset + requiredNormBytes > model.buffers[normBuf.buffer].data.size())
+                {
+                    KE_LOG_WARN("glTF normal buffer out of bounds, ignoring normals");
+                    normData = nullptr;
+                }
+                else
+                {
+                    normData = reinterpret_cast<const float*>(
+                        &model.buffers[normBuf.buffer].data[normOffset]);
+                }
+            }
+
+            const float* uvData = nullptr;
+            if (primitive.attributes.count("TEXCOORD_0") > 0)
+            {
+                const auto& uvAcc = model.accessors[primitive.attributes.at("TEXCOORD_0")];
+                const auto& uvBuf = model.bufferViews[uvAcc.bufferView];
+                size_t uvOffset = uvBuf.byteOffset + uvAcc.byteOffset;
+                size_t requiredUvBytes = uvAcc.count * 2 * sizeof(float);
+                if (uvOffset + requiredUvBytes > model.buffers[uvBuf.buffer].data.size())
+                {
+                    KE_LOG_WARN("glTF UV buffer out of bounds, ignoring UVs");
+                    uvData = nullptr;
+                }
+                else
+                {
+                    uvData = reinterpret_cast<const float*>(
+                        &model.buffers[uvBuf.buffer].data[uvOffset]);
+                }
+            }
+
+            int vertexCount = static_cast<int>(posAcc.count);
+            uint32_t baseIdx = static_cast<uint32_t>(meshData.vertices.size());
+
+            for (int i = 0; i < vertexCount; ++i)
+            {
+                Vertex v{};
+                v.position = glm::vec3(posData[i * 3], posData[i * 3 + 1], posData[i * 3 + 2]);
+                if (normData) v.normal = glm::vec3(normData[i * 3], normData[i * 3 + 1], normData[i * 3 + 2]);
+                if (uvData) v.uv = glm::vec2(uvData[i * 2], uvData[i * 2 + 1]);
+                meshData.vertices.push_back(v);
+            }
+
+            if (primitive.indices >= 0)
+            {
+                const auto& idxAcc = model.accessors[primitive.indices];
+                const auto& idxBuf = model.bufferViews[idxAcc.bufferView];
+                const auto& buf = model.buffers[idxBuf.buffer];
+                size_t idxOffset = idxBuf.byteOffset + idxAcc.byteOffset;
+
+                if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+                {
+                    size_t requiredIdxBytes = idxAcc.count * sizeof(uint16_t);
+                    if (idxOffset + requiredIdxBytes > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF index buffer out of bounds: {}", path);
+                        return INVALID_HANDLE;
+                    }
+                    const uint16_t* idx16 = reinterpret_cast<const uint16_t*>(&buf.data[idxOffset]);
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    {
+                        meshData.indices.push_back(baseIdx + idx16[i]);
+                        meshData.indices.push_back(baseIdx + idx16[i + 1]);
+                        meshData.indices.push_back(baseIdx + idx16[i + 2]);
+                    }
+                }
+                else if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
+                {
+                    size_t requiredIdxBytes = idxAcc.count * sizeof(uint32_t);
+                    if (idxOffset + requiredIdxBytes > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF index buffer out of bounds: {}", path);
+                        return INVALID_HANDLE;
+                    }
+                    const uint32_t* idx32 = reinterpret_cast<const uint32_t*>(&buf.data[idxOffset]);
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    {
+                        meshData.indices.push_back(baseIdx + idx32[i]);
+                        meshData.indices.push_back(baseIdx + idx32[i + 1]);
+                        meshData.indices.push_back(baseIdx + idx32[i + 2]);
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < vertexCount; i += 3)
+                {
+                    meshData.indices.push_back(baseIdx + i);
+                    meshData.indices.push_back(baseIdx + i + 1);
+                    meshData.indices.push_back(baseIdx + i + 2);
+                }
+            }
+        }
+
+        ComputeBounds(meshData.vertices, meshData.boundsMin, meshData.boundsMax);
+
+        if (meshData.vertices.empty())
+        {
+            KE_LOG_ERROR("glTF mesh has no vertices: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        glm::vec3 extents = meshData.boundsMax - meshData.boundsMin;
+        bool hasDegenerateBounds = (extents.x < 0.0001f || extents.y < 0.0001f || extents.z < 0.0001f);
+        if (hasDegenerateBounds)
+        {
+            KE_LOG_WARN("glTF mesh has degenerate bounds: {} (extents: {:.3f}, {:.3f}, {:.3f})",
+                path, extents.x, extents.y, extents.z);
+        }
+
+        AssetHandle handle = m_nextHandle++;
+        m_meshPaths[path] = handle;
+        m_meshes[handle] = std::move(meshData);
+
+        if (materialIndex >= 0)
+        {
+            auto matInfo = ExtractGLTFMaterial(model, materialIndex, basePath);
+            if (matInfo.hasMaterial)
+            {
+                MaterialData matData;
+                matData.albedo = glm::vec3(matInfo.baseColorFactor);
+                matData.metallic = matInfo.metallicFactor;
+                matData.roughness = matInfo.roughnessFactor;
+                matData.emissive = matInfo.emissiveFactor;
+                matData.albedoTexturePath = matInfo.albedoTexturePath;
+                matData.normalTexturePath = matInfo.normalTexturePath;
+                matData.metallicRoughnessTexturePath = matInfo.metallicRoughnessTexturePath;
+
+                AssetHandle matHandle = m_nextHandle++;
+                m_materials[matHandle] = matData;
+                m_meshMaterialMap[handle] = matHandle;
+                KE_LOG_INFO("Imported material for mesh {} (albedo: [{:.2f},{:.2f},{:.2f}], metallic: {:.2f}, roughness: {:.2f})",
+                    path, matData.albedo.x, matData.albedo.y, matData.albedo.z, matData.metallic, matData.roughness);
+            }
+        }
+
+        KE_LOG_INFO("Loaded mesh with material: {} ({} vertices, {} indices)",
+            path, m_meshes[handle].vertices.size(), m_meshes[handle].indices.size());
+        return handle;
+    }
+
+    AssetHandle GetMaterialForMesh(AssetHandle meshHandle) const
+    {
+        auto it = m_meshMaterialMap.find(meshHandle);
+        return (it != m_meshMaterialMap.end()) ? it->second : INVALID_HANDLE;
+    }
+
     const MeshData* GetMesh(AssetHandle handle) const
     {
         auto it = m_meshes.find(handle);
@@ -696,6 +982,12 @@ private:
 
         for (const auto& primitive : mesh.primitives)
         {
+            if (!primitive.attributes.count("POSITION"))
+            {
+                KE_LOG_WARN("glTF primitive missing POSITION, skipping");
+                continue;
+            }
+
             const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
             const auto& posBuf = model.bufferViews[posAcc.bufferView];
             const float* posData = reinterpret_cast<const float*>(
@@ -706,8 +998,12 @@ private:
             {
                 const auto& normAcc = model.accessors[primitive.attributes.at("NORMAL")];
                 const auto& normBuf = model.bufferViews[normAcc.bufferView];
-                normData = reinterpret_cast<const float*>(
-                    &model.buffers[normBuf.buffer].data[normBuf.byteOffset + normAcc.byteOffset]);
+                size_t normOffset = normBuf.byteOffset + normAcc.byteOffset;
+                if (normOffset + normAcc.count * 3 * sizeof(float) <= model.buffers[normBuf.buffer].data.size())
+                {
+                    normData = reinterpret_cast<const float*>(
+                        &model.buffers[normBuf.buffer].data[normOffset]);
+                }
             }
 
             const float* uvData = nullptr;
@@ -715,8 +1011,12 @@ private:
             {
                 const auto& uvAcc = model.accessors[primitive.attributes.at("TEXCOORD_0")];
                 const auto& uvBuf = model.bufferViews[uvAcc.bufferView];
-                uvData = reinterpret_cast<const float*>(
-                    &model.buffers[uvBuf.buffer].data[uvBuf.byteOffset + uvAcc.byteOffset]);
+                size_t uvOffset = uvBuf.byteOffset + uvAcc.byteOffset;
+                if (uvOffset + uvAcc.count * 2 * sizeof(float) <= model.buffers[uvBuf.buffer].data.size())
+                {
+                    uvData = reinterpret_cast<const float*>(
+                        &model.buffers[uvBuf.buffer].data[uvOffset]);
+                }
             }
 
             int vertexCount = static_cast<int>(posAcc.count);
@@ -736,12 +1036,18 @@ private:
                 const auto& idxAcc = model.accessors[primitive.indices];
                 const auto& idxBuf = model.bufferViews[idxAcc.bufferView];
                 const auto& buf = model.buffers[idxBuf.buffer];
+                size_t idxOffset = idxBuf.byteOffset + idxAcc.byteOffset;
 
                 if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
                 {
-                    const uint16_t* idx16 = reinterpret_cast<const uint16_t*>(
-                        &buf.data[idxBuf.byteOffset + idxAcc.byteOffset]);
-                    for (int i = 0; i < idxAcc.count; i += 3)
+                    size_t requiredBytes = idxAcc.count * sizeof(uint16_t);
+                    if (idxOffset + requiredBytes > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF index buffer out of bounds: {}", path);
+                        return false;
+                    }
+                    const uint16_t* idx16 = reinterpret_cast<const uint16_t*>(&buf.data[idxOffset]);
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
                     {
                         outMesh.indices.push_back(baseIdx + idx16[i]);
                         outMesh.indices.push_back(baseIdx + idx16[i + 1]);
@@ -750,9 +1056,14 @@ private:
                 }
                 else if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
                 {
-                    const uint32_t* idx32 = reinterpret_cast<const uint32_t*>(
-                        &buf.data[idxBuf.byteOffset + idxAcc.byteOffset]);
-                    for (int i = 0; i < idxAcc.count; i += 3)
+                    size_t requiredBytes = idxAcc.count * sizeof(uint32_t);
+                    if (idxOffset + requiredBytes > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF index buffer out of bounds: {}", path);
+                        return false;
+                    }
+                    const uint32_t* idx32 = reinterpret_cast<const uint32_t*>(&buf.data[idxOffset]);
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
                     {
                         outMesh.indices.push_back(baseIdx + idx32[i]);
                         outMesh.indices.push_back(baseIdx + idx32[i + 1]);
@@ -800,6 +1111,8 @@ private:
 
         for (const auto& primitive : mesh.primitives)
         {
+            if (!primitive.attributes.count("POSITION")) continue;
+
             const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
             const auto& posBuf = model.bufferViews[posAcc.bufferView];
             const float* posData = reinterpret_cast<const float*>(
@@ -810,8 +1123,9 @@ private:
             {
                 const auto& normAcc = model.accessors[primitive.attributes.at("NORMAL")];
                 const auto& normBuf = model.bufferViews[normAcc.bufferView];
-                normData = reinterpret_cast<const float*>(
-                    &model.buffers[normBuf.buffer].data[normBuf.byteOffset + normAcc.byteOffset]);
+                size_t normOff = normBuf.byteOffset + normAcc.byteOffset;
+                if (normOff + normAcc.count * 3 * sizeof(float) <= model.buffers[normBuf.buffer].data.size())
+                    normData = reinterpret_cast<const float*>(&model.buffers[normBuf.buffer].data[normOff]);
             }
 
             const float* uvData = nullptr;
@@ -819,8 +1133,9 @@ private:
             {
                 const auto& uvAcc = model.accessors[primitive.attributes.at("TEXCOORD_0")];
                 const auto& uvBuf = model.bufferViews[uvAcc.bufferView];
-                uvData = reinterpret_cast<const float*>(
-                    &model.buffers[uvBuf.buffer].data[uvBuf.byteOffset + uvAcc.byteOffset]);
+                size_t uvOff = uvBuf.byteOffset + uvAcc.byteOffset;
+                if (uvOff + uvAcc.count * 2 * sizeof(float) <= model.buffers[uvBuf.buffer].data.size())
+                    uvData = reinterpret_cast<const float*>(&model.buffers[uvBuf.buffer].data[uvOff]);
             }
 
             const float* weightData = nullptr;
@@ -868,12 +1183,17 @@ private:
                 const auto& idxAcc = model.accessors[primitive.indices];
                 const auto& idxBuf = model.bufferViews[idxAcc.bufferView];
                 const auto& buf = model.buffers[idxBuf.buffer];
+                size_t idxOffset = idxBuf.byteOffset + idxAcc.byteOffset;
 
                 if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
                 {
-                    const uint16_t* idx16 = reinterpret_cast<const uint16_t*>(
-                        &buf.data[idxBuf.byteOffset + idxAcc.byteOffset]);
-                    for (int i = 0; i < idxAcc.count; i += 3)
+                    if (idxOffset + idxAcc.count * sizeof(uint16_t) > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF skinned index buffer out of bounds: {}", path);
+                        return false;
+                    }
+                    const uint16_t* idx16 = reinterpret_cast<const uint16_t*>(&buf.data[idxOffset]);
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
                     {
                         outMesh.indices.push_back(baseIdx + idx16[i]);
                         outMesh.indices.push_back(baseIdx + idx16[i + 1]);
@@ -882,9 +1202,13 @@ private:
                 }
                 else
                 {
-                    const uint32_t* idx32 = reinterpret_cast<const uint32_t*>(
-                        &buf.data[idxBuf.byteOffset + idxAcc.byteOffset]);
-                    for (int i = 0; i < idxAcc.count; i += 3)
+                    if (idxOffset + idxAcc.count * sizeof(uint32_t) > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF skinned index buffer out of bounds: {}", path);
+                        return false;
+                    }
+                    const uint32_t* idx32 = reinterpret_cast<const uint32_t*>(&buf.data[idxOffset]);
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
                     {
                         outMesh.indices.push_back(baseIdx + idx32[i]);
                         outMesh.indices.push_back(baseIdx + idx32[i + 1]);
@@ -925,6 +1249,7 @@ private:
     std::unordered_map<AssetHandle, TerrainData> m_terrains;
     std::unordered_map<AssetHandle, SkeletonData> m_skeletons;
     std::unordered_map<AssetHandle, AnimationClipData> m_animationClips;
+    std::unordered_map<AssetHandle, AssetHandle> m_meshMaterialMap;
     std::unordered_map<std::string, AssetHandle> m_meshPaths;
     std::unordered_map<std::string, AssetHandle> m_skinnedMeshPaths;
     std::unordered_map<std::string, AssetHandle> m_texturePaths;

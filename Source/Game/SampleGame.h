@@ -39,7 +39,9 @@ public:
         camComp->isActive = true;
 
         AssetHandle cubeMatHandle = renderer->RegisterMaterial(
-            Vec3(0.8f, 0.3f, 0.2f), 0.1f, 0.4f);
+            Vec3(0.8f, 0.3f, 0.2f), 0.1f, 0.4f,
+            INVALID_HANDLE, false, INVALID_HANDLE, false,
+            Vec3(0.0f), 0.0f);
 
         auto* cubeEntity = world->CreateEntity("Cube");
         cubeEntity->GetTransform()->transform.position = Vec3(0.0f, 1.0f, 0.0f);
@@ -48,7 +50,9 @@ public:
         cubeMr->materialHandle = cubeMatHandle;
 
         AssetHandle blueMatHandle = renderer->RegisterMaterial(
-            Vec3(0.2f, 0.4f, 0.8f), 0.2f, 0.3f);
+            Vec3(0.2f, 0.4f, 0.8f), 0.2f, 0.3f,
+            INVALID_HANDLE, false, INVALID_HANDLE, false,
+            Vec3(0.0f), 0.0f);
 
         auto* cube2Entity = world->CreateEntity("BlueCube");
         cube2Entity->GetTransform()->transform.position = Vec3(3.0f, 1.0f, -2.0f);
@@ -57,13 +61,26 @@ public:
         cube2Mr->materialHandle = blueMatHandle;
 
         AssetHandle floorMatHandle = renderer->RegisterMaterial(
-            Vec3(0.4f, 0.4f, 0.4f), 0.0f, 0.8f);
+            Vec3(0.4f, 0.4f, 0.4f), 0.0f, 0.8f,
+            INVALID_HANDLE, false, INVALID_HANDLE, false,
+            Vec3(0.0f), 0.0f);
 
         auto* floorEntity = world->CreateEntity("Floor");
         floorEntity->GetTransform()->transform.position = Vec3(0.0f, 0.0f, 0.0f);
         auto* floorMr = floorEntity->AddComponent<MeshRendererComponent>();
         floorMr->meshHandle = renderer->GetDefaultPlaneHandle();
         floorMr->materialHandle = floorMatHandle;
+
+        AssetHandle emissiveMatHandle = renderer->RegisterMaterial(
+            Vec3(0.1f, 0.1f, 0.1f), 0.8f, 0.2f,
+            INVALID_HANDLE, false, INVALID_HANDLE, false,
+            Vec3(0.9f, 0.6f, 0.1f), 2.0f);
+
+        auto* emissiveEntity = world->CreateEntity("EmissiveOrb");
+        emissiveEntity->GetTransform()->transform.position = Vec3(-3.0f, 2.0f, 0.0f);
+        auto* emissiveMr = emissiveEntity->AddComponent<MeshRendererComponent>();
+        emissiveMr->meshHandle = renderer->GetDefaultCubeHandle();
+        emissiveMr->materialHandle = emissiveMatHandle;
 
         CreateTestTerrain(world, assetStore, renderer);
 
@@ -180,7 +197,9 @@ private:
         tc->cellSize = cellSize;
 
         AssetHandle terrainMatHandle = renderer->RegisterMaterial(
-            Vec3(0.3f, 0.6f, 0.2f), 0.0f, 0.9f);
+            Vec3(0.3f, 0.6f, 0.2f), 0.0f, 0.9f,
+            INVALID_HANDLE, false, INVALID_HANDLE, false,
+            Vec3(0.0f), 0.0f);
         tc->materialHandle = terrainMatHandle;
     }
 

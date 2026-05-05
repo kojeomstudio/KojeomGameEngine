@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/Engine.h"
+#include <stb_image.h>
 #include <chrono>
 
 namespace Kojeom
@@ -281,13 +282,15 @@ public:
 
         if (FileSystem::FileExists(screenshotPath))
         {
-            auto data = FileSystem::ReadBinaryFile(screenshotPath);
-            if (data.size() > 0)
+            int imgW, imgH, imgChannels;
+            uint8_t* pixels = stbi_load(screenshotPath.c_str(), &imgW, &imgH, &imgChannels, 3);
+            if (pixels && imgW > 0 && imgH > 0)
             {
                 bool allBlack = true;
-                for (size_t i = 0; i < data.size(); i += 3)
+                size_t pixelCount = static_cast<size_t>(imgW) * imgH * 3;
+                for (size_t i = 0; i < pixelCount; i += 3)
                 {
-                    if (data[i] != 0 || data[i + 1] != 0 || data[i + 2] != 0)
+                    if (pixels[i] != 0 || pixels[i + 1] != 0 || pixels[i + 2] != 0)
                     {
                         allBlack = false;
                         break;
@@ -297,6 +300,11 @@ public:
                 {
                     result.warnings.push_back("Screenshot appears to be completely black");
                 }
+                stbi_image_free(pixels);
+            }
+            else
+            {
+                result.warnings.push_back("Could not decode screenshot for black-check");
             }
         }
 

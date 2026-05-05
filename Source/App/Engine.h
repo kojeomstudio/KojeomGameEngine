@@ -230,7 +230,9 @@ public:
                 if (matData)
                 {
                     AssetHandle albedoTexHandle = INVALID_HANDLE;
+                    AssetHandle normalTexHandle = INVALID_HANDLE;
                     bool hasTex = false;
+                    bool hasNormalTex = false;
                     if (!matData->albedoTexturePath.empty())
                     {
                         auto texHandle = m_assetStore->LoadTexture(matData->albedoTexturePath);
@@ -242,8 +244,21 @@ public:
                             hasTex = true;
                         }
                     }
+                    if (!matData->normalTexturePath.empty())
+                    {
+                        auto texHandle = m_assetStore->LoadTexture(matData->normalTexturePath);
+                        auto* texData = m_assetStore->GetTexture(texHandle);
+                        if (texData)
+                        {
+                            normalTexHandle = m_renderer->UploadTexture(
+                                texData->width, texData->height, texData->channels, texData->pixels.data());
+                            hasNormalTex = true;
+                        }
+                    }
                     mr->materialHandle = m_renderer->RegisterMaterial(
-                        matData->albedo, matData->metallic, matData->roughness, albedoTexHandle, hasTex);
+                        matData->albedo, matData->metallic, matData->roughness,
+                        albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
+                        matData->emissive);
                 }
             }
         }
@@ -290,7 +305,9 @@ public:
                 if (matData)
                 {
                     sm->materialHandle = m_renderer->RegisterMaterial(
-                        matData->albedo, matData->metallic, matData->roughness);
+                        matData->albedo, matData->metallic, matData->roughness,
+                        INVALID_HANDLE, false, INVALID_HANDLE, false,
+                        matData->emissive);
                 }
             }
 

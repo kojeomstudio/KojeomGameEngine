@@ -394,8 +394,12 @@ public:
                 if (matJson.contains("metallic")) materialDef.metallic = matJson["metallic"];
                 if (matJson.contains("roughness")) materialDef.roughness = matJson["roughness"];
                 if (matJson.contains("ao")) materialDef.ao = matJson["ao"];
+                if (matJson.contains("emissive") && matJson["emissive"].is_array() && matJson["emissive"].size() >= 3)
+                    materialDef.emissive = Vec3(matJson["emissive"][0], matJson["emissive"][1], matJson["emissive"][2]);
                 if (matJson.contains("albedoTexture"))
                     materialDef.albedoTexturePath = matJson["albedoTexture"].get<std::string>();
+                if (matJson.contains("normalTexture"))
+                    materialDef.normalTexturePath = matJson["normalTexture"].get<std::string>();
 
                 if (assetStore)
                 {

@@ -28,7 +28,9 @@ public:
         const uint8_t* data) = 0;
     virtual AssetHandle RegisterMaterial(const Vec3& albedo, float metallic,
         float roughness, AssetHandle albedoTexHandle = INVALID_HANDLE,
-        bool hasTex = false) = 0;
+        bool hasTex = false, AssetHandle normalTexHandle = INVALID_HANDLE,
+        bool hasNormalTex = false, const Vec3& emissiveColor = Vec3(0.0f),
+        float emissiveStr = 1.0f) = 0;
     virtual void UploadBoneMatrices(AssetHandle handle,
         const std::vector<Mat4>& matrices) = 0;
     virtual void RemoveMesh(AssetHandle handle) = 0;
@@ -101,11 +103,14 @@ public:
 
     AssetHandle RegisterMaterial(const Vec3& albedo, float metallic,
         float roughness, AssetHandle albedoTexHandle = INVALID_HANDLE,
-        bool hasTex = false)
+        bool hasTex = false, AssetHandle normalTexHandle = INVALID_HANDLE,
+        bool hasNormalTex = false, const Vec3& emissiveColor = Vec3(0.0f),
+        float emissiveStr = 1.0f)
     {
         if (!m_backend) return INVALID_HANDLE;
         return m_backend->RegisterMaterial(albedo, metallic, roughness,
-            albedoTexHandle, hasTex);
+            albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
+            emissiveColor, emissiveStr);
     }
 
     void UploadBoneMatrices(AssetHandle handle,
