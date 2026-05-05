@@ -73,6 +73,8 @@ struct UniformLocations
     GLint pointLightColors = -1;
     GLint pointLightRanges = -1;
     GLint pointLightIntensities = -1;
+    GLint lightSpaceMatrix = -1;
+    GLint shadowMap = -1;
 };
 
 class OpenGLRenderer : public IRendererBackend
@@ -111,6 +113,8 @@ public:
 
         CreatePBRShader();
         CreateSkinnedShader();
+        CreateShadowShader();
+        CreatePostProcessShader();
         CacheUniformLocations();
         CreateDefaultMesh();
         CreateDefaultTextures();
@@ -143,15 +147,23 @@ public:
 
         if (m_pbrShader.program) { glDeleteProgram(m_pbrShader.program); m_pbrShader.program = 0; }
         if (m_skinnedShader.program) { glDeleteProgram(m_skinnedShader.program); m_skinnedShader.program = 0; }
+        if (m_shadowShader.program) { glDeleteProgram(m_shadowShader.program); m_shadowShader.program = 0; }
+        if (m_postProcessShader.program) { glDeleteProgram(m_postProcessShader.program); m_postProcessShader.program = 0; }
         if (m_defaultAlbedoTexture) { glDeleteTextures(1, &m_defaultAlbedoTexture); m_defaultAlbedoTexture = 0; }
         if (m_defaultNormalTexture) { glDeleteTextures(1, &m_defaultNormalTexture); m_defaultNormalTexture = 0; }
+
+        DestroyFramebuffer();
+        DestroyShadowMap();
 
         KE_LOG_INFO("OpenGL Renderer shutdown");
     }
 
     void OnResize(int width, int height) override
     {
+        m_windowWidth = width;
+        m_windowHeight = height;
         glViewport(0, 0, width, height);
+        CreateFramebuffer(width, height);
     }
 
     void BeginFrame() override
@@ -166,9 +178,21 @@ public:
     void Render(const RenderScene& scene) override
     {
         m_drawCallCount = 0;
+
+        RenderShadowMap(scene);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFBO);
+        glViewport(0, 0, m_windowWidth, m_windowHeight);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         RenderStaticMeshes(scene);
         RenderSkinnedMeshes(scene);
         RenderTerrain(scene);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        RenderPostProcess();
+
+        RenderDebugOverlay();
     }
 
     uint32_t GetDrawCallCount() const { return m_drawCallCount; }
@@ -366,6 +390,12 @@ private:
 
         SetPBRUniforms(scene, m_pbrUniforms);
 
+        if (m_pbrUniforms.shadowMap >= 0) glUniform1i(m_pbrUniforms.shadowMap, 2);
+        if (m_pbrUniforms.lightSpaceMatrix >= 0 && m_shadowShader.program)
+            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
+
         for (const auto& cmd : scene.staticDrawCommands)
         {
             if (m_pbrUniforms.model >= 0)
@@ -390,6 +420,8 @@ private:
             glUniform1i(m_pbrUniforms.useNormalTexture, 0);
         if (m_pbrUniforms.useAlbedoTexture >= 0)
             glUniform1i(m_pbrUniforms.useAlbedoTexture, 0);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE0);
@@ -442,6 +474,12 @@ private:
 
         SetPBRUniforms(scene, m_pbrUniforms);
 
+        if (m_pbrUniforms.shadowMap >= 0) glUniform1i(m_pbrUniforms.shadowMap, 2);
+        if (m_pbrUniforms.lightSpaceMatrix >= 0 && m_shadowShader.program)
+            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
+
         for (const auto& cmd : scene.terrainDrawCommands)
         {
             if (m_pbrUniforms.model >= 0)
@@ -459,7 +497,122 @@ private:
             }
         }
 
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, 0);
         glUseProgram(0);
+    }
+
+    void RenderShadowMap(const RenderScene& scene)
+    {
+        if (!m_shadowShader.program) return;
+
+        if (m_shadowMapFBO == 0)
+            CreateShadowMap(2048, 2048);
+
+        float nearP = 0.1f;
+        float farP = 50.0f;
+        Mat4 lightProj = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, nearP, farP);
+        Mat4 lightView = glm::lookAt(-scene.light.direction * 25.0f,
+            Vec3(0.0f), Vec3(0.0f, 1.0f, 0.0f));
+        m_lightSpaceMatrix = lightProj * lightView;
+
+        glViewport(0, 0, m_shadowMapSize, m_shadowMapSize);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_shadowMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(m_shadowShader.program);
+        GLint lightSpaceLoc = glGetUniformLocation(m_shadowShader.program, "uLightSpaceMatrix");
+        if (lightSpaceLoc >= 0)
+            glUniformMatrix4fv(lightSpaceLoc, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
+
+        GLint modelLoc = glGetUniformLocation(m_shadowShader.program, "uModel");
+
+        for (const auto& cmd : scene.staticDrawCommands)
+        {
+            if (modelLoc >= 0)
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+
+            GLMeshData mesh = m_defaultMesh;
+            auto it = m_meshCache.find(cmd.meshHandle);
+            if (it != m_meshCache.end()) mesh = it->second;
+
+            if (mesh.vao)
+            {
+                glBindVertexArray(mesh.vao);
+                glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+                glBindVertexArray(0);
+            }
+        }
+
+        for (const auto& cmd : scene.terrainDrawCommands)
+        {
+            if (modelLoc >= 0)
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+
+            auto it = m_meshCache.find(cmd.terrainHandle);
+            if (it != m_meshCache.end() && it->second.vao)
+            {
+                glBindVertexArray(it->second.vao);
+                glDrawElements(GL_TRIANGLES, it->second.indexCount, GL_UNSIGNED_INT, nullptr);
+                glBindVertexArray(0);
+            }
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, m_windowWidth, m_windowHeight);
+        glUseProgram(0);
+    }
+
+    void RenderPostProcess()
+    {
+        if (!m_postProcessShader.program) return;
+
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+
+        glUseProgram(m_postProcessShader.program);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_sceneColorTexture);
+        GLint sceneTexLoc = glGetUniformLocation(m_postProcessShader.program, "uSceneTexture");
+        if (sceneTexLoc >= 0) glUniform1i(sceneTexLoc, 0);
+
+        GLint exposureLoc = glGetUniformLocation(m_postProcessShader.program, "uExposure");
+        if (exposureLoc >= 0) glUniform1f(exposureLoc, 1.0f);
+
+        if (m_screenQuadVAO == 0)
+        {
+            float quad[] = {
+                -1.0f,  1.0f, 0.0f, 1.0f,
+                -1.0f, -1.0f, 0.0f, 0.0f,
+                 1.0f, -1.0f, 1.0f, 0.0f,
+                -1.0f,  1.0f, 0.0f, 1.0f,
+                 1.0f, -1.0f, 1.0f, 0.0f,
+                 1.0f,  1.0f, 1.0f, 1.0f,
+            };
+            glGenVertexArrays(1, &m_screenQuadVAO);
+            glGenBuffers(1, &m_screenQuadVBO);
+            glBindVertexArray(m_screenQuadVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, m_screenQuadVBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                reinterpret_cast<void*>(2 * sizeof(float)));
+            glBindVertexArray(0);
+        }
+
+        glBindVertexArray(m_screenQuadVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+
+        glEnable(GL_DEPTH_TEST);
+        glUseProgram(0);
+    }
+
+    void RenderDebugOverlay()
+    {
     }
 
     void SetPBRUniforms(const RenderScene& scene, const UniformLocations& locs)
@@ -638,6 +791,9 @@ private:
             uniform sampler2D uAlbedoTexture;
             uniform sampler2D uNormalTexture;
 
+            uniform mat4 uLightSpaceMatrix;
+            uniform sampler2D uShadowMap;
+
             uniform int uPointLightCount;
             uniform vec3 uPointLightPositions[4];
             uniform vec3 uPointLightColors[4];
@@ -647,6 +803,28 @@ private:
             out vec4 FragColor;
 
             const float PI = 3.14159265359;
+
+            float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+            {
+                vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+                projCoords = projCoords * 0.5 + 0.5;
+                if (projCoords.z > 1.0) return 0.0;
+                float closestDepth = texture(uShadowMap, projCoords.xy).r;
+                float currentDepth = projCoords.z;
+                float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
+                float shadow = 0.0;
+                vec2 texelSize = 1.0 / textureSize(uShadowMap, 0);
+                for (int x = -1; x <= 1; ++x)
+                {
+                    for (int y = -1; y <= 1; ++y)
+                    {
+                        float pcfDepth = texture(uShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+                        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+                    }
+                }
+                shadow /= 9.0;
+                return shadow;
+            }
 
             vec3 GetNormal()
             {
@@ -696,7 +874,7 @@ private:
                 return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
             }
 
-            vec3 CalcLighting(vec3 L, vec3 radiance, vec3 N, vec3 V, vec3 albedo)
+            vec3 CalcLighting(vec3 L, vec3 radiance, vec3 N, vec3 V, vec3 albedo, float shadow)
             {
                 vec3 H = normalize(V + L);
                 vec3 F0 = mix(vec3(0.04), albedo, uMetallic);
@@ -709,7 +887,7 @@ private:
                 vec3 kS = F;
                 vec3 kD = (vec3(1.0) - kS) * (1.0 - uMetallic);
                 float NdotL = max(dot(N, L), 0.0);
-                return (kD * albedo / PI + specular) * radiance * NdotL;
+                return (1.0 - shadow) * (kD * albedo / PI + specular) * radiance * NdotL;
             }
 
             void main()
@@ -719,9 +897,12 @@ private:
                 vec3 N = GetNormal();
                 vec3 V = normalize(uCameraPos - vWorldPos);
 
+                vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(vWorldPos, 1.0);
+                float shadow = ShadowCalculation(fragPosLightSpace, N, normalize(-uLightDirection));
+
                 vec3 L = normalize(-uLightDirection);
                 vec3 radiance = uLightColor * uLightIntensity;
-                vec3 Lo = CalcLighting(L, radiance, N, V, albedo);
+                vec3 Lo = CalcLighting(L, radiance, N, V, albedo, shadow);
 
                 for (int i = 0; i < uPointLightCount && i < 4; ++i)
                 {
@@ -732,15 +913,12 @@ private:
                     float attenuation = 1.0 - (dist / uPointLightRanges[i]);
                     attenuation = attenuation * attenuation;
                     radiance = uPointLightColors[i] * uPointLightIntensities[i] * attenuation;
-                    Lo += CalcLighting(L, radiance, N, V, albedo);
+                    Lo += CalcLighting(L, radiance, N, V, albedo, 0.0);
                 }
 
                 vec3 ambient = uAmbientColor * albedo * uAO;
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
                 vec3 color = ambient + Lo + emissiveContrib;
-
-                color = color / (color + vec3(1.0));
-                color = pow(color, vec3(1.0 / 2.2));
 
                 FragColor = vec4(color, 1.0);
             }
@@ -1042,6 +1220,8 @@ private:
             m_pbrUniforms.pointLightColors = cache(m_pbrShader.program, "uPointLightColors[0]");
             m_pbrUniforms.pointLightRanges = cache(m_pbrShader.program, "uPointLightRanges[0]");
             m_pbrUniforms.pointLightIntensities = cache(m_pbrShader.program, "uPointLightIntensities[0]");
+            m_pbrUniforms.lightSpaceMatrix = cache(m_pbrShader.program, "uLightSpaceMatrix");
+            m_pbrUniforms.shadowMap = cache(m_pbrShader.program, "uShadowMap");
         }
 
         if (m_skinnedShader.program)
@@ -1061,6 +1241,147 @@ private:
         }
     }
 
+    void CreateShadowShader()
+    {
+        const char* vertexSrc = R"(
+            #version 450 core
+            layout(location = 0) in vec3 aPosition;
+
+            uniform mat4 uLightSpaceMatrix;
+            uniform mat4 uModel;
+
+            void main()
+            {
+                gl_Position = uLightSpaceMatrix * uModel * vec4(aPosition, 1.0);
+            }
+        )";
+
+        const char* fragmentSrc = R"(
+            #version 450 core
+            void main()
+            {
+            }
+        )";
+
+        GLuint vs = CompileShader(GL_VERTEX_SHADER, vertexSrc);
+        GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fragmentSrc);
+        if (!vs || !fs) return;
+
+        m_shadowShader.program = LinkProgram(vs, fs);
+    }
+
+    void CreatePostProcessShader()
+    {
+        const char* vertexSrc = R"(
+            #version 450 core
+            layout(location = 0) in vec2 aPosition;
+            layout(location = 1) in vec2 aTexCoord;
+            out vec2 vTexCoord;
+            void main()
+            {
+                vTexCoord = aTexCoord;
+                gl_Position = vec4(aPosition, 0.0, 1.0);
+            }
+        )";
+
+        const char* fragmentSrc = R"(
+            #version 450 core
+            in vec2 vTexCoord;
+            out vec4 FragColor;
+
+            uniform sampler2D uSceneTexture;
+            uniform float uExposure;
+
+            void main()
+            {
+                vec3 color = texture(uSceneTexture, vTexCoord).rgb;
+
+                color = vec3(1.0) - exp(-color * uExposure);
+
+                color = pow(color, vec3(1.0 / 2.2));
+
+                FragColor = vec4(color, 1.0);
+            }
+        )";
+
+        GLuint vs = CompileShader(GL_VERTEX_SHADER, vertexSrc);
+        GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fragmentSrc);
+        if (!vs || !fs) return;
+
+        m_postProcessShader.program = LinkProgram(vs, fs);
+    }
+
+    void CreateFramebuffer(int width, int height)
+    {
+        DestroyFramebuffer();
+
+        if (width <= 0 || height <= 0) return;
+
+        glGenFramebuffers(1, &m_sceneFBO);
+        glGenTextures(1, &m_sceneColorTexture);
+        glGenRenderbuffers(1, &m_sceneDepthRBO);
+
+        glBindTexture(GL_TEXTURE_2D, m_sceneColorTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glBindRenderbuffer(GL_RENDERBUFFER, m_sceneDepthRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_sceneColorTexture, 0);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_sceneDepthRBO);
+
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+            KE_LOG_ERROR("Framebuffer incomplete: {}", static_cast<int>(status));
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        KE_LOG_INFO("Created scene framebuffer {}x{}", width, height);
+    }
+
+    void DestroyFramebuffer()
+    {
+        if (m_sceneFBO) { glDeleteFramebuffers(1, &m_sceneFBO); m_sceneFBO = 0; }
+        if (m_sceneColorTexture) { glDeleteTextures(1, &m_sceneColorTexture); m_sceneColorTexture = 0; }
+        if (m_sceneDepthRBO) { glDeleteRenderbuffers(1, &m_sceneDepthRBO); m_sceneDepthRBO = 0; }
+    }
+
+    void CreateShadowMap(int width, int height)
+    {
+        DestroyShadowMap();
+
+        m_shadowMapSize = width;
+
+        glGenFramebuffers(1, &m_shadowMapFBO);
+        glGenTextures(1, &m_shadowMapTexture);
+
+        glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, width, height, 0,
+            GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, m_shadowMapFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_shadowMapTexture, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void DestroyShadowMap()
+    {
+        if (m_shadowMapFBO) { glDeleteFramebuffers(1, &m_shadowMapFBO); m_shadowMapFBO = 0; }
+        if (m_shadowMapTexture) { glDeleteTextures(1, &m_shadowMapTexture); m_shadowMapTexture = 0; }
+    }
+
 public:
     std::unordered_map<AssetHandle, std::vector<Mat4>> m_boneMatricesCache;
 
@@ -1072,6 +1393,8 @@ private:
 
     GLShaderProgram m_pbrShader{};
     GLShaderProgram m_skinnedShader{};
+    GLShaderProgram m_shadowShader{};
+    GLShaderProgram m_postProcessShader{};
     UniformLocations m_pbrUniforms{};
     UniformLocations m_skinnedUniforms{};
     GLMeshData m_defaultMesh{};
@@ -1085,5 +1408,17 @@ private:
     std::unordered_map<AssetHandle, GLMaterialData> m_materialCache;
     AssetHandle m_nextHandle = 0;
     uint32_t m_drawCallCount = 0;
+
+    GLuint m_sceneFBO = 0;
+    GLuint m_sceneColorTexture = 0;
+    GLuint m_sceneDepthRBO = 0;
+    GLuint m_shadowMapFBO = 0;
+    GLuint m_shadowMapTexture = 0;
+    int m_shadowMapSize = 2048;
+    GLuint m_screenQuadVAO = 0;
+    GLuint m_screenQuadVBO = 0;
+    Mat4 m_lightSpaceMatrix = Mat4(1.0f);
+    int m_windowWidth = 1280;
+    int m_windowHeight = 720;
 };
 }

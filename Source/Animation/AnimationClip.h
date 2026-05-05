@@ -2,8 +2,10 @@
 
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include "Math/Transform.h"
 #include "Animation/Skeleton.h"
 #include "Core/Log.h"
 
@@ -350,5 +352,173 @@ private:
     std::vector<BlendNode> m_nodes;
     float m_playbackTime = 0.0f;
     float m_speed = 1.0f;
+};
+
+class AnimationCrossfade
+{
+public:
+    void Start(const AnimationClip* fromClip, float fromTime,
+               const AnimationClip* toClip, float duration,
+               const Skeleton* skeleton)
+    {
+        m_fromClip = fromClip;
+        m_fromTime = fromTime;
+        m_toClip = toClip;
+        m_duration = duration;
+        m_elapsed = 0.0f;
+        m_skeleton = skeleton;
+        m_active = true;
+    }
+
+    void Tick(float deltaSeconds)
+    {
+        if (!m_active) return;
+        m_elapsed += deltaSeconds;
+        m_fromTime += deltaSeconds;
+        if (m_elapsed >= m_duration)
+        {
+            m_active = false;
+        }
+    }
+
+    Pose Sample() const
+    {
+        if (!m_skeleton || !m_fromClip || !m_toClip) return Pose();
+
+        float t = glm::clamp(m_elapsed / m_duration, 0.0f, 1.0f);
+        Pose fromPose = m_fromClip->Sample(m_fromTime, *m_skeleton);
+        Pose toPose = m_toClip->Sample(m_elapsed, *m_skeleton);
+
+        Pose result(m_skeleton->GetBoneCount());
+        for (size_t i = 0; i < m_skeleton->GetBoneCount(); ++i)
+        {
+            result.GetLocalTransform(i) = BoneTransform::Lerp(
+                fromPose.GetLocalTransform(i), toPose.GetLocalTransform(i), t);
+        }
+        result.ComputeGlobalTransforms(*m_skeleton);
+        return result;
+    }
+
+    bool IsActive() const { return m_active; }
+    float GetProgress() const { return glm::clamp(m_elapsed / m_duration, 0.0f, 1.0f); }
+
+private:
+    const AnimationClip* m_fromClip = nullptr;
+    const AnimationClip* m_toClip = nullptr;
+    const Skeleton* m_skeleton = nullptr;
+    float m_fromTime = 0.0f;
+    float m_duration = 0.3f;
+    float m_elapsed = 0.0f;
+    bool m_active = false;
+};
+
+struct AnimStateTransition
+{
+    std::string fromState;
+    std::string toState;
+    std::string trigger;
+    float crossfadeDuration = 0.25f;
+};
+
+class AnimationStateMachine
+{
+public:
+    struct State
+    {
+        std::string name;
+        const AnimationClip* clip = nullptr;
+        bool loop = true;
+        float speed = 1.0f;
+    };
+
+    void SetSkeleton(const Skeleton* skeleton) { m_skeleton = skeleton; }
+
+    void AddState(const std::string& name, const AnimationClip* clip, bool loop = true, float speed = 1.0f)
+    {
+        m_states[name] = { name, clip, loop, speed };
+        if (m_states.size() == 1)
+            m_currentStateName = name;
+    }
+
+    void AddTransition(const std::string& from, const std::string& to,
+                       const std::string& trigger, float crossfadeDuration = 0.25f)
+    {
+        m_transitions.push_back({ from, to, trigger, crossfadeDuration });
+    }
+
+    void SetTrigger(const std::string& trigger)
+    {
+        for (const auto& trans : m_transitions)
+        {
+            if (trans.fromState == m_currentStateName && trans.trigger == trigger)
+            {
+                auto it = m_states.find(trans.toState);
+                if (it != m_states.end())
+                {
+                    auto fromIt = m_states.find(m_currentStateName);
+                    if (fromIt != m_states.end())
+                    {
+                        m_crossfade.Start(fromIt->second.clip, m_playbackTime,
+                            it->second.clip, trans.crossfadeDuration, m_skeleton);
+                    }
+                    m_currentStateName = trans.toState;
+                    m_playbackTime = 0.0f;
+                }
+                return;
+            }
+        }
+    }
+
+    void Tick(float deltaSeconds)
+    {
+        if (!m_skeleton) return;
+
+        auto it = m_states.find(m_currentStateName);
+        if (it == m_states.end()) return;
+
+        const State& state = it->second;
+        m_playbackTime += deltaSeconds * state.speed;
+
+        float clipDuration = state.clip->GetDurationSeconds();
+        if (m_playbackTime >= clipDuration)
+        {
+            if (state.loop)
+                m_playbackTime = std::fmod(m_playbackTime, clipDuration);
+            else
+                m_playbackTime = clipDuration;
+        }
+
+        m_crossfade.Tick(deltaSeconds);
+    }
+
+    Pose Sample() const
+    {
+        if (!m_skeleton) return Pose();
+
+        if (m_crossfade.IsActive())
+            return m_crossfade.Sample();
+
+        auto it = m_states.find(m_currentStateName);
+        if (it == m_states.end()) return Pose();
+        return it->second.clip->Sample(m_playbackTime, *m_skeleton);
+    }
+
+    std::vector<Mat4> GetSkinMatrices() const
+    {
+        if (!m_skeleton) return {};
+        Pose pose = Sample();
+        return pose.ComputeSkinMatrices(*m_skeleton);
+    }
+
+    const std::string& GetCurrentStateName() const { return m_currentStateName; }
+    bool IsInState(const std::string& name) const { return m_currentStateName == name; }
+
+private:
+    const Skeleton* m_skeleton = nullptr;
+    std::unordered_map<std::string, State> m_states;
+    std::vector<AnimStateTransition> m_transitions;
+    std::string m_currentStateName;
+    float m_playbackTime = 0.0f;
+    AnimationCrossfade m_crossfade;
 };
 }

@@ -21,6 +21,10 @@
 
 #include <algorithm>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 namespace Kojeom
 {
 struct Vertex
@@ -149,6 +153,12 @@ public:
             loaded = LoadOBJMesh(path, meshData);
         else if (ext == ".gltf" || ext == ".glb")
             loaded = LoadGLTFStaticMesh(path, meshData);
+        else if (ext == ".fbx" || ext == ".FBX")
+        {
+            m_meshPaths.erase(path);
+            m_mutex.unlock();
+            return LoadFBX(path);
+        }
         else
         {
             KE_LOG_ERROR("Unsupported mesh format: {}", path);
@@ -781,6 +791,105 @@ public:
 
         KE_LOG_INFO("Loaded mesh with material: {} ({} vertices, {} indices)",
             path, m_meshes[handle].vertices.size(), m_meshes[handle].indices.size());
+        return handle;
+    }
+
+    AssetHandle LoadFBX(const std::string& path)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Path validation failed for FBX: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        auto it = m_meshPaths.find(path);
+        if (it != m_meshPaths.end()) return it->second;
+
+        Assimp::Importer importer;
+        unsigned int flags = aiProcess_Triangulate | aiProcess_GenNormals |
+            aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace |
+            aiProcess_FlipUVs;
+
+        const aiScene* scene = importer.ReadFile(path, flags);
+        if (!scene || !scene->HasMeshes())
+        {
+            KE_LOG_ERROR("Assimp failed to load: {} - {}", path, importer.GetErrorString());
+            return INVALID_HANDLE;
+        }
+
+        MeshData meshData;
+        meshData.name = FileSystem::GetFileName(path);
+
+        uint32_t baseIdx = 0;
+        for (unsigned int m = 0; m < scene->mNumMeshes; ++m)
+        {
+            const aiMesh* aiMesh = scene->mMeshes[m];
+
+            for (unsigned int i = 0; i < aiMesh->mNumVertices; ++i)
+            {
+                Vertex v{};
+                v.position = glm::vec3(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
+                if (aiMesh->HasNormals())
+                    v.normal = glm::vec3(aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z);
+                if (aiMesh->HasTextureCoords(0))
+                    v.uv = glm::vec2(aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y);
+                meshData.vertices.push_back(v);
+            }
+
+            for (unsigned int f = 0; f < aiMesh->mNumFaces; ++f)
+            {
+                const aiFace& face = aiMesh->mFaces[f];
+                for (unsigned int idx = 0; idx < face.mNumIndices; ++idx)
+                    meshData.indices.push_back(baseIdx + face.mIndices[idx]);
+            }
+
+            baseIdx = static_cast<uint32_t>(meshData.vertices.size());
+        }
+
+        ComputeBounds(meshData.vertices, meshData.boundsMin, meshData.boundsMax);
+
+        if (meshData.vertices.empty())
+        {
+            KE_LOG_ERROR("FBX mesh has no vertices: {}", path);
+            return INVALID_HANDLE;
+        }
+
+        AssetHandle handle = m_nextHandle++;
+        m_meshPaths[path] = handle;
+        m_meshes[handle] = std::move(meshData);
+
+        if (scene->HasMaterials() && scene->mNumMaterials > 0)
+        {
+            const aiMaterial* aiMat = scene->mMaterials[0];
+            MaterialData matData;
+
+            aiColor4D color;
+            if (aiGetMaterialColor(aiMat, AI_MATKEY_COLOR_DIFFUSE, &color) == AI_SUCCESS)
+                matData.albedo = glm::vec3(color.r, color.g, color.b);
+
+            float val;
+            if (aiGetMaterialFloat(aiMat, AI_MATKEY_METALLIC_FACTOR, &val) == AI_SUCCESS)
+                matData.metallic = val;
+            if (aiGetMaterialFloat(aiMat, AI_MATKEY_ROUGHNESS_FACTOR, &val) == AI_SUCCESS)
+                matData.roughness = val;
+
+            aiString texPath;
+            if (aiGetMaterialTexture(aiMat, aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
+                matData.albedoTexturePath = FileSystem::GetDirectory(path) + texPath.C_Str();
+            if (aiGetMaterialTexture(aiMat, aiTextureType_NORMALS, 0, &texPath) == AI_SUCCESS)
+                matData.normalTexturePath = FileSystem::GetDirectory(path) + texPath.C_Str();
+
+            AssetHandle matHandle = m_nextHandle++;
+            m_materials[matHandle] = matData;
+            m_meshMaterialMap[handle] = matHandle;
+            KE_LOG_INFO("Imported FBX material (albedo: [{:.2f},{:.2f},{:.2f}], metallic: {:.2f}, roughness: {:.2f})",
+                matData.albedo.x, matData.albedo.y, matData.albedo.z, matData.metallic, matData.roughness);
+        }
+
+        KE_LOG_INFO("Loaded FBX: {} ({} vertices, {} indices, {} submeshes)",
+            path, m_meshes[handle].vertices.size(), m_meshes[handle].indices.size(), scene->mNumMeshes);
         return handle;
     }
 
