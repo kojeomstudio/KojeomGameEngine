@@ -319,10 +319,50 @@ public:
                 auto* matData = m_assetStore->GetMaterial(sm->materialHandle);
                 if (matData)
                 {
+                    AssetHandle albedoTexHandle = INVALID_HANDLE;
+                    AssetHandle normalTexHandle = INVALID_HANDLE;
+                    AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE;
+                    bool hasTex = false;
+                    bool hasNormalTex = false;
+                    bool hasMRTex = false;
+                    if (!matData->albedoTexturePath.empty())
+                    {
+                        auto texHandle = m_assetStore->LoadTexture(matData->albedoTexturePath);
+                        auto* texData = m_assetStore->GetTexture(texHandle);
+                        if (texData)
+                        {
+                            albedoTexHandle = m_renderer->UploadTexture(
+                                texData->width, texData->height, texData->channels, texData->pixels.data());
+                            hasTex = true;
+                        }
+                    }
+                    if (!matData->normalTexturePath.empty())
+                    {
+                        auto texHandle = m_assetStore->LoadTexture(matData->normalTexturePath);
+                        auto* texData = m_assetStore->GetTexture(texHandle);
+                        if (texData)
+                        {
+                            normalTexHandle = m_renderer->UploadTexture(
+                                texData->width, texData->height, texData->channels, texData->pixels.data());
+                            hasNormalTex = true;
+                        }
+                    }
+                    if (!matData->metallicRoughnessTexturePath.empty())
+                    {
+                        auto texHandle = m_assetStore->LoadTexture(matData->metallicRoughnessTexturePath);
+                        auto* texData = m_assetStore->GetTexture(texHandle);
+                        if (texData)
+                        {
+                            metallicRoughnessTexHandle = m_renderer->UploadTexture(
+                                texData->width, texData->height, texData->channels, texData->pixels.data());
+                            hasMRTex = true;
+                        }
+                    }
                     sm->materialHandle = m_renderer->RegisterMaterial(
                         matData->albedo, matData->metallic, matData->roughness,
-                        INVALID_HANDLE, false, INVALID_HANDLE, false,
-                        matData->emissive);
+                        albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
+                        matData->emissive, 1.0f, metallicRoughnessTexHandle, hasMRTex,
+                        matData->ao);
                 }
             }
 

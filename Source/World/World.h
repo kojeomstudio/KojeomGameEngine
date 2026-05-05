@@ -421,6 +421,8 @@ public:
                     materialDef.albedoTexturePath = matJson["albedoTexture"].get<std::string>();
                 if (matJson.contains("normalTexture"))
                     materialDef.normalTexturePath = matJson["normalTexture"].get<std::string>();
+                if (matJson.contains("metallicRoughnessTexture"))
+                    materialDef.metallicRoughnessTexturePath = matJson["metallicRoughnessTexture"].get<std::string>();
 
                 if (assetStore)
                 {
@@ -439,6 +441,12 @@ public:
                 if (terJson.contains("heightmap") && assetStore)
                 {
                     std::string heightmapPath = terJson["heightmap"].get<std::string>();
+                    float maxH = terJson.value("maxHeight", 10.0f);
+                    tc->terrainHandle = assetStore->LoadTerrainFromHeightmap(heightmapPath, tc->cellSize, maxH);
+                }
+                else if (terJson.contains("heightmapImage") && assetStore)
+                {
+                    std::string heightmapPath = terJson["heightmapImage"].get<std::string>();
                     float maxH = terJson.value("maxHeight", 10.0f);
                     tc->terrainHandle = assetStore->LoadTerrainFromHeightmap(heightmapPath, tc->cellSize, maxH);
                 }
@@ -598,6 +606,8 @@ public:
                             matJson["albedoTexture"] = matData->albedoTexturePath;
                         if (!matData->normalTexturePath.empty())
                             matJson["normalTexture"] = matData->normalTexturePath;
+                        if (!matData->metallicRoughnessTexturePath.empty())
+                            matJson["metallicRoughnessTexture"] = matData->metallicRoughnessTexturePath;
                         entJson["material"] = matJson;
                     }
                 }

@@ -133,6 +133,58 @@ public:
                             else if (!FileSystem::FileExists(texPath))
                                 result.errors.push_back("Albedo texture not found: " + texPath);
                         }
+                        if (mat.contains("normalTexture"))
+                        {
+                            std::string texPath = mat["normalTexture"].get<std::string>();
+                            if (!FileSystem::ValidatePath(texPath))
+                                result.errors.push_back("Invalid normal texture path: " + texPath);
+                            else if (!FileSystem::FileExists(texPath))
+                                result.errors.push_back("Normal texture not found: " + texPath);
+                        }
+                        if (mat.contains("metallicRoughnessTexture"))
+                        {
+                            std::string texPath = mat["metallicRoughnessTexture"].get<std::string>();
+                            if (!FileSystem::ValidatePath(texPath))
+                                result.errors.push_back("Invalid metallic-roughness texture path: " + texPath);
+                            else if (!FileSystem::FileExists(texPath))
+                                result.errors.push_back("Metallic-roughness texture not found: " + texPath);
+                        }
+                    }
+                    if (entity.contains("skeleton"))
+                    {
+                        std::string skelPath = entity["skeleton"].get<std::string>();
+                        if (!FileSystem::ValidatePath(skelPath))
+                            result.errors.push_back("Invalid skeleton path: " + skelPath);
+                        else if (!FileSystem::FileExists(skelPath))
+                            result.errors.push_back("Skeleton not found: " + skelPath);
+                    }
+                    if (entity.contains("skinnedMesh"))
+                    {
+                        std::string meshPath = entity["skinnedMesh"].get<std::string>();
+                        if (!FileSystem::ValidatePath(meshPath))
+                            result.errors.push_back("Invalid skinned mesh path: " + meshPath);
+                        else if (!FileSystem::FileExists(meshPath))
+                            result.errors.push_back("Skinned mesh not found: " + meshPath);
+                    }
+                    if (entity.contains("animationClip"))
+                    {
+                        std::string clipPath = entity["animationClip"].get<std::string>();
+                        if (!FileSystem::ValidatePath(clipPath))
+                            result.errors.push_back("Invalid animation clip path: " + clipPath);
+                        else if (!FileSystem::FileExists(clipPath))
+                            result.errors.push_back("Animation clip not found: " + clipPath);
+                    }
+                    if (entity.contains("terrain"))
+                    {
+                        const auto& terrainData = entity["terrain"];
+                        if (terrainData.contains("heightmapImage"))
+                        {
+                            std::string hmPath = terrainData["heightmapImage"].get<std::string>();
+                            if (!FileSystem::ValidatePath(hmPath))
+                                result.errors.push_back("Invalid heightmap path: " + hmPath);
+                            else if (!FileSystem::FileExists(hmPath))
+                                result.errors.push_back("Heightmap not found: " + hmPath);
+                        }
                     }
                 }
             }
@@ -381,6 +433,7 @@ inline std::unique_ptr<IAppMode> CreateAppMode(AppConfig::Mode mode)
     case AppConfig::Mode::ValidateAssets: return std::make_unique<AssetValidationMode>();
     case AppConfig::Mode::RenderTest: return std::make_unique<RenderTestMode>();
     case AppConfig::Mode::SceneDump: return std::make_unique<SceneDumpMode>();
+    case AppConfig::Mode::ScreenshotCompare: return std::make_unique<ScreenshotCompareMode>();
     case AppConfig::Mode::Benchmark: return std::make_unique<BenchmarkMode>();
     }
     return std::make_unique<GameMode>();

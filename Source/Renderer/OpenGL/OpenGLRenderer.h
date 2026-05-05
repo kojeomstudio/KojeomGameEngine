@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <string>
+#include <limits>
 
 namespace Kojeom
 {
@@ -163,6 +164,7 @@ public:
         {
             if (mat.albedoTexture) glDeleteTextures(1, &mat.albedoTexture);
             if (mat.normalTexture) glDeleteTextures(1, &mat.normalTexture);
+            if (mat.metallicRoughnessTexture) glDeleteTextures(1, &mat.metallicRoughnessTexture);
         }
         m_materialCache.clear();
 
@@ -586,6 +588,8 @@ private:
         glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
         glUseProgram(0);
@@ -645,11 +649,54 @@ private:
         if (m_shadowMapFBO == 0)
             CreateShadowMap(2048, 2048);
 
+        Vec3 sceneMin(std::numeric_limits<float>::max());
+        Vec3 sceneMax(std::numeric_limits<float>::lowest());
+
+        auto expandBounds = [&](const Mat4& worldMatrix, const Vec3& localCenter, float localRadius)
+        {
+            if (localRadius <= 0.0f) return;
+            for (int dx = -1; dx <= 1; dx += 2)
+            {
+                for (int dy = -1; dy <= 1; dy += 2)
+                {
+                    for (int dz = -1; dz <= 1; dz += 2)
+                    {
+                        Vec3 corner = localCenter + localRadius * Vec3(static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dz));
+                        Vec3 worldCorner = Vec3(worldMatrix * Vec4(corner, 1.0f));
+                        sceneMin = glm::min(sceneMin, worldCorner);
+                        sceneMax = glm::max(sceneMax, worldCorner);
+                    }
+                }
+            }
+        };
+
+        for (const auto& cmd : scene.staticDrawCommands)
+            expandBounds(cmd.worldMatrix, cmd.boundsCenter, cmd.boundsRadius);
+        for (const auto& cmd : scene.terrainDrawCommands)
+            expandBounds(cmd.worldMatrix, cmd.boundsCenter, cmd.boundsRadius);
+        for (const auto& cmd : scene.skinnedDrawCommands)
+        {
+            Vec3 skinnedCenter = Vec3(cmd.worldMatrix * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+            sceneMin = glm::min(sceneMin, skinnedCenter - Vec3(2.0f));
+            sceneMax = glm::max(sceneMax, skinnedCenter + Vec3(2.0f));
+        }
+
+        if (scene.staticDrawCommands.empty() && scene.terrainDrawCommands.empty() && scene.skinnedDrawCommands.empty())
+        {
+            sceneMin = Vec3(-10.0f);
+            sceneMax = Vec3(10.0f);
+        }
+
+        Vec3 center = (sceneMin + sceneMax) * 0.5f;
+        Vec3 extents = sceneMax - sceneMin;
+        float maxExtent = std::max({ extents.x, extents.y, extents.z }) * 0.5f;
+        float shadowRange = std::max(maxExtent, 10.0f) + 10.0f;
+
         float nearP = 0.1f;
-        float farP = 100.0f;
-        Mat4 lightProj = glm::ortho(-30.0f, 30.0f, -30.0f, 30.0f, nearP, farP);
-        Mat4 lightView = glm::lookAt(-scene.light.direction * 30.0f,
-            Vec3(0.0f), Vec3(0.0f, 1.0f, 0.0f));
+        float farP = shadowRange * 2.0f;
+        Mat4 lightProj = glm::ortho(-shadowRange, shadowRange, -shadowRange, shadowRange, nearP, farP);
+        Mat4 lightView = glm::lookAt(-scene.light.direction * shadowRange + center,
+            center, Vec3(0.0f, 1.0f, 0.0f));
         m_lightSpaceMatrix = lightProj * lightView;
 
         glViewport(0, 0, m_shadowMapSize, m_shadowMapSize);
@@ -834,6 +881,37 @@ private:
             glUniform1f(m_skinnedUniforms.lightIntensity, scene.light.intensity);
         if (m_skinnedUniforms.ambientColor >= 0)
             glUniform3fv(m_skinnedUniforms.ambientColor, 1, &scene.light.ambientColor[0]);
+
+        int plCount = std::min(scene.light.pointLightCount,
+            static_cast<int>(LightData::MAX_POINT_LIGHTS));
+        if (m_skinnedUniforms.pointLightCount >= 0)
+            glUniform1i(m_skinnedUniforms.pointLightCount, plCount);
+        if (plCount > 0)
+        {
+            float positions[12] = {};
+            float colors[12] = {};
+            float ranges[4] = {};
+            float intensities[4] = {};
+            for (int i = 0; i < plCount; ++i)
+            {
+                positions[i * 3]     = scene.light.pointLights[i].position.x;
+                positions[i * 3 + 1] = scene.light.pointLights[i].position.y;
+                positions[i * 3 + 2] = scene.light.pointLights[i].position.z;
+                colors[i * 3]        = scene.light.pointLights[i].color.x;
+                colors[i * 3 + 1]    = scene.light.pointLights[i].color.y;
+                colors[i * 3 + 2]    = scene.light.pointLights[i].color.z;
+                ranges[i]            = scene.light.pointLights[i].range;
+                intensities[i]       = scene.light.pointLights[i].intensity;
+            }
+            if (m_skinnedUniforms.pointLightPositions >= 0)
+                glUniform3fv(m_skinnedUniforms.pointLightPositions, plCount, positions);
+            if (m_skinnedUniforms.pointLightColors >= 0)
+                glUniform3fv(m_skinnedUniforms.pointLightColors, plCount, colors);
+            if (m_skinnedUniforms.pointLightRanges >= 0)
+                glUniform1fv(m_skinnedUniforms.pointLightRanges, plCount, ranges);
+            if (m_skinnedUniforms.pointLightIntensities >= 0)
+                glUniform1fv(m_skinnedUniforms.pointLightIntensities, plCount, intensities);
+        }
     }
 
     void SetSkinnedMaterialUniforms(AssetHandle materialHandle)
@@ -851,11 +929,25 @@ private:
                 if (m_skinnedUniforms.emissive >= 0) glUniform3fv(m_skinnedUniforms.emissive, 1, &mat.emissive[0]);
                 if (m_skinnedUniforms.emissiveStrength >= 0) glUniform1f(m_skinnedUniforms.emissiveStrength, mat.emissiveStrength);
                 if (m_skinnedUniforms.useAlbedoTexture >= 0) glUniform1i(m_skinnedUniforms.useAlbedoTexture, mat.hasAlbedoTexture ? 1 : 0);
+                if (m_skinnedUniforms.useNormalTexture >= 0) glUniform1i(m_skinnedUniforms.useNormalTexture, mat.hasNormalTexture ? 1 : 0);
+                if (m_skinnedUniforms.useMetallicRoughnessTexture >= 0) glUniform1i(m_skinnedUniforms.useMetallicRoughnessTexture, mat.hasMetallicRoughnessTexture ? 1 : 0);
                 if (mat.hasAlbedoTexture && mat.albedoTexture)
                 {
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, mat.albedoTexture);
                     if (m_skinnedUniforms.albedoTexture >= 0) glUniform1i(m_skinnedUniforms.albedoTexture, 0);
+                }
+                if (mat.hasNormalTexture && mat.normalTexture)
+                {
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, mat.normalTexture);
+                    if (m_skinnedUniforms.normalTexture >= 0) glUniform1i(m_skinnedUniforms.normalTexture, 1);
+                }
+                if (mat.hasMetallicRoughnessTexture && mat.metallicRoughnessTexture)
+                {
+                    glActiveTexture(GL_TEXTURE3);
+                    glBindTexture(GL_TEXTURE_2D, mat.metallicRoughnessTexture);
+                    if (m_skinnedUniforms.metallicRoughnessTexture >= 0) glUniform1i(m_skinnedUniforms.metallicRoughnessTexture, 3);
                 }
                 return;
             }
@@ -868,6 +960,8 @@ private:
         if (m_skinnedUniforms.emissive >= 0) glUniform3f(m_skinnedUniforms.emissive, 0.0f, 0.0f, 0.0f);
         if (m_skinnedUniforms.emissiveStrength >= 0) glUniform1f(m_skinnedUniforms.emissiveStrength, 0.0f);
         if (m_skinnedUniforms.useAlbedoTexture >= 0) glUniform1i(m_skinnedUniforms.useAlbedoTexture, 0);
+        if (m_skinnedUniforms.useNormalTexture >= 0) glUniform1i(m_skinnedUniforms.useNormalTexture, 0);
+        if (m_skinnedUniforms.useMetallicRoughnessTexture >= 0) glUniform1i(m_skinnedUniforms.useMetallicRoughnessTexture, 0);
     }
 
     void SetMaterialUniforms(AssetHandle materialHandle, const UniformLocations& locs)
@@ -1182,10 +1276,20 @@ private:
             uniform vec3 uEmissive;
             uniform float uEmissiveStrength;
             uniform bool uUseAlbedoTexture;
+            uniform bool uUseNormalTexture;
+            uniform bool uUseMetallicRoughnessTexture;
             uniform sampler2D uAlbedoTexture;
+            uniform sampler2D uNormalTexture;
+            uniform sampler2D uMetallicRoughnessTexture;
 
             uniform mat4 uLightSpaceMatrix;
             uniform sampler2D uShadowMap;
+
+            uniform int uPointLightCount;
+            uniform vec3 uPointLightPositions[4];
+            uniform vec3 uPointLightColors[4];
+            uniform float uPointLightRanges[4];
+            uniform float uPointLightIntensities[4];
 
             out vec4 FragColor;
 
@@ -1242,34 +1346,75 @@ private:
                 return shadow;
             }
 
+            vec3 GetNormal()
+            {
+                vec3 N = normalize(vNormal);
+                if (uUseNormalTexture)
+                {
+                    vec3 tangentNormal = texture(uNormalTexture, vTexCoord).rgb * 2.0 - 1.0;
+                    vec3 Q1 = dFdx(vWorldPos);
+                    vec3 Q2 = dFdy(vWorldPos);
+                    vec2 st1 = dFdx(vTexCoord);
+                    vec2 st2 = dFdy(vTexCoord);
+                    vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
+                    vec3 B = normalize(cross(N, T));
+                    if (dot(cross(N, T), B) < 0.0) T = -T;
+                    mat3 TBN = mat3(T, B, N);
+                    N = normalize(TBN * tangentNormal);
+                }
+                return N;
+            }
+
+            vec3 CalcLighting(vec3 L, vec3 radiance, vec3 N, vec3 V, vec3 albedo, float shadow)
+            {
+                vec3 H = normalize(V + L);
+                vec3 F0 = mix(vec3(0.04), albedo, uMetallic);
+                float D = DistributionGGX(N, H, uRoughness);
+                float G = GeometrySmith(N, V, L, uRoughness);
+                vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+                vec3 numerator = D * G * F;
+                float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+                vec3 specular = numerator / denominator;
+                vec3 kS = F;
+                vec3 kD = (vec3(1.0) - kS) * (1.0 - uMetallic);
+                float NdotL = max(dot(N, L), 0.0);
+                return (1.0 - shadow) * (kD * albedo / PI + specular) * radiance * NdotL;
+            }
+
             void main()
             {
                 vec3 albedo = uUseAlbedoTexture ? texture(uAlbedoTexture, vTexCoord).rgb : uAlbedo;
+                float metallic = uMetallic;
+                float roughness = uRoughness;
 
-                vec3 N = normalize(vNormal);
+                if (uUseMetallicRoughnessTexture)
+                {
+                    vec3 mrSample = texture(uMetallicRoughnessTexture, vTexCoord).rgb;
+                    roughness = mrSample.g * roughness;
+                    metallic = mrSample.b * metallic;
+                }
+
+                vec3 N = GetNormal();
                 vec3 V = normalize(uCameraPos - vWorldPos);
 
                 vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(vWorldPos, 1.0);
                 float shadow = ShadowCalculation(fragPosLightSpace, N, normalize(-uLightDirection));
 
                 vec3 L = normalize(-uLightDirection);
-                vec3 H = normalize(V + L);
+                vec3 radiance = uLightColor * uLightIntensity;
+                vec3 Lo = CalcLighting(L, radiance, N, V, albedo, shadow);
 
-                vec3 F0 = mix(vec3(0.04), albedo, uMetallic);
-
-                float D = DistributionGGX(N, H, uRoughness);
-                float G = GeometrySmith(N, V, L, uRoughness);
-                vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
-
-                vec3 numerator = D * G * F;
-                float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-                vec3 specular = numerator / denominator;
-
-                vec3 kS = F;
-                vec3 kD = (vec3(1.0) - kS) * (1.0 - uMetallic);
-
-                float NdotL = max(dot(N, L), 0.0);
-                vec3 Lo = (1.0 - shadow) * (kD * albedo / PI + specular) * uLightColor * uLightIntensity * NdotL;
+                for (int i = 0; i < uPointLightCount && i < 4; ++i)
+                {
+                    vec3 lightVec = uPointLightPositions[i] - vWorldPos;
+                    float dist = length(lightVec);
+                    if (dist > uPointLightRanges[i]) continue;
+                    L = lightVec / dist;
+                    float attenuation = 1.0 - (dist / uPointLightRanges[i]);
+                    attenuation = attenuation * attenuation;
+                    radiance = uPointLightColors[i] * uPointLightIntensities[i] * attenuation;
+                    Lo += CalcLighting(L, radiance, N, V, albedo, 0.0);
+                }
 
                 vec3 ambient = uAmbientColor * albedo * uAO;
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
@@ -1468,11 +1613,20 @@ private:
             m_skinnedUniforms.emissive = cache(m_skinnedShader.program, "uEmissive");
             m_skinnedUniforms.emissiveStrength = cache(m_skinnedShader.program, "uEmissiveStrength");
             m_skinnedUniforms.useAlbedoTexture = cache(m_skinnedShader.program, "uUseAlbedoTexture");
+            m_skinnedUniforms.useNormalTexture = cache(m_skinnedShader.program, "uUseNormalTexture");
+            m_skinnedUniforms.useMetallicRoughnessTexture = cache(m_skinnedShader.program, "uUseMetallicRoughnessTexture");
             m_skinnedUniforms.albedoTexture = cache(m_skinnedShader.program, "uAlbedoTexture");
+            m_skinnedUniforms.normalTexture = cache(m_skinnedShader.program, "uNormalTexture");
+            m_skinnedUniforms.metallicRoughnessTexture = cache(m_skinnedShader.program, "uMetallicRoughnessTexture");
             m_skinnedUniforms.boneMatrices = cache(m_skinnedShader.program, "uBoneMatrices[0]");
             m_skinnedUniforms.lightSpaceMatrix = cache(m_skinnedShader.program, "uLightSpaceMatrix");
             m_skinnedUniforms.shadowMap = cache(m_skinnedShader.program, "uShadowMap");
             m_skinnedUniforms.normalMatrix = cache(m_skinnedShader.program, "uNormalMatrix");
+            m_skinnedUniforms.pointLightCount = cache(m_skinnedShader.program, "uPointLightCount");
+            m_skinnedUniforms.pointLightPositions = cache(m_skinnedShader.program, "uPointLightPositions[0]");
+            m_skinnedUniforms.pointLightColors = cache(m_skinnedShader.program, "uPointLightColors[0]");
+            m_skinnedUniforms.pointLightRanges = cache(m_skinnedShader.program, "uPointLightRanges[0]");
+            m_skinnedUniforms.pointLightIntensities = cache(m_skinnedShader.program, "uPointLightIntensities[0]");
         }
     }
 

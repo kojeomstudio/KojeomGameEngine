@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstdint>
+#include <cerrno>
 #include <algorithm>
 #include <sys/stat.h>
 

@@ -15,6 +15,7 @@ struct AppConfig
         ValidateAssets,
         RenderTest,
         SceneDump,
+        ScreenshotCompare,
         Benchmark
     };
 
@@ -41,6 +42,7 @@ struct AppConfig
         case Mode::ValidateAssets: return "validate-assets";
         case Mode::RenderTest: return "render-test";
         case Mode::SceneDump: return "scene-dump";
+        case Mode::ScreenshotCompare: return "screenshot-compare";
         case Mode::Benchmark: return "benchmark";
         }
         return "unknown";
@@ -53,6 +55,7 @@ struct AppConfig
         if (s == "validate-assets") return Mode::ValidateAssets;
         if (s == "render-test") return Mode::RenderTest;
         if (s == "scene-dump") return Mode::SceneDump;
+        if (s == "screenshot-compare") return Mode::ScreenshotCompare;
         if (s == "benchmark") return Mode::Benchmark;
         return Mode::Game;
     }
