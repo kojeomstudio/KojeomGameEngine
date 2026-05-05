@@ -10,7 +10,7 @@ class StringId
 {
 public:
     StringId() : m_id(0) {}
-    explicit StringId(const std::string& str) : m_id(HashString(str)), m_str(&str)
+    explicit StringId(const std::string& str) : m_id(HashString(str))
     {
         auto& registry = GetRegistry();
         registry[m_id] = str;
@@ -50,7 +50,6 @@ private:
     }
 
     uint64_t m_id;
-    const std::string* m_str;
 };
 }
 

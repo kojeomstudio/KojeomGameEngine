@@ -321,6 +321,25 @@ public:
                 m_defaultLight->intensity = light["intensity"];
             if (light.contains("ambient") && light["ambient"].is_array() && light["ambient"].size() >= 3)
                 m_defaultLight->ambientColor = Vec3(light["ambient"][0], light["ambient"][1], light["ambient"][2]);
+
+            if (light.contains("pointLights") && light["pointLights"].is_array())
+            {
+                int plIdx = 0;
+                for (const auto& pl : light["pointLights"])
+                {
+                    if (plIdx >= static_cast<int>(LightData::MAX_POINT_LIGHTS)) break;
+                    if (pl.contains("position") && pl["position"].is_array() && pl["position"].size() >= 3)
+                        m_defaultLight->pointLights[plIdx].position = Vec3(pl["position"][0], pl["position"][1], pl["position"][2]);
+                    if (pl.contains("color") && pl["color"].is_array() && pl["color"].size() >= 3)
+                        m_defaultLight->pointLights[plIdx].color = Vec3(pl["color"][0], pl["color"][1], pl["color"][2]);
+                    if (pl.contains("range"))
+                        m_defaultLight->pointLights[plIdx].range = pl["range"];
+                    if (pl.contains("intensity"))
+                        m_defaultLight->pointLights[plIdx].intensity = pl["intensity"];
+                    ++plIdx;
+                }
+                m_defaultLight->pointLightCount = plIdx;
+            }
         }
 
         if (!sceneJson.contains("entities"))
@@ -477,7 +496,7 @@ public:
             }
         }
 
-        result.success = !result.errors.empty() ? false : true;
+        result.success = result.errors.empty();
         if (result.success)
             KE_LOG_INFO("Scene loaded: {} ({} entities)", scenePath, result.entityCount);
         else
@@ -531,6 +550,26 @@ public:
                 entJson["camera"]["far"] = cam->cameraData.farPlane;
                 entJson["camera"]["forward"] = {
                     cam->cameraData.forward.x, cam->cameraData.forward.y, cam->cameraData.forward.z };
+            }
+
+            auto* mr = entity->GetMeshRendererComponent();
+            if (mr)
+            {
+                entJson["mesh"] = "$mesh";
+                if (mr->materialHandle != INVALID_HANDLE)
+                    entJson["material"] = "$material";
+            }
+
+            auto* tc = entity->GetTerrainComponent();
+            if (tc)
+            {
+                entJson["terrain"]["cellSize"] = tc->cellSize;
+            }
+
+            auto* sm = entity->GetSkeletalMeshComponent();
+            if (sm)
+            {
+                entJson["skeletalMesh"]["path"] = "$skelmesh";
             }
 
             entitiesJson.push_back(entJson);

@@ -3,7 +3,21 @@
     "direction": [0.3, -1.0, -0.5],
     "color": [1.0, 0.95, 0.85],
     "intensity": 1.5,
-    "ambient": [0.12, 0.12, 0.15]
+    "ambient": [0.12, 0.12, 0.15],
+    "pointLights": [
+      {
+        "position": [2.0, 3.0, 1.0],
+        "color": [1.0, 0.8, 0.4],
+        "range": 15.0,
+        "intensity": 2.0
+      },
+      {
+        "position": [-3.0, 2.0, -4.0],
+        "color": [0.4, 0.6, 1.0],
+        "range": 12.0,
+        "intensity": 1.5
+      }
+    ]
   },
   "entities": [
     {
@@ -28,7 +42,7 @@
         "rotation": [0.0, 0.0, 0.0],
         "scale": [1.0, 1.0, 1.0]
       },
-      "mesh": "Meshes/Cube.obj",
+      "mesh": "$default_cube",
       "material": {
         "albedo": [0.8, 0.3, 0.2],
         "metallic": 0.1,
@@ -42,11 +56,26 @@
         "rotation": [0.0, 45.0, 0.0],
         "scale": [1.0, 1.0, 1.0]
       },
-      "mesh": "Meshes/Cube.obj",
+      "mesh": "$default_cube",
       "material": {
         "albedo": [0.2, 0.4, 0.8],
         "metallic": 0.2,
         "roughness": 0.3
+      }
+    },
+    {
+      "name": "GoldSphere",
+      "transform": {
+        "position": [-2.0, 1.5, -3.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "mesh": "$default_cube",
+      "material": {
+        "albedo": [1.0, 0.84, 0.0],
+        "metallic": 0.9,
+        "roughness": 0.1,
+        "emissive": [0.3, 0.25, 0.0]
       }
     },
     {

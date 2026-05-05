@@ -218,6 +218,18 @@ jobs:
           fi
           echo "Build output verified successfully"
 
+      - name: Run headless asset validation
+        run: |
+          ./build/bin/Simple3DEngine --mode validate-assets --scene Scenes/TestScene.json --result-json Saved/TestResults/assets.json
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "Asset validation failed with exit code $EXIT_CODE"
+            cat Saved/TestResults/assets.json || true
+            exit 1
+          fi
+          echo "Asset validation passed"
+          cat Saved/TestResults/assets.json
+
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest

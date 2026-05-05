@@ -906,8 +906,13 @@ private:
             }
             else if (prefix == "f")
             {
-                std::string v1, v2, v3;
-                iss >> v1 >> v2 >> v3;
+                std::vector<std::string> faceVerts;
+                std::string vertStr;
+                while (iss >> vertStr)
+                    faceVerts.push_back(vertStr);
+
+                if (faceVerts.size() < 3) continue;
+
                 auto parseFace = [](const std::string& face)
                 {
                     int v = 0, vt = 0, vn = 0;
@@ -925,14 +930,9 @@ private:
                     return std::make_tuple(v, vt, vn);
                 };
 
-                auto [iv1, ivt1, ivn1] = parseFace(v1);
-                auto [iv2, ivt2, ivn2] = parseFace(v2);
-                auto [iv3, ivt3, ivn3] = parseFace(v3);
-
-                uint32_t baseIdx = static_cast<uint32_t>(outMesh.vertices.size());
-                for (auto [iv, ivt, ivn] : { std::make_tuple(iv1, ivt1, ivn1),
-                    std::make_tuple(iv2, ivt2, ivn2), std::make_tuple(iv3, ivt3, ivn3) })
+                auto addVertex = [&](const std::string& faceStr)
                 {
+                    auto [iv, ivt, ivn] = parseFace(faceStr);
                     Vertex vtx{};
                     if (iv > 0 && iv <= static_cast<int>(positions.size()))
                         vtx.position = positions[iv - 1];
@@ -941,10 +941,18 @@ private:
                     if (ivt > 0 && ivt <= static_cast<int>(uvs.size()))
                         vtx.uv = uvs[ivt - 1];
                     outMesh.vertices.push_back(vtx);
+                };
+
+                for (size_t i = 1; i + 1 < faceVerts.size(); ++i)
+                {
+                    uint32_t baseIdx = static_cast<uint32_t>(outMesh.vertices.size());
+                    addVertex(faceVerts[0]);
+                    addVertex(faceVerts[i]);
+                    addVertex(faceVerts[i + 1]);
+                    outMesh.indices.push_back(baseIdx);
+                    outMesh.indices.push_back(baseIdx + 1);
+                    outMesh.indices.push_back(baseIdx + 2);
                 }
-                outMesh.indices.push_back(baseIdx);
-                outMesh.indices.push_back(baseIdx + 1);
-                outMesh.indices.push_back(baseIdx + 2);
             }
         }
 
@@ -990,8 +998,16 @@ private:
 
             const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
             const auto& posBuf = model.bufferViews[posAcc.bufferView];
+            size_t posDataSize = model.buffers[posBuf.buffer].data.size();
+            size_t posOffset = posBuf.byteOffset + posAcc.byteOffset;
+            size_t requiredPosBytes = posAcc.count * 3 * sizeof(float);
+            if (posOffset + requiredPosBytes > posDataSize)
+            {
+                KE_LOG_ERROR("glTF position buffer out of bounds: {}", path);
+                return false;
+            }
             const float* posData = reinterpret_cast<const float*>(
-                &model.buffers[posBuf.buffer].data[posBuf.byteOffset + posAcc.byteOffset]);
+                &model.buffers[posBuf.buffer].data[posOffset]);
 
             const float* normData = nullptr;
             if (primitive.attributes.count("NORMAL") > 0)
@@ -1115,8 +1131,16 @@ private:
 
             const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
             const auto& posBuf = model.bufferViews[posAcc.bufferView];
+            size_t posDataSize = model.buffers[posBuf.buffer].data.size();
+            size_t posOffset = posBuf.byteOffset + posAcc.byteOffset;
+            size_t requiredPosBytes = posAcc.count * 3 * sizeof(float);
+            if (posOffset + requiredPosBytes > posDataSize)
+            {
+                KE_LOG_ERROR("glTF skinned position buffer out of bounds: {}", path);
+                return false;
+            }
             const float* posData = reinterpret_cast<const float*>(
-                &model.buffers[posBuf.buffer].data[posBuf.byteOffset + posAcc.byteOffset]);
+                &model.buffers[posBuf.buffer].data[posOffset]);
 
             const float* normData = nullptr;
             if (primitive.attributes.count("NORMAL") > 0)
@@ -1143,8 +1167,18 @@ private:
             {
                 const auto& wAcc = model.accessors[primitive.attributes.at("WEIGHTS_0")];
                 const auto& wBuf = model.bufferViews[wAcc.bufferView];
-                weightData = reinterpret_cast<const float*>(
-                    &model.buffers[wBuf.buffer].data[wBuf.byteOffset + wAcc.byteOffset]);
+                size_t wOffset = wBuf.byteOffset + wAcc.byteOffset;
+                size_t requiredWBytes = wAcc.count * 4 * sizeof(float);
+                if (wOffset + requiredWBytes > model.buffers[wBuf.buffer].data.size())
+                {
+                    KE_LOG_WARN("glTF WEIGHTS_0 buffer out of bounds, ignoring weights");
+                    weightData = nullptr;
+                }
+                else
+                {
+                    weightData = reinterpret_cast<const float*>(
+                        &model.buffers[wBuf.buffer].data[wOffset]);
+                }
             }
 
             const uint16_t* jointData = nullptr;
@@ -1155,12 +1189,35 @@ private:
                 const auto& jAcc = model.accessors[primitive.attributes.at("JOINTS_0")];
                 const auto& jBuf = model.bufferViews[jAcc.bufferView];
                 jointComponentType = jAcc.componentType;
+                size_t jOffset = jBuf.byteOffset + jAcc.byteOffset;
                 if (jointComponentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
-                    jointData = reinterpret_cast<const uint16_t*>(
-                        &model.buffers[jBuf.buffer].data[jBuf.byteOffset + jAcc.byteOffset]);
+                {
+                    size_t requiredJBytes = jAcc.count * 4 * sizeof(uint16_t);
+                    if (jOffset + requiredJBytes > model.buffers[jBuf.buffer].data.size())
+                    {
+                        KE_LOG_WARN("glTF JOINTS_0 buffer out of bounds, ignoring joints");
+                        jointData = nullptr;
+                    }
+                    else
+                    {
+                        jointData = reinterpret_cast<const uint16_t*>(
+                            &model.buffers[jBuf.buffer].data[jOffset]);
+                    }
+                }
                 else
-                    jointData8 = reinterpret_cast<const uint8_t*>(
-                        &model.buffers[jBuf.buffer].data[jBuf.byteOffset + jAcc.byteOffset]);
+                {
+                    size_t requiredJBytes = jAcc.count * 4 * sizeof(uint8_t);
+                    if (jOffset + requiredJBytes > model.buffers[jBuf.buffer].data.size())
+                    {
+                        KE_LOG_WARN("glTF JOINTS_0 buffer out of bounds, ignoring joints");
+                        jointData8 = nullptr;
+                    }
+                    else
+                    {
+                        jointData8 = reinterpret_cast<const uint8_t*>(
+                            &model.buffers[jBuf.buffer].data[jOffset]);
+                    }
+                }
             }
 
             int vertexCount = static_cast<int>(posAcc.count);

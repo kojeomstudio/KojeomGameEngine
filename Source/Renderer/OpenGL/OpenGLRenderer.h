@@ -68,6 +68,11 @@ struct UniformLocations
     GLint albedoTexture = -1;
     GLint normalTexture = -1;
     GLint boneMatrices = -1;
+    GLint pointLightCount = -1;
+    GLint pointLightPositions = -1;
+    GLint pointLightColors = -1;
+    GLint pointLightRanges = -1;
+    GLint pointLightIntensities = -1;
 };
 
 class OpenGLRenderer : public IRendererBackend
@@ -160,10 +165,13 @@ public:
 
     void Render(const RenderScene& scene) override
     {
+        m_drawCallCount = 0;
         RenderStaticMeshes(scene);
         RenderSkinnedMeshes(scene);
         RenderTerrain(scene);
     }
+
+    uint32_t GetDrawCallCount() const { return m_drawCallCount; }
 
     AssetHandle UploadMesh(const std::vector<float>& vertices, const std::vector<uint32_t>& indices,
         int vertexStride = 8) override
@@ -374,6 +382,7 @@ private:
                 glBindVertexArray(mesh.vao);
                 glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
                 glBindVertexArray(0);
+                ++m_drawCallCount;
             }
         }
 
@@ -419,6 +428,7 @@ private:
                 glBindVertexArray(mesh.vao);
                 glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
                 glBindVertexArray(0);
+                ++m_drawCallCount;
             }
         }
 
@@ -445,6 +455,7 @@ private:
                 glBindVertexArray(it->second.vao);
                 glDrawElements(GL_TRIANGLES, it->second.indexCount, GL_UNSIGNED_INT, nullptr);
                 glBindVertexArray(0);
+                ++m_drawCallCount;
             }
         }
 
@@ -465,6 +476,37 @@ private:
             glUniform1f(locs.lightIntensity, scene.light.intensity);
         if (locs.ambientColor >= 0)
             glUniform3fv(locs.ambientColor, 1, &scene.light.ambientColor[0]);
+
+        int plCount = std::min(scene.light.pointLightCount,
+            static_cast<int>(LightData::MAX_POINT_LIGHTS));
+        if (locs.pointLightCount >= 0)
+            glUniform1i(locs.pointLightCount, plCount);
+        if (plCount > 0)
+        {
+            float positions[12] = {};
+            float colors[12] = {};
+            float ranges[4] = {};
+            float intensities[4] = {};
+            for (int i = 0; i < plCount; ++i)
+            {
+                positions[i * 3]     = scene.light.pointLights[i].position.x;
+                positions[i * 3 + 1] = scene.light.pointLights[i].position.y;
+                positions[i * 3 + 2] = scene.light.pointLights[i].position.z;
+                colors[i * 3]        = scene.light.pointLights[i].color.x;
+                colors[i * 3 + 1]    = scene.light.pointLights[i].color.y;
+                colors[i * 3 + 2]    = scene.light.pointLights[i].color.z;
+                ranges[i]            = scene.light.pointLights[i].range;
+                intensities[i]       = scene.light.pointLights[i].intensity;
+            }
+            if (locs.pointLightPositions >= 0)
+                glUniform3fv(locs.pointLightPositions, plCount, positions);
+            if (locs.pointLightColors >= 0)
+                glUniform3fv(locs.pointLightColors, plCount, colors);
+            if (locs.pointLightRanges >= 0)
+                glUniform1fv(locs.pointLightRanges, plCount, ranges);
+            if (locs.pointLightIntensities >= 0)
+                glUniform1fv(locs.pointLightIntensities, plCount, intensities);
+        }
     }
 
     void SetSkinnedUniforms(const RenderScene& scene)
@@ -596,6 +638,12 @@ private:
             uniform sampler2D uAlbedoTexture;
             uniform sampler2D uNormalTexture;
 
+            uniform int uPointLightCount;
+            uniform vec3 uPointLightPositions[4];
+            uniform vec3 uPointLightColors[4];
+            uniform float uPointLightRanges[4];
+            uniform float uPointLightIntensities[4];
+
             out vec4 FragColor;
 
             const float PI = 3.14159265359;
@@ -648,35 +696,47 @@ private:
                 return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
             }
 
+            vec3 CalcLighting(vec3 L, vec3 radiance, vec3 N, vec3 V, vec3 albedo)
+            {
+                vec3 H = normalize(V + L);
+                vec3 F0 = mix(vec3(0.04), albedo, uMetallic);
+                float D = DistributionGGX(N, H, uRoughness);
+                float G = GeometrySmith(N, V, L, uRoughness);
+                vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+                vec3 numerator = D * G * F;
+                float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+                vec3 specular = numerator / denominator;
+                vec3 kS = F;
+                vec3 kD = (vec3(1.0) - kS) * (1.0 - uMetallic);
+                float NdotL = max(dot(N, L), 0.0);
+                return (kD * albedo / PI + specular) * radiance * NdotL;
+            }
+
             void main()
             {
                 vec3 albedo = uUseAlbedoTexture ? texture(uAlbedoTexture, vTexCoord).rgb : uAlbedo;
 
                 vec3 N = GetNormal();
                 vec3 V = normalize(uCameraPos - vWorldPos);
+
                 vec3 L = normalize(-uLightDirection);
-                vec3 H = normalize(V + L);
+                vec3 radiance = uLightColor * uLightIntensity;
+                vec3 Lo = CalcLighting(L, radiance, N, V, albedo);
 
-                vec3 F0 = mix(vec3(0.04), albedo, uMetallic);
-
-                float D = DistributionGGX(N, H, uRoughness);
-                float G = GeometrySmith(N, V, L, uRoughness);
-                vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
-
-                vec3 numerator = D * G * F;
-                float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-                vec3 specular = numerator / denominator;
-
-                vec3 kS = F;
-                vec3 kD = (vec3(1.0) - kS) * (1.0 - uMetallic);
-
-                float NdotL = max(dot(N, L), 0.0);
-                vec3 Lo = (kD * albedo / PI + specular) * uLightColor * uLightIntensity * NdotL;
+                for (int i = 0; i < uPointLightCount && i < 4; ++i)
+                {
+                    vec3 lightVec = uPointLightPositions[i] - vWorldPos;
+                    float dist = length(lightVec);
+                    if (dist > uPointLightRanges[i]) continue;
+                    L = lightVec / dist;
+                    float attenuation = 1.0 - (dist / uPointLightRanges[i]);
+                    attenuation = attenuation * attenuation;
+                    radiance = uPointLightColors[i] * uPointLightIntensities[i] * attenuation;
+                    Lo += CalcLighting(L, radiance, N, V, albedo);
+                }
 
                 vec3 ambient = uAmbientColor * albedo * uAO;
-
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
-
                 vec3 color = ambient + Lo + emissiveContrib;
 
                 color = color / (color + vec3(1.0));
@@ -977,6 +1037,11 @@ private:
             m_pbrUniforms.useNormalTexture = cache(m_pbrShader.program, "uUseNormalTexture");
             m_pbrUniforms.albedoTexture = cache(m_pbrShader.program, "uAlbedoTexture");
             m_pbrUniforms.normalTexture = cache(m_pbrShader.program, "uNormalTexture");
+            m_pbrUniforms.pointLightCount = cache(m_pbrShader.program, "uPointLightCount");
+            m_pbrUniforms.pointLightPositions = cache(m_pbrShader.program, "uPointLightPositions[0]");
+            m_pbrUniforms.pointLightColors = cache(m_pbrShader.program, "uPointLightColors[0]");
+            m_pbrUniforms.pointLightRanges = cache(m_pbrShader.program, "uPointLightRanges[0]");
+            m_pbrUniforms.pointLightIntensities = cache(m_pbrShader.program, "uPointLightIntensities[0]");
         }
 
         if (m_skinnedShader.program)
@@ -1019,5 +1084,6 @@ private:
     std::unordered_map<AssetHandle, GLTextureData> m_textureCache;
     std::unordered_map<AssetHandle, GLMaterialData> m_materialCache;
     AssetHandle m_nextHandle = 0;
+    uint32_t m_drawCallCount = 0;
 };
 }

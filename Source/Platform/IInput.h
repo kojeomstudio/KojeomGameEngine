@@ -20,7 +20,7 @@ enum class KeyCode : uint32_t
     LeftCtrl = 341,
     RightCtrl = 345,
     LeftAlt = 342,
-    Up = 265, Down, Left = 263, Right = 262,
+    Down = 264, Up = 265, Left = 263, Right = 262,
     F1 = 290, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12
 };
 

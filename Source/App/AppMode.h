@@ -89,7 +89,11 @@ public:
                     if (entity.contains("mesh"))
                     {
                         std::string meshPath = entity["mesh"].get<std::string>();
-                        if (!FileSystem::ValidatePath(meshPath))
+                        if (meshPath == "$default_cube" || meshPath == "$default_plane")
+                        {
+                            result.loadedAssets++;
+                        }
+                        else if (!FileSystem::ValidatePath(meshPath))
                         {
                             result.errors.push_back("Invalid mesh path (traversal): " + meshPath);
                         }

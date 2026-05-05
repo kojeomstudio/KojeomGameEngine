@@ -15,6 +15,26 @@ int main(int argc, char** argv)
     Kojeom::Log::Init(config.logFilePath);
     KE_LOG_INFO("KojeomEngine starting in mode: {}", Kojeom::AppConfig::ModeToString(config.mode));
 
+    if (config.mode == Kojeom::AppConfig::Mode::ValidateAssets)
+    {
+        if (config.scenePath.empty())
+        {
+            KE_LOG_ERROR("No scene path specified for validate-assets mode");
+            return 1;
+        }
+        Kojeom::Engine engine;
+        if (!engine.InitializeHeadless(config))
+        {
+            KE_LOG_ERROR("Engine headless initialization failed");
+            return 4;
+        }
+        auto appMode = Kojeom::CreateAppMode(config.mode);
+        int exitCode = appMode->Run(engine);
+        engine.Shutdown();
+        KE_LOG_INFO("Engine exited with code: {}", exitCode);
+        return exitCode;
+    }
+
     Kojeom::Engine engine;
     if (!engine.Initialize(config))
     {

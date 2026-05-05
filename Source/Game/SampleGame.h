@@ -22,6 +22,13 @@ public:
         light.color = Vec3(1.0f, 0.95f, 0.85f);
         light.intensity = 1.5f;
         light.ambientColor = Vec3(0.12f, 0.12f, 0.15f);
+
+        light.pointLights[0].position = Vec3(2.0f, 3.0f, 1.0f);
+        light.pointLights[0].color = Vec3(1.0f, 0.8f, 0.4f);
+        light.pointLights[0].range = 15.0f;
+        light.pointLights[0].intensity = 2.0f;
+        light.pointLightCount = 1;
+
         world->SetDefaultLight(light);
 
         float aspect = static_cast<float>(engine.GetConfig().windowWidth) /

@@ -10,12 +10,23 @@ namespace Kojeom
 using AssetHandle = uint64_t;
 constexpr AssetHandle INVALID_HANDLE = 0;
 
+struct PointLightData
+{
+    Vec3 position = Vec3(0.0f);
+    float range = 10.0f;
+    Vec3 color = Vec3(1.0f);
+    float intensity = 1.0f;
+};
+
 struct LightData
 {
     Vec3 direction = Vec3(0.0f, -1.0f, 0.0f);
     Vec3 color = Vec3(1.0f);
     float intensity = 1.0f;
     Vec3 ambientColor = Vec3(0.1f);
+    static constexpr size_t MAX_POINT_LIGHTS = 4;
+    PointLightData pointLights[MAX_POINT_LIGHTS];
+    int pointLightCount = 0;
 };
 
 struct StaticDrawCommand

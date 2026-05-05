@@ -137,6 +137,17 @@ public:
         return true;
     }
 
+    bool InitializeHeadless(const AppConfig& config)
+    {
+        m_config = config;
+        m_assetStore = std::make_unique<AssetStore>();
+        m_world = std::make_unique<World>();
+        m_running = true;
+
+        KE_LOG_INFO("Engine initialized in headless mode");
+        return true;
+    }
+
     void Shutdown()
     {
         m_running = false;
