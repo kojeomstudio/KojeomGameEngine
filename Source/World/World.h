@@ -7,8 +7,14 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <optional>
+#include <nlohmann/json.hpp>
 #include "Math/Transform.h"
 #include "Renderer/RenderScene.h"
+#include "Assets/AssetStore.h"
+#include "Renderer/Renderer.h"
+#include "Core/FileSystem.h"
+#include "Core/Log.h"
 
 namespace Kojeom
 {
@@ -204,6 +210,9 @@ public:
     {
         RenderScene scene;
 
+        if (m_defaultLight)
+            scene.light = *m_defaultLight;
+
         for (const auto& entity : m_entities)
         {
             auto* cam = entity->GetCameraComponent();
@@ -256,9 +265,165 @@ public:
         m_entityMap.clear();
     }
 
+    struct SceneLoadResult
+    {
+        bool success = false;
+        int entityCount = 0;
+        std::vector<std::string> errors;
+        std::vector<std::string> warnings;
+    };
+
+    SceneLoadResult LoadFromJson(const std::string& scenePath,
+        AssetStore* assetStore, Renderer* renderer)
+    {
+        SceneLoadResult result;
+        auto content = FileSystem::ReadTextFile(scenePath);
+        if (content.empty())
+        {
+            result.errors.push_back("Scene file not found: " + scenePath);
+            return result;
+        }
+
+        nlohmann::json sceneJson;
+        try
+        {
+            sceneJson = nlohmann::json::parse(content);
+        }
+        catch (const std::exception& e)
+        {
+            result.errors.push_back("JSON parse error: " + std::string(e.what()));
+            return result;
+        }
+
+        if (sceneJson.contains("light"))
+        {
+            m_defaultLight = LightData{};
+            const auto& light = sceneJson["light"];
+            if (light.contains("direction") && light["direction"].is_array() && light["direction"].size() >= 3)
+                m_defaultLight->direction = Vec3(light["direction"][0], light["direction"][1], light["direction"][2]);
+            if (light.contains("color") && light["color"].is_array() && light["color"].size() >= 3)
+                m_defaultLight->color = Vec3(light["color"][0], light["color"][1], light["color"][2]);
+            if (light.contains("intensity"))
+                m_defaultLight->intensity = light["intensity"];
+            if (light.contains("ambient") && light["ambient"].is_array() && light["ambient"].size() >= 3)
+                m_defaultLight->ambientColor = Vec3(light["ambient"][0], light["ambient"][1], light["ambient"][2]);
+        }
+
+        if (!sceneJson.contains("entities"))
+        {
+            result.errors.push_back("Scene has no entities array");
+            return result;
+        }
+
+        for (const auto& entJson : sceneJson["entities"])
+        {
+            std::string name = entJson.value("name", "Entity");
+            Entity* entity = CreateEntity(name);
+            result.entityCount++;
+
+            if (entJson.contains("transform"))
+            {
+                const auto& tr = entJson["transform"];
+                auto* transform = entity->GetTransform();
+                if (tr.contains("position") && tr["position"].is_array() && tr["position"].size() >= 3)
+                    transform->transform.position = Vec3(tr["position"][0], tr["position"][1], tr["position"][2]);
+                if (tr.contains("rotation") && tr["rotation"].is_array() && tr["rotation"].size() >= 3)
+                {
+                    Vec3 euler(tr["rotation"][0], tr["rotation"][1], tr["rotation"][2]);
+                    transform->transform.rotation = glm::quat(euler);
+                }
+                if (tr.contains("scale") && tr["scale"].is_array() && tr["scale"].size() >= 3)
+                    transform->transform.scale = Vec3(tr["scale"][0], tr["scale"][1], tr["scale"][2]);
+            }
+
+            if (entJson.contains("camera"))
+            {
+                const auto& camJson = entJson["camera"];
+                auto* cam = entity->AddComponent<CameraComponent>();
+                cam->isActive = camJson.value("active", false);
+                if (camJson.contains("fov")) cam->cameraData.fov = camJson["fov"];
+                if (camJson.contains("near")) cam->cameraData.nearPlane = camJson["near"];
+                if (camJson.contains("far")) cam->cameraData.farPlane = camJson["far"];
+                if (camJson.contains("forward") && camJson["forward"].is_array() && camJson["forward"].size() >= 3)
+                    cam->cameraData.forward = Vec3(camJson["forward"][0], camJson["forward"][1], camJson["forward"][2]);
+            }
+
+            if (entJson.contains("mesh"))
+            {
+                auto* mr = entity->AddComponent<MeshRendererComponent>();
+                std::string meshPath = entJson["mesh"].get<std::string>();
+                if (assetStore)
+                {
+                    mr->meshHandle = assetStore->LoadMesh(meshPath);
+                    if (mr->meshHandle == INVALID_HANDLE)
+                        result.warnings.push_back("Failed to load mesh: " + meshPath);
+                }
+            }
+
+            if (entJson.contains("material"))
+            {
+                MaterialData materialDef{};
+                const auto& matJson = entJson["material"];
+                if (matJson.contains("albedo") && matJson["albedo"].is_array() && matJson["albedo"].size() >= 3)
+                    materialDef.albedo = Vec3(matJson["albedo"][0], matJson["albedo"][1], matJson["albedo"][2]);
+                if (matJson.contains("metallic")) materialDef.metallic = matJson["metallic"];
+                if (matJson.contains("roughness")) materialDef.roughness = matJson["roughness"];
+                if (matJson.contains("ao")) materialDef.ao = matJson["ao"];
+                if (matJson.contains("albedoTexture"))
+                    materialDef.albedoTexturePath = matJson["albedoTexture"].get<std::string>();
+
+                if (assetStore)
+                {
+                    AssetHandle matHandle = assetStore->RegisterMaterial(materialDef);
+                    auto* mr = entity->GetMeshRendererComponent();
+                    if (mr) mr->materialHandle = matHandle;
+                }
+            }
+
+            if (entJson.contains("terrain"))
+            {
+                const auto& terJson = entJson["terrain"];
+                auto* tc = entity->AddComponent<TerrainComponent>();
+                tc->cellSize = terJson.value("cellSize", 1.0f);
+
+                if (terJson.contains("heightmap") && assetStore)
+                {
+                    std::string heightmapPath = terJson["heightmap"].get<std::string>();
+                    float maxH = terJson.value("maxHeight", 10.0f);
+                    tc->terrainHandle = assetStore->LoadTerrainFromHeightmap(heightmapPath, tc->cellSize, maxH);
+                }
+                else if (terJson.contains("size") && assetStore)
+                {
+                    int tw = terJson["size"][0];
+                    int th = terJson["size"][1];
+                    float maxH = terJson.value("maxHeight", 10.0f);
+                    std::vector<float> heights(static_cast<size_t>(tw) * th, 0.0f);
+                    if (terJson.contains("heights") && terJson["heights"].is_array())
+                    {
+                        for (int i = 0; i < std::min(static_cast<int>(terJson["heights"].size()), tw * th); ++i)
+                            heights[i] = terJson["heights"][i].get<float>();
+                    }
+                    tc->terrainHandle = assetStore->CreateTerrain("terrain", tw, th, tc->cellSize, maxH, heights);
+                }
+            }
+        }
+
+        result.success = !result.errors.empty() ? false : true;
+        if (result.success)
+            KE_LOG_INFO("Scene loaded: {} ({} entities)", scenePath, result.entityCount);
+        else
+            KE_LOG_ERROR("Scene load completed with {} errors", result.errors.size());
+        return result;
+    }
+
+    void SetDefaultLight(const LightData& light) { m_defaultLight = light; }
+    bool HasDefaultLight() const { return m_defaultLight.has_value(); }
+    const LightData& GetDefaultLight() const { return m_defaultLight.value(); }
+
 private:
     EntityId m_nextEntityId = 1;
     std::vector<std::unique_ptr<Entity>> m_entities;
     std::unordered_map<EntityId, Entity*> m_entityMap;
+    std::optional<LightData> m_defaultLight;
 };
 }

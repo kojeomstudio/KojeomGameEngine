@@ -1,10 +1,13 @@
 #pragma once
 
 #include <glad/gl.h>
+#ifndef GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_NONE
+#endif
 #include <GLFW/glfw3.h>
 #include "Core/AppConfig.h"
 #include "Core/Log.h"
+#include "Core/FileSystem.h"
 #include "Platform/GlfwWindow.h"
 #include "Platform/GlfwInput.h"
 #include "Renderer/Renderer.h"
@@ -14,6 +17,7 @@
 #include "App/Clock.h"
 #include <memory>
 #include <string>
+#include <optional>
 #include <nlohmann/json.hpp>
 
 namespace Kojeom
@@ -181,6 +185,76 @@ public:
             if (m_input->GetState().IsKeyPressed(KeyCode::Escape))
             {
                 m_running = false;
+            }
+        }
+    }
+
+    bool LoadScene(const std::string& scenePath)
+    {
+        if (!m_world || !m_assetStore || !m_renderer) return false;
+        auto result = m_world->LoadFromJson(scenePath, m_assetStore.get(), m_renderer.get());
+        if (!result.success)
+        {
+            for (const auto& err : result.errors)
+                KE_LOG_ERROR("Scene load error: {}", err);
+            return false;
+        }
+        UploadLoadedMeshesToGPU();
+        return true;
+    }
+
+    void UploadLoadedMeshesToGPU()
+    {
+        auto* glBackend = static_cast<OpenGLRenderer*>(m_renderer->GetBackend());
+        if (!glBackend) return;
+
+        for (const auto& entity : m_world->GetEntities())
+        {
+            auto* mr = entity->GetMeshRendererComponent();
+            if (!mr || mr->meshHandle == INVALID_HANDLE) continue;
+
+            auto* meshData = m_assetStore->GetMesh(mr->meshHandle);
+            if (!meshData) continue;
+
+            std::vector<float> flatVerts;
+            flatVerts.reserve(meshData->vertices.size() * 8);
+            for (const auto& v : meshData->vertices)
+            {
+                flatVerts.insert(flatVerts.end(),
+                    { v.position.x, v.position.y, v.position.z,
+                      v.normal.x, v.normal.y, v.normal.z,
+                      v.uv.x, v.uv.y });
+            }
+
+            AssetHandle gpuHandle = glBackend->UploadMesh(flatVerts, meshData->indices);
+            mr->meshHandle = gpuHandle;
+
+            if (mr->materialHandle != INVALID_HANDLE)
+            {
+                auto* matData = m_assetStore->GetMaterial(mr->materialHandle);
+                if (matData)
+                {
+                    GLuint albedoTex = 0;
+                    bool hasTex = false;
+                    if (!matData->albedoTexturePath.empty())
+                    {
+                        auto texHandle = m_assetStore->LoadTexture(matData->albedoTexturePath);
+                        auto* texData = m_assetStore->GetTexture(texHandle);
+                        if (texData)
+                        {
+                            AssetHandle gpuTex = glBackend->UploadTexture(
+                                texData->width, texData->height, texData->channels, texData->pixels.data());
+                            auto* gpuTexData = glBackend->GetTexture(gpuTex);
+                            if (gpuTexData)
+                            {
+                                albedoTex = gpuTexData->texture;
+                                hasTex = true;
+                            }
+                        }
+                    }
+                    mr->materialHandle = glBackend->RegisterGLMaterial(
+                        matData->albedo, matData->metallic, matData->roughness, albedoTex, hasTex);
+                }
             }
         }
     }

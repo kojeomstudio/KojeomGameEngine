@@ -1,0 +1,84 @@
+{
+  "light": {
+    "direction": [0.3, -1.0, -0.5],
+    "color": [1.0, 0.95, 0.85],
+    "intensity": 1.5,
+    "ambient": [0.12, 0.12, 0.15]
+  },
+  "entities": [
+    {
+      "name": "MainCamera",
+      "transform": {
+        "position": [0.0, 5.0, 12.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "camera": {
+        "active": true,
+        "fov": 60.0,
+        "near": 0.1,
+        "far": 1000.0,
+        "forward": [0.0, -0.38, -0.92]
+      }
+    },
+    {
+      "name": "RedCube",
+      "transform": {
+        "position": [0.0, 1.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "mesh": "Meshes/Cube.obj",
+      "material": {
+        "albedo": [0.8, 0.3, 0.2],
+        "metallic": 0.1,
+        "roughness": 0.4
+      }
+    },
+    {
+      "name": "BlueCube",
+      "transform": {
+        "position": [3.0, 1.0, -2.0],
+        "rotation": [0.0, 45.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "mesh": "Meshes/Cube.obj",
+      "material": {
+        "albedo": [0.2, 0.4, 0.8],
+        "metallic": 0.2,
+        "roughness": 0.3
+      }
+    },
+    {
+      "name": "Floor",
+      "transform": {
+        "position": [0.0, -0.5, 0.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "material": {
+        "albedo": [0.4, 0.4, 0.4],
+        "metallic": 0.0,
+        "roughness": 0.8
+      }
+    },
+    {
+      "name": "TestTerrain",
+      "transform": {
+        "position": [-32.0, -1.0, -32.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "terrain": {
+        "cellSize": 2.0,
+        "size": [32, 32],
+        "maxHeight": 3.0
+      },
+      "material": {
+        "albedo": [0.3, 0.6, 0.2],
+        "metallic": 0.0,
+        "roughness": 0.9
+      }
+    }
+  ]
+}

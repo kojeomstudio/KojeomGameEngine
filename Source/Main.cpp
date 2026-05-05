@@ -22,8 +22,19 @@ int main(int argc, char** argv)
         return 4;
     }
 
+    bool useSceneFile = !config.scenePath.empty() &&
+        Kojeom::FileSystem::FileExists(config.scenePath);
+
     Kojeom::SampleGame game;
     game.OnStart(engine);
+
+    if (useSceneFile)
+    {
+        if (engine.LoadScene(config.scenePath))
+            KE_LOG_INFO("Loaded scene: {}", config.scenePath);
+        else
+            KE_LOG_WARN("Failed to load scene: {}", config.scenePath);
+    }
 
     if (config.mode == Kojeom::AppConfig::Mode::Game)
     {
