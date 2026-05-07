@@ -16,12 +16,14 @@ class FileSystem
 public:
     static bool FileExists(const std::string& path)
     {
+        if (path.empty()) return false;
         std::ifstream f(path);
         return f.good();
     }
 
     static std::string ReadTextFile(const std::string& path)
     {
+        if (!ValidatePath(path)) return {};
         std::ifstream f(path);
         if (!f.is_open()) return {};
         std::stringstream ss;
@@ -31,9 +33,12 @@ public:
 
     static std::vector<uint8_t> ReadBinaryFile(const std::string& path)
     {
+        if (!ValidatePath(path)) return {};
         std::ifstream f(path, std::ios::binary | std::ios::ate);
         if (!f.is_open()) return {};
         auto size = f.tellg();
+        if (size <= 0) return {};
+        if (static_cast<size_t>(size) > 512UL * 1024UL * 1024UL) return {};
         f.seekg(0);
         std::vector<uint8_t> data(static_cast<size_t>(size));
         f.read(reinterpret_cast<char*>(data.data()), size);

@@ -32,6 +32,7 @@ struct Vertex
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 uv;
+    glm::vec4 tangent = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 };
 
 struct SkinnedVertex
@@ -1440,6 +1441,8 @@ private:
         }
 
         ComputeBounds(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
+        if (!outMesh.vertices.empty() && !outMesh.indices.empty())
+            ComputeTangents(outMesh.vertices, outMesh.indices);
         return !outMesh.vertices.empty();
     }
 
@@ -1583,6 +1586,9 @@ private:
 
         ComputeBounds(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
         ValidateDegenerateTriangles(outMesh.indices, outMesh.vertices);
+
+        if (!outMesh.vertices.empty() && !outMesh.indices.empty())
+            ComputeTangents(outMesh.vertices, outMesh.indices);
 
         if (outMesh.vertices.empty() || outMesh.indices.empty())
         {
@@ -1795,6 +1801,74 @@ private:
         {
             bMin = glm::min(bMin, v.position);
             bMax = glm::max(bMax, v.position);
+        }
+    }
+
+    static void ComputeTangents(std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
+    {
+        std::vector<glm::vec3> tan1(vertices.size(), glm::vec3(0.0f));
+        std::vector<glm::vec3> tan2(vertices.size(), glm::vec3(0.0f));
+
+        for (size_t i = 0; i + 2 < indices.size(); i += 3)
+        {
+            uint32_t i0 = indices[i];
+            uint32_t i1 = indices[i + 1];
+            uint32_t i2 = indices[i + 2];
+
+            if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size())
+                continue;
+
+            const glm::vec3& v0 = vertices[i0].position;
+            const glm::vec3& v1 = vertices[i1].position;
+            const glm::vec3& v2 = vertices[i2].position;
+
+            const glm::vec2& uv0 = vertices[i0].uv;
+            const glm::vec2& uv1 = vertices[i1].uv;
+            const glm::vec2& uv2 = vertices[i2].uv;
+
+            glm::vec3 e1 = v1 - v0;
+            glm::vec3 e2 = v2 - v0;
+            glm::vec2 duv1 = uv1 - uv0;
+            glm::vec2 duv2 = uv2 - uv0;
+
+            float r = 1.0f;
+            float det = duv1.x * duv2.y - duv2.x * duv1.y;
+            if (std::abs(det) > 1e-6f)
+                r = 1.0f / det;
+
+            glm::vec3 tdir(r * (duv2.y * e1.x - duv1.y * e2.x),
+                           r * (duv2.y * e1.y - duv1.y * e2.y),
+                           r * (duv2.y * e1.z - duv1.y * e2.z));
+            glm::vec3 bdir(r * (-duv2.x * e1.x + duv1.x * e2.x),
+                           r * (-duv2.x * e1.y + duv1.x * e2.y),
+                           r * (-duv2.x * e1.z + duv1.x * e2.z));
+
+            tan1[i0] += tdir;
+            tan1[i1] += tdir;
+            tan1[i2] += tdir;
+            tan2[i0] += bdir;
+            tan2[i1] += bdir;
+            tan2[i2] += bdir;
+        }
+
+        for (size_t i = 0; i < vertices.size(); ++i)
+        {
+            const glm::vec3& n = vertices[i].normal;
+            const glm::vec3& t = tan1[i];
+
+            float dot_nt = glm::dot(n, t);
+            glm::vec3 projected = t - n * dot_nt;
+            float len = glm::length(projected);
+            if (len > 0.0001f)
+            {
+                glm::vec3 tangent = projected / len;
+                float handedness = (glm::dot(glm::cross(n, t), tan2[i]) < 0.0f) ? -1.0f : 1.0f;
+                vertices[i].tangent = glm::vec4(tangent.x, tangent.y, tangent.z, handedness);
+            }
+            else
+            {
+                vertices[i].tangent = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+            }
         }
     }
 

@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include "Math/Transform.h"
@@ -388,13 +390,28 @@ public:
     {
         const AnimationClip* clip = nullptr;
         float position = 0.0f;
+        glm::vec2 position2D = glm::vec2(0.0f);
+    };
+
+    enum class BlendMode
+    {
+        Blend1D,
+        Blend2D
     };
 
     void SetSkeleton(const Skeleton* skeleton) { m_skeleton = skeleton; }
 
+    void SetBlendMode(BlendMode mode) { m_blendMode = mode; }
+    BlendMode GetBlendMode() const { return m_blendMode; }
+
     void AddNode(const AnimationClip* clip, float position)
     {
-        m_nodes.push_back({ clip, position });
+        m_nodes.push_back({ clip, position, glm::vec2(position, 0.0f) });
+    }
+
+    void AddNode2D(const AnimationClip* clip, const glm::vec2& position)
+    {
+        m_nodes.push_back({ clip, position.x, position });
     }
 
     void ClearNodes() { m_nodes.clear(); }
@@ -412,6 +429,9 @@ public:
         if (!m_skeleton || m_nodes.empty()) return Pose();
         if (m_nodes.size() == 1)
             return m_nodes[0].clip->Sample(m_playbackTime, *m_skeleton);
+
+        if (m_blendMode == BlendMode::Blend2D)
+            return Sample2D(glm::vec2(blendParam, 0.0f));
 
         size_t lowerIdx = 0;
         for (size_t i = 0; i < m_nodes.size() - 1; ++i)
@@ -444,11 +464,75 @@ public:
         return result;
     }
 
+    Pose Sample2D(const glm::vec2& blendParam) const
+    {
+        if (!m_skeleton || m_nodes.empty()) return Pose();
+        if (m_nodes.size() == 1)
+            return m_nodes[0].clip->Sample(m_playbackTime, *m_skeleton);
+
+        struct WeightedNode
+        {
+            size_t index;
+            float weight;
+        };
+        std::vector<WeightedNode> weighted;
+
+        float totalWeight = 0.0f;
+        for (size_t i = 0; i < m_nodes.size(); ++i)
+        {
+            float dist = glm::length(blendParam - m_nodes[i].position2D);
+            float w = (dist > 0.0001f) ? (1.0f / (dist * dist)) : 10000.0f;
+            weighted.push_back({ i, w });
+            totalWeight += w;
+        }
+
+        for (auto& wn : weighted)
+            wn.weight /= totalWeight;
+
+        std::vector<Pose> poses;
+        poses.reserve(m_nodes.size());
+        for (const auto& node : m_nodes)
+            poses.push_back(node.clip->Sample(m_playbackTime, *m_skeleton));
+
+        Pose result(m_skeleton->GetBoneCount());
+        for (size_t b = 0; b < m_skeleton->GetBoneCount(); ++b)
+        {
+            glm::vec3 pos(0.0f);
+            glm::quat rot(0.0f, 0.0f, 0.0f, 0.0f);
+            glm::vec3 scl(0.0f);
+
+            float firstWeight = (weighted.empty()) ? 0.0f : weighted[0].weight;
+
+            for (size_t w = 0; w < weighted.size(); ++w)
+            {
+                const auto& wt = weighted[w];
+                const BoneTransform& bt = poses[wt.index].GetLocalTransform(b);
+                pos += bt.position * wt.weight;
+                scl += bt.scale * wt.weight;
+            }
+
+            rot = poses[weighted[0].index].GetLocalTransform(b).rotation * firstWeight;
+            for (size_t w = 1; w < weighted.size(); ++w)
+            {
+                const auto& wt = weighted[w];
+                rot = glm::slerp(rot, poses[wt.index].GetLocalTransform(b).rotation, wt.weight / (weighted[w - 1].weight + wt.weight));
+            }
+            rot = glm::normalize(rot);
+
+            result.GetLocalTransform(b).position = pos;
+            result.GetLocalTransform(b).rotation = rot;
+            result.GetLocalTransform(b).scale = scl;
+        }
+        result.ComputeGlobalTransforms(*m_skeleton);
+        return result;
+    }
+
 private:
     const Skeleton* m_skeleton = nullptr;
     std::vector<BlendNode> m_nodes;
     float m_playbackTime = 0.0f;
     float m_speed = 1.0f;
+    BlendMode m_blendMode = BlendMode::Blend1D;
 };
 
 class AnimationCrossfade
@@ -509,11 +593,29 @@ private:
     bool m_active = false;
 };
 
+enum class AnimConditionType
+{
+    Trigger,
+    BoolTrue,
+    BoolFalse,
+    FloatGreater,
+    FloatLess,
+    IntEqual,
+    IntNotEqual
+};
+
+struct AnimCondition
+{
+    std::string parameterName;
+    AnimConditionType type = AnimConditionType::Trigger;
+    float compareValue = 0.0f;
+};
+
 struct AnimStateTransition
 {
     std::string fromState;
     std::string toState;
-    std::string trigger;
+    std::vector<AnimCondition> conditions;
     float crossfadeDuration = 0.25f;
 };
 
@@ -540,29 +642,116 @@ public:
     void AddTransition(const std::string& from, const std::string& to,
                        const std::string& trigger, float crossfadeDuration = 0.25f)
     {
-        m_transitions.push_back({ from, to, trigger, crossfadeDuration });
+        AnimStateTransition trans;
+        trans.fromState = from;
+        trans.toState = to;
+        trans.conditions.push_back({ trigger, AnimConditionType::Trigger, 0.0f });
+        trans.crossfadeDuration = crossfadeDuration;
+        m_transitions.push_back(std::move(trans));
+    }
+
+    void AddTransition(const AnimStateTransition& transition)
+    {
+        m_transitions.push_back(transition);
+    }
+
+    void SetBool(const std::string& name, bool value)
+    {
+        m_boolParams[name] = value;
+        m_triggers.erase(name);
+    }
+
+    void SetFloat(const std::string& name, float value)
+    {
+        m_floatParams[name] = value;
+    }
+
+    void SetInt(const std::string& name, int value)
+    {
+        m_intParams[name] = value;
     }
 
     void SetTrigger(const std::string& trigger)
     {
+        m_triggers.insert(trigger);
+    }
+
+    bool EvaluateConditions(const std::vector<AnimCondition>& conditions) const
+    {
+        for (const auto& cond : conditions)
+        {
+            switch (cond.type)
+            {
+            case AnimConditionType::Trigger:
+                if (m_triggers.find(cond.parameterName) == m_triggers.end())
+                    return false;
+                break;
+            case AnimConditionType::BoolTrue:
+                {
+                    auto it = m_boolParams.find(cond.parameterName);
+                    if (it == m_boolParams.end() || !it->second) return false;
+                }
+                break;
+            case AnimConditionType::BoolFalse:
+                {
+                    auto it = m_boolParams.find(cond.parameterName);
+                    if (it != m_boolParams.end() && it->second) return false;
+                }
+                break;
+            case AnimConditionType::FloatGreater:
+                {
+                    auto it = m_floatParams.find(cond.parameterName);
+                    if (it == m_floatParams.end() || it->second <= cond.compareValue) return false;
+                }
+                break;
+            case AnimConditionType::FloatLess:
+                {
+                    auto it = m_floatParams.find(cond.parameterName);
+                    if (it == m_floatParams.end() || it->second >= cond.compareValue) return false;
+                }
+                break;
+            case AnimConditionType::IntEqual:
+                {
+                    auto it = m_intParams.find(cond.parameterName);
+                    if (it == m_intParams.end() || it->second != static_cast<int>(cond.compareValue)) return false;
+                }
+                break;
+            case AnimConditionType::IntNotEqual:
+                {
+                    auto it = m_intParams.find(cond.parameterName);
+                    if (it != m_intParams.end() && it->second == static_cast<int>(cond.compareValue)) return false;
+                }
+                break;
+            }
+        }
+        return true;
+    }
+
+    void CheckTransitions()
+    {
         for (const auto& trans : m_transitions)
         {
-            if (trans.fromState == m_currentStateName && trans.trigger == trigger)
+            if (trans.fromState != m_currentStateName) continue;
+            if (!EvaluateConditions(trans.conditions)) continue;
+
+            auto it = m_states.find(trans.toState);
+            if (it == m_states.end()) continue;
+
+            auto fromIt = m_states.find(m_currentStateName);
+            if (fromIt != m_states.end())
             {
-                auto it = m_states.find(trans.toState);
-                if (it != m_states.end())
-                {
-                    auto fromIt = m_states.find(m_currentStateName);
-                    if (fromIt != m_states.end())
-                    {
-                        m_crossfade.Start(fromIt->second.clip, m_playbackTime,
-                            it->second.clip, trans.crossfadeDuration, m_skeleton);
-                    }
-                    m_currentStateName = trans.toState;
-                    m_playbackTime = 0.0f;
-                }
-                return;
+                m_crossfade.Start(fromIt->second.clip, m_playbackTime,
+                    it->second.clip, trans.crossfadeDuration, m_skeleton);
             }
+            m_currentStateName = trans.toState;
+            m_playbackTime = 0.0f;
+
+            for (const auto& cond : trans.conditions)
+            {
+                if (cond.type == AnimConditionType::Trigger)
+                    m_triggers.erase(cond.parameterName);
+            }
+            return;
         }
     }
 
@@ -586,6 +775,8 @@ public:
         }
 
         m_crossfade.Tick(deltaSeconds);
+
+        CheckTransitions();
     }
 
     Pose Sample() const
@@ -617,5 +808,9 @@ private:
     std::string m_currentStateName;
     float m_playbackTime = 0.0f;
     AnimationCrossfade m_crossfade;
+    std::unordered_map<std::string, bool> m_boolParams;
+    std::unordered_map<std::string, float> m_floatParams;
+    std::unordered_map<std::string, int> m_intParams;
+    std::unordered_set<std::string> m_triggers;
 };
 }

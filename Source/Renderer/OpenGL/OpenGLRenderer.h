@@ -1892,7 +1892,10 @@ private:
 
                 float hemisphere = 0.5 + 0.5 * N.y;
                 vec3 hemisphereColor = mix(uAmbientGroundColor, uAmbientColor, hemisphere);
-                vec3 diffuseAmbient = hemisphereColor * kD * albedo * ao;
+
+                vec3 irradiance = hemisphereColor * (0.5 + 0.5 * max(dot(N, vec3(0.0, 1.0, 0.0)), 0.0));
+                irradiance += uAmbientColor * 0.3 * max(dot(N, normalize(-uLightDirection)), 0.0);
+                vec3 diffuseAmbient = irradiance * kD * albedo * ao;
 
                 vec2 brdf = texture(uBRDFLUT, vec2(NdotV, roughness)).rg;
                 vec3 specularAmbient = F * brdf.x + brdf.y;
