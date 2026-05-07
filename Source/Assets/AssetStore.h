@@ -628,18 +628,41 @@ public:
                 info.emissiveFactor = glm::vec3(static_cast<float>(e[0]), static_cast<float>(e[1]), static_cast<float>(e[2]));
         }
 
-        auto resolveTexturePath = [&](int textureIndex) -> std::string
-        {
-            if (textureIndex < 0 || textureIndex >= static_cast<int>(model.textures.size()))
-                return "";
-            const auto& texture = model.textures[textureIndex];
-            if (texture.source < 0 || texture.source >= static_cast<int>(model.images.size()))
-                return "";
-            const auto& image = model.images[texture.source];
-            if (!image.uri.empty())
-                return basePath + image.uri;
+    auto resolveTexturePath = [&](int textureIndex) -> std::string
+    {
+        if (textureIndex < 0 || textureIndex >= static_cast<int>(model.textures.size()))
             return "";
-        };
+        const auto& texture = model.textures[textureIndex];
+        if (texture.source < 0 || texture.source >= static_cast<int>(model.images.size()))
+            return "";
+        const auto& image = model.images[texture.source];
+        if (!image.uri.empty())
+            return basePath + image.uri;
+        if (image.width > 0 && image.height > 0 && !image.image.empty())
+        {
+            std::string virtualPath = "$embedded:" + std::to_string(texture.source) + ":" + basePath;
+            auto embIt = m_texturePaths.find(virtualPath);
+            if (embIt != m_texturePaths.end()) return virtualPath;
+
+            TextureData texData;
+            texData.width = image.width;
+            texData.height = image.height;
+            texData.channels = image.component;
+            texData.path = virtualPath;
+            if (texData.channels < 1 || texData.channels > 4) return "";
+            size_t pixelCount = static_cast<size_t>(texData.width) * texData.height * texData.channels;
+            if (image.image.size() >= static_cast<int>(pixelCount))
+            {
+                texData.pixels.assign(image.image.begin(), image.image.begin() + pixelCount);
+                AssetHandle handle = m_nextHandle++;
+                m_texturePaths[virtualPath] = handle;
+                m_textures[handle] = std::move(texData);
+                KE_LOG_INFO("Extracted embedded texture {} ({}x{}, {}ch)", virtualPath, image.width, image.height, image.component);
+                return virtualPath;
+            }
+        }
+        return "";
+    };
 
         if (mat.values.count("baseColorTexture"))
             info.albedoTexturePath = resolveTexturePath(mat.values.at("baseColorTexture").TextureIndex());
@@ -962,20 +985,84 @@ private:
 
             aiString texPath;
             std::string basePath = FileSystem::GetDirectory(path);
-            if (aiGetMaterialTexture(aiMat, aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
-                matData.albedoTexturePath = basePath + texPath.C_Str();
-            if (aiGetMaterialTexture(aiMat, aiTextureType_NORMALS, 0, &texPath) == AI_SUCCESS)
-                matData.normalTexturePath = basePath + texPath.C_Str();
-            if (aiGetMaterialTexture(aiMat, aiTextureType_METALNESS, 0, &texPath) == AI_SUCCESS)
-                matData.metallicRoughnessTexturePath = basePath + texPath.C_Str();
-            else if (aiGetMaterialTexture(aiMat, aiTextureType_SHININESS, 0, &texPath) == AI_SUCCESS)
-                matData.metallicRoughnessTexturePath = basePath + texPath.C_Str();
-            if (aiGetMaterialTexture(aiMat, aiTextureType_EMISSIVE, 0, &texPath) == AI_SUCCESS)
-                matData.emissiveTexturePath = basePath + texPath.C_Str();
-            if (aiGetMaterialTexture(aiMat, aiTextureType_LIGHTMAP, 0, &texPath) == AI_SUCCESS)
-                matData.aoTexturePath = basePath + texPath.C_Str();
-            else if (aiGetMaterialTexture(aiMat, aiTextureType_AMBIENT_OCCLUSION, 0, &texPath) == AI_SUCCESS)
-                matData.aoTexturePath = basePath + texPath.C_Str();
+
+            auto resolveFBXTexture = [&](aiTextureType type) -> std::string
+            {
+                aiString tp;
+                if (aiGetMaterialTexture(aiMat, type, 0, &tp) != AI_SUCCESS) return "";
+                std::string texName = tp.C_Str();
+
+                if (texName.empty()) return "";
+
+                if (scene->HasTextures())
+                {
+                    for (unsigned int ti = 0; ti < scene->mNumTextures; ++ti)
+                    {
+                        const aiTexture* aiTex = scene->mTextures[ti];
+                        std::string embeddedName = aiTex->mFilename.C_Str();
+                        if (embeddedName == texName || texName.find("*") == 0)
+                        {
+                            std::string virtualPath = "$fbx_embedded:" + std::to_string(ti) + ":" + path;
+                            auto embIt = m_texturePaths.find(virtualPath);
+                            if (embIt != m_texturePaths.end()) return virtualPath;
+
+                            TextureData texData;
+                            if (aiTex->mHeight > 0)
+                            {
+                                texData.width = aiTex->mWidth;
+                                texData.height = aiTex->mHeight;
+                                texData.channels = 4;
+                                size_t pixelCount = static_cast<size_t>(texData.width) * texData.height * texData.channels;
+                                const uint8_t* pixelData = reinterpret_cast<const uint8_t*>(aiTex->pcData);
+                                texData.pixels.assign(pixelData, pixelData + pixelCount);
+                            }
+                            else
+                            {
+                                int w, h, ch;
+                                stbi_set_flip_vertically_on_load(true);
+                                uint8_t* data = stbi_load_from_memory(
+                                    reinterpret_cast<const uint8_t*>(aiTex->pcData),
+                                    static_cast<int>(aiTex->mWidth),
+                                    &w, &h, &ch, 4);
+                                if (data)
+                                {
+                                    texData.width = w;
+                                    texData.height = h;
+                                    texData.channels = 4;
+                                    size_t pixelCount = static_cast<size_t>(w) * h * 4;
+                                    texData.pixels.assign(data, data + pixelCount);
+                                    stbi_image_free(data);
+                                }
+                            }
+
+                            if (texData.width > 0 && texData.height > 0 && !texData.pixels.empty())
+                            {
+                                texData.path = virtualPath;
+                                AssetHandle handle = m_nextHandle++;
+                                m_texturePaths[virtualPath] = handle;
+                                m_textures[handle] = std::move(texData);
+                                KE_LOG_INFO("Extracted FBX embedded texture {} ({}x{})", virtualPath, texData.width, texData.height);
+                                return virtualPath;
+                            }
+                        }
+                    }
+                }
+
+                return basePath + texName;
+            };
+
+            matData.albedoTexturePath = resolveFBXTexture(aiTextureType_DIFFUSE);
+            matData.normalTexturePath = resolveFBXTexture(aiTextureType_NORMALS);
+            matData.metallicRoughnessTexturePath = resolveFBXTexture(aiTextureType_METALNESS);
+            if (matData.metallicRoughnessTexturePath.empty())
+            {
+                std::string shininessPath = resolveFBXTexture(aiTextureType_SHININESS);
+                matData.metallicRoughnessTexturePath = shininessPath;
+            }
+            matData.emissiveTexturePath = resolveFBXTexture(aiTextureType_EMISSIVE);
+            matData.aoTexturePath = resolveFBXTexture(aiTextureType_LIGHTMAP);
+            if (matData.aoTexturePath.empty())
+                matData.aoTexturePath = resolveFBXTexture(aiTextureType_AMBIENT_OCCLUSION);
 
             AssetHandle matHandle = m_nextHandle++;
             m_materials[matHandle] = matData;

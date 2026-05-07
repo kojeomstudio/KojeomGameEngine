@@ -14,6 +14,7 @@
 #include <array>
 #include <string>
 #include <limits>
+#include <random>
 
 namespace Kojeom
 {
@@ -74,6 +75,8 @@ public:
         CreateDefaultMesh();
         CreateDefaultTextures();
         CreateBRDFLUT();
+        CreateSSAO();
+        CreateBoneUBO();
 
         int fbWidth = 0, fbHeight = 0;
         OpenGLContext::GetFramebufferSize(windowHandle, &fbWidth, &fbHeight);
@@ -101,6 +104,8 @@ public:
         m_materialCache.clear();
         m_boneMatricesCache.clear();
 
+        if (m_boneUBO) { glDeleteBuffers(1, &m_boneUBO); m_boneUBO = 0; }
+
         if (m_defaultAlbedoTexture) { glDeleteTextures(1, &m_defaultAlbedoTexture); m_defaultAlbedoTexture = 0; }
         if (m_defaultNormalTexture) { glDeleteTextures(1, &m_defaultNormalTexture); m_defaultNormalTexture = 0; }
         if (m_screenQuadVAO) { glDeleteVertexArrays(1, &m_screenQuadVAO); m_screenQuadVAO = 0; }
@@ -114,6 +119,7 @@ public:
         DestroySceneFBO();
         DestroyBloomFBOs();
         DestroyShadowMap();
+        DestroySSAO();
 
         m_context.Shutdown();
         KE_LOG_INFO("OpenGL Renderer shutdown");
@@ -126,6 +132,7 @@ public:
         m_context.SetViewport(0, 0, width, height);
         CreateSceneFBO(width, height);
         CreateBloomFBOs(width, height);
+        CreateSSAOFBOs(width, height);
     }
 
     void BeginFrame() override
@@ -152,6 +159,7 @@ public:
         RenderTerrain(scene);
 
         m_context.BindDefaultFramebuffer();
+        RenderSSAO(scene);
         RenderBloom();
         RenderPostProcess();
 
@@ -253,6 +261,17 @@ public:
     {
         if (width <= 0 || height <= 0) return false;
         if (path.empty()) return false;
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Screenshot path validation failed: {}", path);
+            return false;
+        }
+
+        std::string dir = FileSystem::GetDirectory(path);
+        if (!dir.empty() && !FileSystem::FileExists(dir))
+        {
+            FileSystem::CreateDirectory(dir);
+        }
 
         GLint prevFBO = 0;
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFBO);
@@ -288,6 +307,7 @@ public:
 
 public:
     std::unordered_map<AssetHandle, std::vector<Mat4>> m_boneMatricesCache;
+    GLuint m_boneUBO = 0;
 
 private:
     AssetHandle GenerateHandle() { return ++m_nextHandle; }
@@ -313,6 +333,7 @@ private:
         if (postProcess) m_shaderManager.AddShader("postprocess", postProcess);
 
         CreateBloomShaders();
+        CreateSSAOShaders();
         return true;
     }
 
@@ -656,14 +677,10 @@ private:
                 glUniformMatrix3fv(m_skinnedUniforms.normalMatrix, 1, GL_FALSE, &normalMat[0][0]);
             }
 
-            GLint boneLoc = m_skinnedUniforms.boneMatrices;
             auto it = m_boneMatricesCache.find(cmd.boneMatricesHandle);
-            if (boneLoc >= 0 && it != m_boneMatricesCache.end())
+            if (it != m_boneMatricesCache.end())
             {
-                GLsizei boneCount = static_cast<GLsizei>(std::min(
-                    it->second.size(), static_cast<size_t>(128)));
-                glUniformMatrix4fv(boneLoc, boneCount,
-                    GL_FALSE, &it->second[0][0][0]);
+                UploadBoneMatricesToUBO(it->second);
             }
 
             SetMaterialUniforms(cmd.materialHandle, m_skinnedUniforms);
@@ -833,16 +850,16 @@ private:
             if (skinnedLightSpaceLoc >= 0)
                 glUniformMatrix4fv(skinnedLightSpaceLoc, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
             GLint skinnedModelLoc = glGetUniformLocation(shadowSkinnedProg, "uModel");
-            GLint skinnedBoneLoc = glGetUniformLocation(shadowSkinnedProg, "uBoneMatrices[0]");
 
             for (const auto& cmd : scene.skinnedDrawCommands)
             {
                 if (skinnedModelLoc >= 0)
                     glUniformMatrix4fv(skinnedModelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
                 auto boneIt = m_boneMatricesCache.find(cmd.boneMatricesHandle);
-                if (skinnedBoneLoc >= 0 && boneIt != m_boneMatricesCache.end())
-                    glUniformMatrix4fv(skinnedBoneLoc, static_cast<GLsizei>(boneIt->second.size()),
-                        GL_FALSE, &boneIt->second[0][0][0]);
+                if (boneIt != m_boneMatricesCache.end())
+                {
+                    UploadBoneMatricesToUBO(boneIt->second);
+                }
                 const GLMeshData* mesh = m_bufferManager.GetMesh(cmd.skeletalMeshHandle);
                 if (mesh && mesh->vao) m_bufferManager.DrawMesh(*mesh);
             }
@@ -872,6 +889,18 @@ private:
         bool useBloom = (m_bloomPingPongFBO[0] != 0);
         GLint useBloomLoc = glGetUniformLocation(ppProg, "uUseBloom");
         if (useBloomLoc >= 0) glUniform1i(useBloomLoc, useBloom ? 1 : 0);
+
+        bool useSSAO = (m_ssaoBlurTexture != 0 && m_ssaoEnabled);
+        GLint useSSAOLoc = glGetUniformLocation(ppProg, "uUseSSAO");
+        if (useSSAOLoc >= 0) glUniform1i(useSSAOLoc, useSSAO ? 1 : 0);
+
+        if (useSSAO)
+        {
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, m_ssaoBlurTexture);
+            GLint ssaoTexLoc = glGetUniformLocation(ppProg, "uSSAOTexture");
+            if (ssaoTexLoc >= 0) glUniform1i(ssaoTexLoc, 2);
+        }
 
         if (useBloom)
         {
@@ -1090,6 +1119,161 @@ private:
         }
     }
 
+    void CreateSSAO()
+    {
+        DestroySSAO();
+
+        m_ssaoKernel.resize(64);
+        std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+        std::mt19937 rng(42);
+
+        for (int i = 0; i < 64; ++i)
+        {
+            Vec3 sample(
+                dist(rng) * 2.0f - 1.0f,
+                dist(rng) * 2.0f - 1.0f,
+                dist(rng)
+            );
+            sample = glm::normalize(sample);
+            float scale = static_cast<float>(i) / 64.0f;
+            scale = 0.1f + scale * scale * 0.9f;
+            sample *= scale;
+            m_ssaoKernel[i] = sample;
+        }
+
+        std::vector<Vec3> noiseData(16);
+        for (int i = 0; i < 16; ++i)
+        {
+            noiseData[i] = Vec3(
+                dist(rng) * 2.0f - 1.0f,
+                dist(rng) * 2.0f - 1.0f,
+                0.0f
+            );
+        }
+
+        glGenTextures(1, &m_ssaoNoiseTexture);
+        glBindTexture(GL_TEXTURE_2D, m_ssaoNoiseTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4, 0, GL_RGB, GL_FLOAT, noiseData.data());
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        CreateSSAOFBOs(m_windowWidth, m_windowHeight);
+    }
+
+    void CreateSSAOFBOs(int width, int height)
+    {
+        if (m_ssaoFBO) { glDeleteFramebuffers(1, &m_ssaoFBO); m_ssaoFBO = 0; }
+        if (m_ssaoColorTexture) { glDeleteTextures(1, &m_ssaoColorTexture); m_ssaoColorTexture = 0; }
+        if (m_ssaoBlurFBO) { glDeleteFramebuffers(1, &m_ssaoBlurFBO); m_ssaoBlurFBO = 0; }
+        if (m_ssaoBlurTexture) { glDeleteTextures(1, &m_ssaoBlurTexture); m_ssaoBlurTexture = 0; }
+
+        if (width <= 0 || height <= 0) return;
+
+        glGenTextures(1, &m_ssaoColorTexture);
+        glBindTexture(GL_TEXTURE_2D, m_ssaoColorTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, width, height, 0, GL_RED, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glGenFramebuffers(1, &m_ssaoFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_ssaoFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_ssaoColorTexture, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        glGenTextures(1, &m_ssaoBlurTexture);
+        glBindTexture(GL_TEXTURE_2D, m_ssaoBlurTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, width, height, 0, GL_RED, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glGenFramebuffers(1, &m_ssaoBlurFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_ssaoBlurFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_ssaoBlurTexture, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void DestroySSAO()
+    {
+        if (m_ssaoFBO) { glDeleteFramebuffers(1, &m_ssaoFBO); m_ssaoFBO = 0; }
+        if (m_ssaoColorTexture) { glDeleteTextures(1, &m_ssaoColorTexture); m_ssaoColorTexture = 0; }
+        if (m_ssaoBlurFBO) { glDeleteFramebuffers(1, &m_ssaoBlurFBO); m_ssaoBlurFBO = 0; }
+        if (m_ssaoBlurTexture) { glDeleteTextures(1, &m_ssaoBlurTexture); m_ssaoBlurTexture = 0; }
+        if (m_ssaoNoiseTexture) { glDeleteTextures(1, &m_ssaoNoiseTexture); m_ssaoNoiseTexture = 0; }
+        m_ssaoKernel.clear();
+    }
+
+    void RenderSSAO(const RenderScene& scene)
+    {
+        GLuint ssaoProg = m_shaderManager.GetProgram("ssao");
+        GLuint ssaoBlurProg = m_shaderManager.GetProgram("ssao_blur");
+        if (!ssaoProg || !ssaoBlurProg || !m_ssaoFBO || !m_ssaoEnabled) return;
+
+        m_bufferManager.CreateScreenQuad(m_screenQuadVAO, m_screenQuadVBO);
+        m_context.EnableDepthTest(false);
+
+        glUseProgram(ssaoProg);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_sceneDepthTexture);
+        GLint depthLoc = glGetUniformLocation(ssaoProg, "uDepthTexture");
+        if (depthLoc >= 0) glUniform1i(depthLoc, 0);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, m_ssaoNoiseTexture);
+        GLint noiseLoc = glGetUniformLocation(ssaoProg, "uNoiseTexture");
+        if (noiseLoc >= 0) glUniform1i(noiseLoc, 1);
+
+        Mat4 invVP = glm::inverse(scene.camera.viewProjectionMatrix);
+        GLint invVPLoc = glGetUniformLocation(ssaoProg, "uInverseViewProjection");
+        if (invVPLoc >= 0) glUniformMatrix4fv(invVPLoc, 1, GL_FALSE, &invVP[0][0]);
+
+        GLint vpLoc = glGetUniformLocation(ssaoProg, "uViewProjection");
+        if (vpLoc >= 0) glUniformMatrix4fv(vpLoc, 1, GL_FALSE, &scene.camera.viewProjectionMatrix[0][0]);
+
+        for (int i = 0; i < 64 && i < static_cast<int>(m_ssaoKernel.size()); ++i)
+        {
+            std::string uname = "uKernel[" + std::to_string(i) + "]";
+            GLint loc = glGetUniformLocation(ssaoProg, uname.c_str());
+            if (loc >= 0) glUniform3fv(loc, 1, &m_ssaoKernel[i][0]);
+        }
+
+        GLint screenSizeLoc = glGetUniformLocation(ssaoProg, "uScreenSize");
+        if (screenSizeLoc >= 0) glUniform2f(screenSizeLoc, static_cast<float>(m_windowWidth), static_cast<float>(m_windowHeight));
+
+        GLint radiusLoc = glGetUniformLocation(ssaoProg, "uRadius");
+        if (radiusLoc >= 0) glUniform1f(radiusLoc, 0.5f);
+
+        GLint biasLoc = glGetUniformLocation(ssaoProg, "uBias");
+        if (biasLoc >= 0) glUniform1f(biasLoc, 0.025f);
+
+        m_context.BindFramebuffer(m_ssaoFBO);
+        m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
+        m_context.ClearColor();
+        m_bufferManager.DrawScreenQuad(m_screenQuadVAO);
+
+        glUseProgram(ssaoBlurProg);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_ssaoColorTexture);
+        GLint ssaoTexLoc = glGetUniformLocation(ssaoBlurProg, "uSSAOTexture");
+        if (ssaoTexLoc >= 0) glUniform1i(ssaoTexLoc, 0);
+
+        m_context.BindFramebuffer(m_ssaoBlurFBO);
+        m_context.ClearColor();
+        m_bufferManager.DrawScreenQuad(m_screenQuadVAO);
+
+        m_context.BindDefaultFramebuffer();
+        m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
+        glUseProgram(0);
+        m_context.EnableDepthTest(true);
+    }
+
     void CreateBRDFLUT()
     {
         const int lutSize = 512;
@@ -1274,9 +1458,14 @@ private:
             layout(location = 0) in vec3 aPosition;
             layout(location = 3) in vec4 aBoneWeights;
             layout(location = 4) in vec4 aBoneIndices;
+
+            layout(std140, binding = 0) uniform BoneBlock
+            {
+                mat4 uBoneMatrices[128];
+            };
+
             uniform mat4 uLightSpaceMatrix;
             uniform mat4 uModel;
-            uniform mat4 uBoneMatrices[128];
             void main()
             {
                 ivec4 boneIdx = ivec4(aBoneIndices);
@@ -1356,6 +1545,135 @@ private:
 
         GLuint blurProg = m_shaderManager.CreateProgram(screenVertSrc, blurFrag);
         if (blurProg) m_shaderManager.AddShader("bloom_blur", blurProg);
+    }
+
+    void CreateBoneUBO()
+    {
+        glGenBuffers(1, &m_boneUBO);
+        glBindBuffer(GL_UNIFORM_BUFFER, m_boneUBO);
+        GLsizeiptr bufferSize = 128 * sizeof(Mat4);
+        glBufferData(GL_UNIFORM_BUFFER, bufferSize, nullptr, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_boneUBO);
+    }
+
+    void UploadBoneMatricesToUBO(const std::vector<Mat4>& matrices)
+    {
+        if (!m_boneUBO) return;
+        GLsizei boneCount = static_cast<GLsizei>(std::min(matrices.size(), static_cast<size_t>(128)));
+        GLsizeiptr dataSize = boneCount * sizeof(Mat4);
+        glBindBuffer(GL_UNIFORM_BUFFER, m_boneUBO);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, dataSize, matrices.data());
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    }
+
+    void CreateSSAOShaders()
+    {
+        const char* screenVertSrc = R"(
+            #version 450 core
+            layout(location = 0) in vec2 aPosition;
+            layout(location = 1) in vec2 aTexCoord;
+            out vec2 vTexCoord;
+            void main()
+            {
+                vTexCoord = aTexCoord;
+                gl_Position = vec4(aPosition, 0.0, 1.0);
+            }
+        )";
+
+        const char* ssaoFrag = R"(
+            #version 450 core
+            in vec2 vTexCoord;
+            out float FragColor;
+
+            uniform sampler2D uDepthTexture;
+            uniform sampler2D uNoiseTexture;
+            uniform mat4 uViewProjection;
+            uniform mat4 uInverseViewProjection;
+            uniform vec3 uKernel[64];
+            uniform vec2 uScreenSize;
+            uniform float uRadius;
+            uniform float uBias;
+
+            vec3 ReconstructWorldPos(vec2 uv, float depth)
+            {
+                vec4 ndc = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+                vec4 worldPos = uInverseViewProjection * ndc;
+                return worldPos.xyz / worldPos.w;
+            }
+
+            void main()
+            {
+                float depth = texture(uDepthTexture, vTexCoord).r;
+                if (depth >= 1.0) { FragColor = 1.0; return; }
+
+                vec3 fragPos = ReconstructWorldPos(vTexCoord, depth);
+
+                vec3 dFdxPos = dFdx(fragPos);
+                vec3 dFdyPos = dFdy(fragPos);
+                vec3 normal = normalize(cross(dFdxPos, dFdyPos));
+
+                vec2 noiseScale = uScreenSize / 4.0;
+                vec3 randomVec = texture(uNoiseTexture, vTexCoord * noiseScale).xyz * 2.0 - 1.0;
+
+                vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
+                vec3 bitangent = cross(normal, tangent);
+                mat3 TBN = mat3(tangent, bitangent, normal);
+
+                float occlusion = 0.0;
+                for (int i = 0; i < 64; ++i)
+                {
+                    vec3 sampleDir = TBN * uKernel[i];
+                    vec3 samplePos = fragPos + sampleDir * uRadius;
+
+                    vec4 sampleNDC = uViewProjection * vec4(samplePos, 1.0);
+                    sampleNDC /= sampleNDC.w;
+                    vec2 sampleUV = sampleNDC.xy * 0.5 + 0.5;
+
+                    if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0)
+                        continue;
+
+                    float sampleDepth = texture(uDepthTexture, sampleUV).r;
+                    vec3 sampleWorldPos = ReconstructWorldPos(sampleUV, sampleDepth);
+
+                    float zDiff = length(sampleWorldPos - fragPos);
+                    float rangeCheck = smoothstep(0.0, 1.0, uRadius / max(zDiff, 0.001));
+                    occlusion += (zDiff <= uRadius - uBias ? 1.0 : 0.0) * rangeCheck;
+                }
+
+                FragColor = 1.0 - (occlusion / 64.0);
+                FragColor = max(FragColor, 0.3);
+            }
+        )";
+
+        GLuint ssaoProg = m_shaderManager.CreateProgram(screenVertSrc, ssaoFrag);
+        if (ssaoProg) m_shaderManager.AddShader("ssao", ssaoProg);
+
+        const char* ssaoBlurFrag = R"(
+            #version 450 core
+            in vec2 vTexCoord;
+            out float FragColor;
+
+            uniform sampler2D uSSAOTexture;
+
+            void main()
+            {
+                vec2 texelSize = 1.0 / vec2(textureSize(uSSAOTexture, 0));
+                float result = 0.0;
+                for (int x = -2; x <= 2; ++x)
+                {
+                    for (int y = -2; y <= 2; ++y)
+                    {
+                        vec2 offset = vec2(float(x), float(y)) * texelSize;
+                        result += texture(uSSAOTexture, vTexCoord + offset).r;
+                    }
+                }
+                FragColor = result / 25.0;
+            }
+        )";
+
+        GLuint ssaoBlurProg = m_shaderManager.CreateProgram(screenVertSrc, ssaoBlurFrag);
+        if (ssaoBlurProg) m_shaderManager.AddShader("ssao_blur", ssaoBlurProg);
     }
 
     static const char* PBRVertexSrc()
@@ -1600,9 +1918,13 @@ private:
             layout(location = 3) in vec4 aBoneWeights;
             layout(location = 4) in vec4 aBoneIndices;
 
+            layout(std140, binding = 0) uniform BoneBlock
+            {
+                mat4 uBoneMatrices[128];
+            };
+
             uniform mat4 uViewProjection;
             uniform mat4 uModel;
-            uniform mat4 uBoneMatrices[128];
             uniform mat3 uNormalMatrix;
 
             out vec3 vWorldPos;
@@ -1661,8 +1983,10 @@ private:
 
             uniform sampler2D uSceneTexture;
             uniform sampler2D uBloomTexture;
+            uniform sampler2D uSSAOTexture;
             uniform float uExposure;
             uniform bool uUseBloom;
+            uniform bool uUseSSAO;
 
             vec3 ACESFilm(vec3 x)
             {
@@ -1677,6 +2001,12 @@ private:
             void main()
             {
                 vec3 color = texture(uSceneTexture, vTexCoord).rgb;
+
+                if (uUseSSAO)
+                {
+                    float ssao = texture(uSSAOTexture, vTexCoord).r;
+                    color *= ssao;
+                }
 
                 if (uUseBloom)
                 {
@@ -1728,6 +2058,14 @@ private:
     GLuint m_bloomPingPongFBO[2] = {0, 0};
     GLuint m_bloomPingPongTexture[2] = {0, 0};
     GLuint m_brdfLUT = 0;
+
+    GLuint m_ssaoFBO = 0;
+    GLuint m_ssaoColorTexture = 0;
+    GLuint m_ssaoBlurFBO = 0;
+    GLuint m_ssaoBlurTexture = 0;
+    GLuint m_ssaoNoiseTexture = 0;
+    std::vector<Vec3> m_ssaoKernel;
+    bool m_ssaoEnabled = true;
 
     bool m_showDebugOverlay = false;
     DebugOverlay m_debugOverlay;
