@@ -631,8 +631,22 @@ private:
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
 
+        if (m_skinnedUniforms.brdfLUT >= 0 && m_brdfLUT)
+        {
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, m_brdfLUT);
+            glUniform1i(m_skinnedUniforms.brdfLUT, 4);
+            glActiveTexture(GL_TEXTURE0);
+        }
+
+        auto frustumPlanes = ExtractFrustumPlanes(scene.camera.viewProjectionMatrix);
+
         for (const auto& cmd : scene.skinnedDrawCommands)
         {
+            Vec3 worldPos = Vec3(cmd.worldMatrix * Vec4(cmd.boundsCenter, 1.0f));
+            float cullRadius = (cmd.boundsRadius > 0.0f) ? cmd.boundsRadius : 5.0f;
+            if (!IsSphereInFrustum(frustumPlanes, worldPos, cullRadius)) continue;
+
             if (m_skinnedUniforms.model >= 0)
                 glUniformMatrix4fv(m_skinnedUniforms.model, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
 
@@ -646,7 +660,9 @@ private:
             auto it = m_boneMatricesCache.find(cmd.boneMatricesHandle);
             if (boneLoc >= 0 && it != m_boneMatricesCache.end())
             {
-                glUniformMatrix4fv(boneLoc, static_cast<GLsizei>(it->second.size()),
+                GLsizei boneCount = static_cast<GLsizei>(std::min(
+                    it->second.size(), static_cast<size_t>(128)));
+                glUniformMatrix4fv(boneLoc, boneCount,
                     GL_FALSE, &it->second[0][0][0]);
             }
 
@@ -665,6 +681,12 @@ private:
         m_textureManager.UnbindTexture(GL_TEXTURE2);
         m_textureManager.UnbindTexture(GL_TEXTURE1);
         m_textureManager.UnbindTexture(GL_TEXTURE0);
+        if (m_brdfLUT)
+        {
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glActiveTexture(GL_TEXTURE0);
+        }
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE0);
@@ -750,9 +772,14 @@ private:
             expandBounds(cmd.worldMatrix, cmd.boundsCenter, cmd.boundsRadius);
         for (const auto& cmd : scene.skinnedDrawCommands)
         {
-            Vec3 skinnedCenter = Vec3(cmd.worldMatrix * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-            sceneMin = glm::min(sceneMin, skinnedCenter - Vec3(2.0f));
-            sceneMax = glm::max(sceneMax, skinnedCenter + Vec3(2.0f));
+            if (cmd.boundsRadius > 0.0f)
+                expandBounds(cmd.worldMatrix, cmd.boundsCenter, cmd.boundsRadius);
+            else
+            {
+                Vec3 skinnedCenter = Vec3(cmd.worldMatrix * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+                sceneMin = glm::min(sceneMin, skinnedCenter - Vec3(2.0f));
+                sceneMax = glm::max(sceneMax, skinnedCenter + Vec3(2.0f));
+            }
         }
 
         if (scene.staticDrawCommands.empty() && scene.terrainDrawCommands.empty() && scene.skinnedDrawCommands.empty())

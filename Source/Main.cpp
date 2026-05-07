@@ -15,11 +15,15 @@ int main(int argc, char** argv)
     Kojeom::Log::Init(config.logFilePath);
     KE_LOG_INFO("KojeomEngine starting in mode: {}", Kojeom::AppConfig::ModeToString(config.mode));
 
-    if (config.mode == Kojeom::AppConfig::Mode::ValidateAssets)
+    if (config.mode == Kojeom::AppConfig::Mode::ValidateAssets ||
+        config.mode == Kojeom::AppConfig::Mode::SceneDump ||
+        config.mode == Kojeom::AppConfig::Mode::MaterialDump ||
+        config.mode == Kojeom::AppConfig::Mode::SceneSave)
     {
         if (config.scenePath.empty())
         {
-            KE_LOG_ERROR("No scene path specified for validate-assets mode");
+            KE_LOG_ERROR("No scene path specified for {} mode",
+                Kojeom::AppConfig::ModeToString(config.mode));
             return 1;
         }
         Kojeom::Engine engine;
@@ -28,6 +32,21 @@ int main(int argc, char** argv)
             KE_LOG_ERROR("Engine headless initialization failed");
             return 4;
         }
+
+        if (Kojeom::FileSystem::FileExists(config.scenePath))
+        {
+            if (engine.LoadScene(config.scenePath))
+                KE_LOG_INFO("Loaded scene: {}", config.scenePath);
+            else
+                KE_LOG_WARN("Failed to load scene: {}", config.scenePath);
+        }
+        else
+        {
+            KE_LOG_ERROR("Scene file not found: {}", config.scenePath);
+            engine.Shutdown();
+            return 2;
+        }
+
         auto appMode = Kojeom::CreateAppMode(config.mode);
         int exitCode = appMode->Run(engine);
         engine.Shutdown();

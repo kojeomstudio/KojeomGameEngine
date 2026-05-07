@@ -296,6 +296,15 @@ public:
                 {
                     cmd.boneMatricesHandle = anim->boneMatricesHandle;
                 }
+                if (m_assetStore)
+                {
+                    auto* skelMesh = m_assetStore->GetSkinnedMesh(sm->skeletalMeshHandle);
+                    if (skelMesh)
+                    {
+                        cmd.boundsCenter = (skelMesh->boundsMin + skelMesh->boundsMax) * 0.5f;
+                        cmd.boundsRadius = glm::length(skelMesh->boundsMax - skelMesh->boundsMin) * 0.5f;
+                    }
+                }
                 scene.skinnedDrawCommands.push_back(cmd);
             }
         }
@@ -425,22 +434,38 @@ public:
             {
                 auto* mr = entity->AddComponent<MeshRendererComponent>();
                 std::string meshPath = entJson["mesh"].get<std::string>();
-                if (assetStore && renderer)
+                if (meshPath == "$default_cube" || meshPath == "$default_plane")
                 {
-                    if (meshPath == "$default_cube")
+                    if (assetStore && renderer)
                     {
-                        mr->meshHandle = renderer->GetDefaultCubeHandle();
-                    }
-                    else if (meshPath == "$default_plane")
-                    {
-                        mr->meshHandle = renderer->GetDefaultPlaneHandle();
+                        if (meshPath == "$default_cube")
+                            mr->meshHandle = renderer->GetDefaultCubeHandle();
+                        else
+                            mr->meshHandle = renderer->GetDefaultPlaneHandle();
                     }
                     else
                     {
-                        mr->meshHandle = assetStore->LoadMesh(meshPath);
-                        if (mr->meshHandle == INVALID_HANDLE)
-                            result.warnings.push_back("Failed to load mesh: " + meshPath);
+                        MeshData defaultMesh;
+                        defaultMesh.name = meshPath;
+                        if (meshPath == "$default_cube")
+                        {
+                            defaultMesh.boundsMin = Vec3(-0.5f);
+                            defaultMesh.boundsMax = Vec3(0.5f);
+                        }
+                        else
+                        {
+                            defaultMesh.boundsMin = Vec3(-50.0f, 0.0f, -50.0f);
+                            defaultMesh.boundsMax = Vec3(50.0f, 0.0f, 50.0f);
+                        }
+                        AssetHandle handle = assetStore->RegisterInternalMesh(meshPath, defaultMesh);
+                        mr->meshHandle = handle;
                     }
+                }
+                else if (assetStore)
+                {
+                    mr->meshHandle = assetStore->LoadMesh(meshPath);
+                    if (mr->meshHandle == INVALID_HANDLE)
+                        result.warnings.push_back("Failed to load mesh: " + meshPath);
                 }
             }
 

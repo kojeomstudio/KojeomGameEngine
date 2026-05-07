@@ -283,10 +283,13 @@ public:
         result.backend = engine.GetConfig().backend;
         result.scene = engine.GetConfig().scenePath;
 
-        engine.TickOneFrame();
+        if (engine.GetWorld())
+            engine.GetWorld()->Tick(0.0f);
 
-        RenderScene scene = engine.GetWorld()->BuildRenderScene();
-        result.entities = static_cast<int>(engine.GetWorld()->GetEntityCount());
+        RenderScene scene;
+        if (engine.GetWorld())
+            scene = engine.GetWorld()->BuildRenderScene();
+        result.entities = engine.GetWorld() ? static_cast<int>(engine.GetWorld()->GetEntityCount()) : 0;
         result.drawCalls = static_cast<int>(scene.TotalDrawCommands());
 
         nlohmann::json dump;
@@ -300,22 +303,25 @@ public:
         dump["totalDrawCalls"] = result.drawCalls;
 
         nlohmann::json entityList = nlohmann::json::array();
-        for (const auto& entity : engine.GetWorld()->GetEntities())
+        if (engine.GetWorld())
         {
-            nlohmann::json e;
-            e["name"] = entity->GetName();
-            auto* transform = entity->GetTransform();
-            e["position"] = { transform->transform.position.x, transform->transform.position.y, transform->transform.position.z };
-            auto* mr = entity->GetMeshRendererComponent();
-            if (mr && mr->meshHandle != INVALID_HANDLE)
-                e["meshHandle"] = mr->meshHandle;
-            auto* tc = entity->GetTerrainComponent();
-            if (tc && tc->terrainHandle != INVALID_HANDLE)
-                e["terrainHandle"] = tc->terrainHandle;
-            auto* sm = entity->GetSkeletalMeshComponent();
-            if (sm && sm->skeletalMeshHandle != INVALID_HANDLE)
-                e["skeletalMeshHandle"] = sm->skeletalMeshHandle;
-            entityList.push_back(e);
+            for (const auto& entity : engine.GetWorld()->GetEntities())
+            {
+                nlohmann::json e;
+                e["name"] = entity->GetName();
+                auto* transform = entity->GetTransform();
+                e["position"] = { transform->transform.position.x, transform->transform.position.y, transform->transform.position.z };
+                auto* mr = entity->GetMeshRendererComponent();
+                if (mr && mr->meshHandle != INVALID_HANDLE)
+                    e["meshHandle"] = mr->meshHandle;
+                auto* tc = entity->GetTerrainComponent();
+                if (tc && tc->terrainHandle != INVALID_HANDLE)
+                    e["terrainHandle"] = tc->terrainHandle;
+                auto* sm = entity->GetSkeletalMeshComponent();
+                if (sm && sm->skeletalMeshHandle != INVALID_HANDLE)
+                    e["skeletalMeshHandle"] = sm->skeletalMeshHandle;
+                entityList.push_back(e);
+            }
         }
         dump["entityDetails"] = entityList;
 
@@ -486,7 +492,8 @@ public:
         result.backend = engine.GetConfig().backend;
         result.scene = engine.GetConfig().scenePath;
 
-        engine.TickOneFrame();
+        if (engine.GetWorld())
+            engine.GetWorld()->Tick(0.0f);
 
         auto* assetStore = engine.GetAssetStore();
         auto stats = assetStore->GetStats();
@@ -562,7 +569,8 @@ public:
         result.backend = engine.GetConfig().backend;
         result.scene = engine.GetConfig().scenePath;
 
-        engine.TickOneFrame();
+        if (engine.GetWorld())
+            engine.GetWorld()->Tick(0.0f);
 
         std::string savePath = engine.GetConfig().resultJsonPath;
         if (savePath.empty()) savePath = "scene_saved.json";

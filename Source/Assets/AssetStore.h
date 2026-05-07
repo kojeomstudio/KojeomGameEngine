@@ -246,7 +246,16 @@ public:
             return INVALID_HANDLE;
         }
 
-        texData.pixels.assign(data, data + texData.width * texData.height * texData.channels);
+        size_t pixelCount = static_cast<size_t>(texData.width) *
+            static_cast<size_t>(texData.height) * static_cast<size_t>(texData.channels);
+        if (pixelCount > static_cast<size_t>(256) * 1024 * 1024)
+        {
+            KE_LOG_ERROR("Texture too large: {} ({} pixels)", path, pixelCount);
+            stbi_image_free(data);
+            return INVALID_HANDLE;
+        }
+
+        texData.pixels.assign(data, data + pixelCount);
         texData.path = path;
         stbi_image_free(data);
 
@@ -266,10 +275,26 @@ public:
         return handle;
     }
 
+    AssetHandle RegisterInternalMesh(const std::string& name, const MeshData& mesh)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_meshPaths.find(name);
+        if (it != m_meshPaths.end()) return it->second;
+        AssetHandle handle = m_nextHandle++;
+        m_meshPaths[name] = handle;
+        m_meshes[handle] = mesh;
+        return handle;
+    }
+
     AssetHandle CreateTerrain(const std::string& name, int width, int height,
         float cellSize, float maxHeight, const std::vector<float>& heights)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+        if (width <= 0 || height <= 0 || width > 4096 || height > 4096)
+        {
+            KE_LOG_ERROR("Invalid terrain dimensions: {}x{}", width, height);
+            return INVALID_HANDLE;
+        }
         AssetHandle handle = m_nextHandle++;
         TerrainData terrain;
         terrain.name = name;
@@ -360,6 +385,11 @@ public:
         const auto& skin = model.skins[0];
 
         int boneCount = static_cast<int>(skin.joints.size());
+        if (boneCount > 128)
+        {
+            KE_LOG_WARN("Skeleton has {} bones, capping to 128: {}", boneCount, path);
+            boneCount = 128;
+        }
         for (int i = 0; i < boneCount; ++i)
         {
             Bone bone;

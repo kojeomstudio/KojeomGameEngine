@@ -212,7 +212,7 @@ public:
 
     bool LoadScene(const std::string& scenePath)
     {
-        if (!m_world || !m_assetStore || !m_renderer) return false;
+        if (!m_world || !m_assetStore) return false;
         auto result = m_world->LoadFromJson(scenePath, m_assetStore.get(), m_renderer.get());
         if (!result.success)
         {
@@ -220,7 +220,8 @@ public:
                 KE_LOG_ERROR("Scene load error: {}", err);
             return false;
         }
-        UploadLoadedMeshesToGPU();
+        if (m_renderer)
+            UploadLoadedMeshesToGPU();
         return true;
     }
 

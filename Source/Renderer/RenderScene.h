@@ -45,6 +45,8 @@ struct SkinnedDrawCommand
     Mat4 worldMatrix = Mat4(1.0f);
     AssetHandle boneMatricesHandle = INVALID_HANDLE;
     uint32_t boneCount = 0;
+    Vec3 boundsCenter = Vec3(0.0f);
+    float boundsRadius = 2.0f;
 };
 
 struct TerrainDrawCommand
