@@ -35,9 +35,13 @@ struct UniformLocations
     GLint useAlbedoTexture = -1;
     GLint useNormalTexture = -1;
     GLint useMetallicRoughnessTexture = -1;
+    GLint useEmissiveTexture = -1;
+    GLint useAOTexture = -1;
     GLint albedoTexture = -1;
     GLint normalTexture = -1;
     GLint metallicRoughnessTexture = -1;
+    GLint emissiveTexture = -1;
+    GLint aoTexture = -1;
     GLint boneMatrices = -1;
     GLint pointLightCount = -1;
     GLint pointLightPositions = -1;
@@ -191,7 +195,9 @@ public:
         AssetHandle normalTexHandle = INVALID_HANDLE, bool hasNormalTex = false,
         const Vec3& emissiveColor = Vec3(0.0f), float emissiveStr = 1.0f,
         AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE, bool hasMetallicRoughnessTex = false,
-        float ao = 1.0f) override
+        float ao = 1.0f,
+        AssetHandle emissiveTexHandle = INVALID_HANDLE, bool hasEmissiveTex = false,
+        AssetHandle aoTexHandle = INVALID_HANDLE, bool hasAOTex = false) override
     {
         AssetHandle handle = GenerateHandle();
         GLMaterialData mat;
@@ -202,6 +208,8 @@ public:
         mat.hasAlbedoTexture = hasTex;
         mat.hasNormalTexture = hasNormalTex;
         mat.hasMetallicRoughnessTexture = hasMetallicRoughnessTex;
+        mat.hasEmissiveTexture = hasEmissiveTex;
+        mat.hasAOTexture = hasAOTex;
         mat.emissive = emissiveColor;
         mat.emissiveStrength = emissiveStr;
         if (hasTex && albedoTexHandle != INVALID_HANDLE)
@@ -218,6 +226,16 @@ public:
         {
             auto* tex = m_textureManager.GetTexture(metallicRoughnessTexHandle);
             if (tex) mat.metallicRoughnessTexture = tex->texture;
+        }
+        if (hasEmissiveTex && emissiveTexHandle != INVALID_HANDLE)
+        {
+            auto* tex = m_textureManager.GetTexture(emissiveTexHandle);
+            if (tex) mat.emissiveTexture = tex->texture;
+        }
+        if (hasAOTex && aoTexHandle != INVALID_HANDLE)
+        {
+            auto* tex = m_textureManager.GetTexture(aoTexHandle);
+            if (tex) mat.aoTexture = tex->texture;
         }
         m_materialCache[handle] = mat;
         return handle;
@@ -256,6 +274,17 @@ public:
     AssetHandle GetDefaultCubeHandle() const override { return m_defaultCubeHandle; }
     AssetHandle GetDefaultPlaneHandle() const override { return m_defaultPlaneHandle; }
     AssetHandle GetDefaultAlbedoTextureHandle() const override { return m_defaultAlbedoTextureHandle; }
+
+    void SetDebugOverlayVisible(bool visible) { m_showDebugOverlay = visible; }
+    bool IsDebugOverlayVisible() const { return m_showDebugOverlay; }
+
+    void UpdateDebugStats(float frameTimeMs, int entityCount, int loadedAssets)
+    {
+        m_debugStats.frameTimeMs = frameTimeMs;
+        m_debugStats.entityCount = entityCount;
+        m_debugStats.loadedAssets = loadedAssets;
+        m_debugStats.fps = (frameTimeMs > 0.0f) ? (1000.0f / frameTimeMs) : 0.0f;
+    }
 
 public:
     std::unordered_map<AssetHandle, std::vector<Mat4>> m_boneMatricesCache;
@@ -328,6 +357,10 @@ private:
             m_pbrUniforms.ambientGroundColor = cache(pbr, "uAmbientGroundColor");
             m_pbrUniforms.ambientGroundBlend = cache(pbr, "uAmbientGroundBlend");
             m_pbrUniforms.brdfLUT = cache(pbr, "uBRDFLUT");
+            m_pbrUniforms.useEmissiveTexture = cache(pbr, "uUseEmissiveTexture");
+            m_pbrUniforms.emissiveTexture = cache(pbr, "uEmissiveTexture");
+            m_pbrUniforms.useAOTexture = cache(pbr, "uUseAOTexture");
+            m_pbrUniforms.aoTexture = cache(pbr, "uAOTexture");
         }
 
         GLuint skinned = m_shaderManager.GetProgram("skinned");
@@ -362,6 +395,10 @@ private:
             m_skinnedUniforms.pointLightColors = cache(skinned, "uPointLightColors[0]");
             m_skinnedUniforms.pointLightRanges = cache(skinned, "uPointLightRanges[0]");
             m_skinnedUniforms.pointLightIntensities = cache(skinned, "uPointLightIntensities[0]");
+            m_skinnedUniforms.useEmissiveTexture = cache(skinned, "uUseEmissiveTexture");
+            m_skinnedUniforms.emissiveTexture = cache(skinned, "uEmissiveTexture");
+            m_skinnedUniforms.useAOTexture = cache(skinned, "uUseAOTexture");
+            m_skinnedUniforms.aoTexture = cache(skinned, "uAOTexture");
         }
     }
 
@@ -429,6 +466,8 @@ private:
                 if (locs.useAlbedoTexture >= 0) glUniform1i(locs.useAlbedoTexture, mat.hasAlbedoTexture ? 1 : 0);
                 if (locs.useNormalTexture >= 0) glUniform1i(locs.useNormalTexture, mat.hasNormalTexture ? 1 : 0);
                 if (locs.useMetallicRoughnessTexture >= 0) glUniform1i(locs.useMetallicRoughnessTexture, mat.hasMetallicRoughnessTexture ? 1 : 0);
+                if (locs.useEmissiveTexture >= 0) glUniform1i(locs.useEmissiveTexture, mat.hasEmissiveTexture ? 1 : 0);
+                if (locs.useAOTexture >= 0) glUniform1i(locs.useAOTexture, mat.hasAOTexture ? 1 : 0);
 
                 if (mat.hasAlbedoTexture && mat.albedoTexture)
                 {
@@ -445,6 +484,16 @@ private:
                     m_textureManager.BindTexture(mat.metallicRoughnessTexture, GL_TEXTURE3);
                     if (locs.metallicRoughnessTexture >= 0) glUniform1i(locs.metallicRoughnessTexture, 3);
                 }
+                if (mat.hasEmissiveTexture && mat.emissiveTexture)
+                {
+                    m_textureManager.BindTexture(mat.emissiveTexture, GL_TEXTURE5);
+                    if (locs.emissiveTexture >= 0) glUniform1i(locs.emissiveTexture, 5);
+                }
+                if (mat.hasAOTexture && mat.aoTexture)
+                {
+                    m_textureManager.BindTexture(mat.aoTexture, GL_TEXTURE6);
+                    if (locs.aoTexture >= 0) glUniform1i(locs.aoTexture, 6);
+                }
                 return;
             }
         }
@@ -458,6 +507,8 @@ private:
         if (locs.useAlbedoTexture >= 0) glUniform1i(locs.useAlbedoTexture, 0);
         if (locs.useNormalTexture >= 0) glUniform1i(locs.useNormalTexture, 0);
         if (locs.useMetallicRoughnessTexture >= 0) glUniform1i(locs.useMetallicRoughnessTexture, 0);
+        if (locs.useEmissiveTexture >= 0) glUniform1i(locs.useEmissiveTexture, 0);
+        if (locs.useAOTexture >= 0) glUniform1i(locs.useAOTexture, 0);
     }
 
     struct FrustumPlane { Vec3 normal; float d; };
@@ -1331,6 +1382,10 @@ private:
             uniform sampler2D uAlbedoTexture;
             uniform sampler2D uNormalTexture;
             uniform sampler2D uMetallicRoughnessTexture;
+            uniform bool uUseEmissiveTexture;
+            uniform sampler2D uEmissiveTexture;
+            uniform bool uUseAOTexture;
+            uniform sampler2D uAOTexture;
 
             uniform mat4 uLightSpaceMatrix;
             uniform sampler2D uShadowMap;
@@ -1444,6 +1499,9 @@ private:
                 float roughness = uRoughness;
                 float ao = uAO;
 
+                if (uUseAOTexture)
+                    ao *= texture(uAOTexture, vTexCoord).r;
+
                 if (uUseMetallicRoughnessTexture)
                 {
                     vec3 mrSample = texture(uMetallicRoughnessTexture, vTexCoord).rgb;
@@ -1492,6 +1550,8 @@ private:
                 vec3 ambient = diffuseAmbient + specularAmbient * hemisphereColor * ao;
 
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
+                if (uUseEmissiveTexture)
+                    emissiveContrib *= texture(uEmissiveTexture, vTexCoord).rgb;
                 vec3 color = ambient + Lo + emissiveContrib;
 
                 FragColor = vec4(color, 1.0);
@@ -1637,5 +1697,9 @@ private:
     GLuint m_bloomPingPongFBO[2] = {0, 0};
     GLuint m_bloomPingPongTexture[2] = {0, 0};
     GLuint m_brdfLUT = 0;
+
+    bool m_showDebugOverlay = false;
+    DebugOverlay m_debugOverlay;
+    RenderStats m_debugStats{};
 };
 }

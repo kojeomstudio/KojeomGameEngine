@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Renderer/RenderScene.h"
+#include "Core/Log.h"
+#include "Core/FileSystem.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -33,7 +35,10 @@ public:
         bool hasTex = false, AssetHandle normalTexHandle = INVALID_HANDLE,
         bool hasNormalTex = false, const Vec3& emissiveColor = Vec3(0.0f),
         float emissiveStr = 1.0f, AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE,
-        bool hasMetallicRoughnessTex = false, float ao = 1.0f) = 0;
+        bool hasMetallicRoughnessTex = false, float ao = 1.0f,
+        AssetHandle emissiveTexHandle = INVALID_HANDLE, bool hasEmissiveTex = false,
+        AssetHandle aoTexHandle = INVALID_HANDLE, bool hasAOTex = false) = 0;
+    virtual uint32_t GetDrawCallCount() const = 0;
     virtual void UploadBoneMatrices(AssetHandle handle,
         const std::vector<Mat4>& matrices) = 0;
     virtual void RemoveMesh(AssetHandle handle) = 0;
@@ -116,13 +121,22 @@ public:
         bool hasTex = false, AssetHandle normalTexHandle = INVALID_HANDLE,
         bool hasNormalTex = false, const Vec3& emissiveColor = Vec3(0.0f),
         float emissiveStr = 1.0f, AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE,
-        bool hasMetallicRoughnessTex = false, float ao = 1.0f)
+        bool hasMetallicRoughnessTex = false, float ao = 1.0f,
+        AssetHandle emissiveTexHandle = INVALID_HANDLE, bool hasEmissiveTex = false,
+        AssetHandle aoTexHandle = INVALID_HANDLE, bool hasAOTex = false)
     {
         if (!m_backend) return INVALID_HANDLE;
         return m_backend->RegisterMaterial(albedo, metallic, roughness,
             albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
             emissiveColor, emissiveStr, metallicRoughnessTexHandle,
-            hasMetallicRoughnessTex, ao);
+            hasMetallicRoughnessTex, ao, emissiveTexHandle, hasEmissiveTex,
+            aoTexHandle, hasAOTex);
+    }
+
+    uint32_t GetDrawCallCount() const
+    {
+        if (!m_backend) return 0;
+        return m_backend->GetDrawCallCount();
     }
 
     void UploadBoneMatrices(AssetHandle handle,
@@ -144,6 +158,11 @@ public:
     bool SaveScreenshot(const std::string& path, int width, int height)
     {
         if (!m_backend) return false;
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Screenshot path failed validation: {}", path);
+            return false;
+        }
         return m_backend->SaveScreenshot(path, width, height);
     }
 

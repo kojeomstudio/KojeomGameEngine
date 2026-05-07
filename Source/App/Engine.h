@@ -6,6 +6,7 @@
 #include "Platform/GlfwWindow.h"
 #include "Platform/GlfwInput.h"
 #include "Renderer/Renderer.h"
+#include "Renderer/OpenGL/OpenGLRenderer.h"
 #include "Assets/AssetStore.h"
 #include "World/World.h"
 #include "App/Clock.h"
@@ -186,6 +187,8 @@ public:
         {
             RenderScene scene = m_world->BuildRenderScene();
             m_renderer->Render(scene);
+
+            UpdateDebugStats(delta);
         }
 
         if (m_window) m_window->SwapBuffers();
@@ -278,7 +281,8 @@ public:
                     mr->materialHandle = m_renderer->RegisterMaterial(
                         matData->albedo, matData->metallic, matData->roughness,
                         albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
-                        matData->emissive);
+                        matData->emissive, matData->emissiveStrength,
+                        INVALID_HANDLE, false, matData->ao);
                 }
             }
         }
@@ -327,9 +331,13 @@ public:
                     AssetHandle albedoTexHandle = INVALID_HANDLE;
                     AssetHandle normalTexHandle = INVALID_HANDLE;
                     AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE;
+                    AssetHandle emissiveTexHandle = INVALID_HANDLE;
+                    AssetHandle aoTexHandle = INVALID_HANDLE;
                     bool hasTex = false;
                     bool hasNormalTex = false;
                     bool hasMRTex = false;
+                    bool hasEmissiveTex = false;
+                    bool hasAOTex = false;
                     if (!matData->albedoTexturePath.empty())
                     {
                         auto texHandle = m_assetStore->LoadTexture(matData->albedoTexturePath);
@@ -363,11 +371,34 @@ public:
                             hasMRTex = true;
                         }
                     }
+                    if (!matData->emissiveTexturePath.empty())
+                    {
+                        auto texHandle = m_assetStore->LoadTexture(matData->emissiveTexturePath);
+                        auto* texData = m_assetStore->GetTexture(texHandle);
+                        if (texData)
+                        {
+                            emissiveTexHandle = m_renderer->UploadTextureSRGB(
+                                texData->width, texData->height, texData->channels, texData->pixels.data());
+                            hasEmissiveTex = true;
+                        }
+                    }
+                    if (!matData->aoTexturePath.empty())
+                    {
+                        auto texHandle = m_assetStore->LoadTexture(matData->aoTexturePath);
+                        auto* texData = m_assetStore->GetTexture(texHandle);
+                        if (texData)
+                        {
+                            aoTexHandle = m_renderer->UploadTexture(
+                                texData->width, texData->height, texData->channels, texData->pixels.data());
+                            hasAOTex = true;
+                        }
+                    }
                     sm->materialHandle = m_renderer->RegisterMaterial(
                         matData->albedo, matData->metallic, matData->roughness,
                         albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
                         matData->emissive, 1.0f, metallicRoughnessTexHandle, hasMRTex,
-                        matData->ao);
+                        matData->ao, emissiveTexHandle, hasEmissiveTex,
+                        aoTexHandle, hasAOTex);
                 }
             }
 
@@ -475,6 +506,26 @@ private:
     AssetHandle GenerateBoneHandle()
     {
         return ++m_nextBoneHandle;
+    }
+
+    void UpdateDebugStats(float delta)
+    {
+        if (!m_renderer) return;
+        auto* backend = m_renderer->GetBackend();
+        if (!backend) return;
+
+        float frameTimeMs = delta * 1000.0f;
+        int entityCount = m_world ? static_cast<int>(m_world->GetEntityCount()) : 0;
+        int loadedAssets = m_assetStore ? static_cast<int>(
+            m_assetStore->GetStats().meshCount + m_assetStore->GetStats().textureCount +
+            m_assetStore->GetStats().materialCount + m_assetStore->GetStats().terrainCount +
+            m_assetStore->GetStats().skeletonCount + m_assetStore->GetStats().animationClipCount) : 0;
+
+        auto* glRenderer = dynamic_cast<OpenGLRenderer*>(backend);
+        if (glRenderer)
+        {
+            glRenderer->UpdateDebugStats(frameTimeMs, entityCount, loadedAssets);
+        }
     }
 
     AppConfig m_config;
