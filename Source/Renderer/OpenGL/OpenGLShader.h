@@ -21,7 +21,18 @@ public:
 
     GLuint CompileShader(GLenum type, const char* source)
     {
+        if (!source || source[0] == '\0')
+        {
+            KE_LOG_ERROR("Shader source is empty");
+            return 0;
+        }
+
         GLuint shader = glCreateShader(type);
+        if (!shader)
+        {
+            KE_LOG_ERROR("glCreateShader failed for type {}", type);
+            return 0;
+        }
         glShaderSource(shader, 1, &source, nullptr);
         glCompileShader(shader);
 
@@ -29,9 +40,11 @@ public:
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
         if (!success)
         {
-            char log[1024];
-            glGetShaderInfoLog(shader, 1024, nullptr, log);
-            KE_LOG_ERROR("Shader compile failed: {}", log);
+            GLint logLen = 0;
+            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLen);
+            std::vector<char> log(static_cast<size_t>(logLen) + 1, '\0');
+            glGetShaderInfoLog(shader, logLen, nullptr, log.data());
+            KE_LOG_ERROR("Shader compile failed (type {}): {}", type, log.data());
             glDeleteShader(shader);
             return 0;
         }
@@ -40,7 +53,16 @@ public:
 
     GLuint LinkProgram(GLuint vs, GLuint fs)
     {
+        if (!vs || !fs) return 0;
+
         GLuint program = glCreateProgram();
+        if (!program)
+        {
+            KE_LOG_ERROR("glCreateProgram failed");
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            return 0;
+        }
         glAttachShader(program, vs);
         glAttachShader(program, fs);
         glLinkProgram(program);
@@ -49,15 +71,21 @@ public:
         glGetProgramiv(program, GL_LINK_STATUS, &success);
         if (!success)
         {
-            char log[1024];
-            glGetProgramInfoLog(program, 1024, nullptr, log);
-            KE_LOG_ERROR("Shader link failed: {}", log);
+            GLint logLen = 0;
+            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLen);
+            std::vector<char> log(static_cast<size_t>(logLen) + 1, '\0');
+            glGetProgramInfoLog(program, logLen, nullptr, log.data());
+            KE_LOG_ERROR("Shader link failed: {}", log.data());
+            glDetachShader(program, vs);
+            glDetachShader(program, fs);
             glDeleteProgram(program);
             glDeleteShader(vs);
             glDeleteShader(fs);
             return 0;
         }
 
+        glDetachShader(program, vs);
+        glDetachShader(program, fs);
         glDeleteShader(vs);
         glDeleteShader(fs);
         return program;

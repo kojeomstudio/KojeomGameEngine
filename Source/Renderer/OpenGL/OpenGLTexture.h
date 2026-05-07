@@ -81,6 +81,8 @@ public:
         if (m_overlayTexture) glDeleteTextures(1, &m_overlayTexture);
         if (m_bgVAO) glDeleteVertexArrays(1, &m_bgVAO);
         if (m_bgVBO) glDeleteBuffers(1, &m_bgVBO);
+        if (m_bgProgram) glDeleteProgram(m_bgProgram);
+        if (m_charProgram) glDeleteProgram(m_charProgram);
     }
 
 private:
@@ -153,7 +155,140 @@ private:
 
     void DrawBitmapChar(float x, float y, int charCode, int screenWidth, int screenHeight)
     {
-        (void)charCode; (void)x; (void)y; (void)screenWidth; (void)screenHeight;
+        if (charCode < 0 || charCode >= 38) return;
+
+        const int charW = 8;
+        const int charH = 14;
+        float scaleX = 2.0f * charW / static_cast<float>(screenWidth);
+        float scaleY = 2.0f * charH / static_cast<float>(screenHeight);
+        float ndcX = -1.0f + 2.0f * x / static_cast<float>(screenWidth);
+        float ndcY = 1.0f - 2.0f * y / static_cast<float>(screenHeight);
+
+        uint32_t bitmap = GetCharBitmap(charCode);
+
+        struct BitmapVertex { float x, y, u, v; };
+        std::vector<BitmapVertex> verts;
+
+        for (int row = 0; row < charH; ++row)
+        {
+            for (int col = 0; col < charW; ++col)
+            {
+                int bit = (charW - 1 - col);
+                if (bitmap & (1u << (row * charW + bit)))
+                {
+                    float px = ndcX + col * scaleX / charW;
+                    float py = ndcY - row * scaleY / charH;
+                    float pw = scaleX / charW;
+                    float ph = scaleY / charH;
+                    verts.push_back({px,      py,      0.0f, 0.0f});
+                    verts.push_back({px + pw, py,      1.0f, 0.0f});
+                    verts.push_back({px + pw, py - ph, 1.0f, 1.0f});
+                    verts.push_back({px,      py,      0.0f, 0.0f});
+                    verts.push_back({px + pw, py - ph, 1.0f, 1.0f});
+                    verts.push_back({px,      py - ph, 0.0f, 1.0f});
+                }
+            }
+        }
+
+        if (verts.empty()) return;
+
+        GLuint charProg = GetCharProgram();
+        glUseProgram(charProg);
+
+        GLuint vao = 0, vbo = 0;
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(BitmapVertex),
+            verts.data(), GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(BitmapVertex), nullptr);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(BitmapVertex),
+            reinterpret_cast<void*>(2 * sizeof(float)));
+
+        GLint colorLoc = glGetUniformLocation(charProg, "uColor");
+        if (colorLoc >= 0) glUniform4f(colorLoc, 0.0f, 1.0f, 0.0f, 1.0f);
+
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(verts.size()));
+
+        glBindVertexArray(0);
+        glDeleteVertexArrays(1, &vao);
+        glDeleteBuffers(1, &vbo);
+        glUseProgram(0);
+    }
+
+    static uint32_t GetCharBitmap(int charCode)
+    {
+        static const uint32_t bitmaps[38] = {
+            0x00000000,
+            0x00000000,
+            0x00000000,
+            0x00000000,
+            0x00000000,
+            0x00000000,
+            0x00000000,
+            0x00000000,
+            0x00000000,
+            0x00000000,
+            0x7EFFFF7E,
+            0x18FFFF18,
+            0x3CFFFF3C,
+            0x7EFFFF7E,
+            0xFFFFDBFF,
+            0xFF00FF18,
+            0x3C427E00,
+            0x427E3C00,
+            0x427E3C42,
+            0x7E3C4200,
+            0x0C0CFE0C,
+            0x0C0CFEFE,
+            0x7C82FE82,
+            0x7C82827C,
+            0xFE82827C,
+            0xFE8282FE,
+            0xFE9292FE,
+            0xFE9292FE,
+            0x7C82827C,
+            0xFE82827C,
+            0x7C8282FE,
+            0x7C82FEFE,
+            0xFE8282FE,
+            0x7C82FEFE,
+            0x7C82FEFE,
+            0x00000000,
+            0x00000000,
+            0x00000000,
+        };
+        if (charCode >= 0 && charCode < 38)
+            return bitmaps[charCode];
+        return 0;
+    }
+
+    GLuint GetCharProgram()
+    {
+        if (m_charProgram) return m_charProgram;
+        const char* vert = R"(
+            #version 450 core
+            layout(location = 0) in vec2 aPos;
+            layout(location = 1) in vec2 aUV;
+            void main()
+            {
+                gl_Position = vec4(aPos, 0.0, 1.0);
+            }
+        )";
+        const char* frag = R"(
+            #version 450 core
+            uniform vec4 uColor;
+            out vec4 FragColor;
+            void main()
+            {
+                FragColor = uColor;
+            }
+        )";
+        m_charProgram = CompileSimpleProgram(vert, frag);
+        return m_charProgram;
     }
 
     GLuint GetBgProgram()
@@ -201,6 +336,7 @@ private:
     GLuint m_overlayFBO = 0;
     GLuint m_overlayTexture = 0;
     GLuint m_bgProgram = 0;
+    GLuint m_charProgram = 0;
     GLuint m_bgVAO = 0;
     GLuint m_bgVBO = 0;
     int m_screenWidth = 0;

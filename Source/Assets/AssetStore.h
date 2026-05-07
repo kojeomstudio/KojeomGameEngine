@@ -961,10 +961,21 @@ private:
                 matData.roughness = val;
 
             aiString texPath;
+            std::string basePath = FileSystem::GetDirectory(path);
             if (aiGetMaterialTexture(aiMat, aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)
-                matData.albedoTexturePath = FileSystem::GetDirectory(path) + texPath.C_Str();
+                matData.albedoTexturePath = basePath + texPath.C_Str();
             if (aiGetMaterialTexture(aiMat, aiTextureType_NORMALS, 0, &texPath) == AI_SUCCESS)
-                matData.normalTexturePath = FileSystem::GetDirectory(path) + texPath.C_Str();
+                matData.normalTexturePath = basePath + texPath.C_Str();
+            if (aiGetMaterialTexture(aiMat, aiTextureType_METALNESS, 0, &texPath) == AI_SUCCESS)
+                matData.metallicRoughnessTexturePath = basePath + texPath.C_Str();
+            else if (aiGetMaterialTexture(aiMat, aiTextureType_SHININESS, 0, &texPath) == AI_SUCCESS)
+                matData.metallicRoughnessTexturePath = basePath + texPath.C_Str();
+            if (aiGetMaterialTexture(aiMat, aiTextureType_EMISSIVE, 0, &texPath) == AI_SUCCESS)
+                matData.emissiveTexturePath = basePath + texPath.C_Str();
+            if (aiGetMaterialTexture(aiMat, aiTextureType_LIGHTMAP, 0, &texPath) == AI_SUCCESS)
+                matData.aoTexturePath = basePath + texPath.C_Str();
+            else if (aiGetMaterialTexture(aiMat, aiTextureType_AMBIENT_OCCLUSION, 0, &texPath) == AI_SUCCESS)
+                matData.aoTexturePath = basePath + texPath.C_Str();
 
             AssetHandle matHandle = m_nextHandle++;
             m_materials[matHandle] = matData;

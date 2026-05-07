@@ -890,7 +890,11 @@ private:
         glUseProgram(0);
     }
 
-    void RenderDebugOverlay() {}
+    void RenderDebugOverlay()
+    {
+        if (!m_showDebugOverlay) return;
+        m_debugOverlay.Draw(m_windowWidth, m_windowHeight, m_drawCallCount, m_debugStats);
+    }
 
     void RenderBloom()
     {

@@ -4,6 +4,7 @@
 #include "App/CommandLine.h"
 #include "App/Engine.h"
 #include "App/AppMode.h"
+#include "Renderer/OpenGL/OpenGLRenderer.h"
 #include "Game/SampleGame.h"
 
 #include <iostream>
@@ -83,6 +84,13 @@ int main(int argc, char** argv)
             game.OnUpdate(engine, delta);
             if (engine.GetInput()->GetState().IsKeyPressed(Kojeom::KeyCode::Escape))
                 engine.Stop();
+            if (engine.GetInput()->GetState().IsKeyPressed(Kojeom::KeyCode::F1))
+            {
+                auto* backend = engine.GetRenderer()->GetBackend();
+                auto* glRenderer = dynamic_cast<Kojeom::OpenGLRenderer*>(backend);
+                if (glRenderer)
+                    glRenderer->SetDebugOverlayVisible(!glRenderer->IsDebugOverlayVisible());
+            }
         }
     }
     else
