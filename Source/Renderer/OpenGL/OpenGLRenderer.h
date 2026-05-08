@@ -985,30 +985,30 @@ private:
     void CreateDefaultMesh()
     {
         std::vector<float> cubeVerts = {
-            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-             0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-            -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-            -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-             0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-             0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, 1.0f,
+            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f, 0.0f, 1.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f, 0.0f, 1.0f, 1.0f,
+             0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
         };
 
         std::vector<uint32_t> cubeIdx = {
@@ -1020,18 +1020,18 @@ private:
             20, 21, 22,  22, 23, 20,
         };
 
-        m_defaultCubeHandle = UploadMesh(cubeVerts, cubeIdx);
+        m_defaultCubeHandle = UploadMesh(cubeVerts, cubeIdx, 12);
         auto* mesh = m_bufferManager.GetMesh(m_defaultCubeHandle);
         if (mesh) m_defaultMesh = *mesh;
 
         std::vector<float> planeVerts = {
-            -50.0f, 0.0f, -50.0f,  0.0f, 1.0f, 0.0f,  0.0f,  0.0f,
-            -50.0f, 0.0f,  50.0f,  0.0f, 1.0f, 0.0f,  0.0f, 50.0f,
-             50.0f, 0.0f,  50.0f,  0.0f, 1.0f, 0.0f, 50.0f, 50.0f,
-             50.0f, 0.0f, -50.0f,  0.0f, 1.0f, 0.0f, 50.0f,  0.0f,
+            -50.0f, 0.0f, -50.0f,  0.0f, 1.0f, 0.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -50.0f, 0.0f,  50.0f,  0.0f, 1.0f, 0.0f,  0.0f, 50.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             50.0f, 0.0f,  50.0f,  0.0f, 1.0f, 0.0f, 50.0f, 50.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+             50.0f, 0.0f, -50.0f,  0.0f, 1.0f, 0.0f, 50.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1.0f,
         };
         std::vector<uint32_t> planeIdx = { 0, 1, 2, 2, 3, 0 };
-        m_defaultPlaneHandle = UploadMesh(planeVerts, planeIdx);
+        m_defaultPlaneHandle = UploadMesh(planeVerts, planeIdx, 12);
     }
 
     void CreateDefaultTextures()
@@ -1683,6 +1683,7 @@ private:
             layout(location = 0) in vec3 aPosition;
             layout(location = 1) in vec3 aNormal;
             layout(location = 2) in vec2 aTexCoord;
+            layout(location = 5) in vec4 aTangent;
 
             uniform mat4 uViewProjection;
             uniform mat4 uModel;
@@ -1691,6 +1692,7 @@ private:
             out vec3 vWorldPos;
             out vec3 vNormal;
             out vec2 vTexCoord;
+            out vec4 vTangent;
 
             void main()
             {
@@ -1698,6 +1700,7 @@ private:
                 vWorldPos = worldPos.xyz;
                 vNormal = uNormalMatrix * aNormal;
                 vTexCoord = aTexCoord;
+                vTangent = vec4(uNormalMatrix * aTangent.xyz, aTangent.w);
                 gl_Position = uViewProjection * worldPos;
             }
         )";
@@ -1710,6 +1713,7 @@ private:
             in vec3 vWorldPos;
             in vec3 vNormal;
             in vec2 vTexCoord;
+            in vec4 vTangent;
 
             uniform vec3 uCameraPos;
             uniform vec3 uLightDirection;
@@ -1778,13 +1782,8 @@ private:
                 if (uUseNormalTexture)
                 {
                     vec3 tangentNormal = texture(uNormalTexture, vTexCoord).rgb * 2.0 - 1.0;
-                    vec3 Q1 = dFdx(vWorldPos);
-                    vec3 Q2 = dFdy(vWorldPos);
-                    vec2 st1 = dFdx(vTexCoord);
-                    vec2 st2 = dFdy(vTexCoord);
-                    vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
-                    vec3 B = normalize(cross(N, T));
-                    if (dot(cross(N, T), B) < 0.0) T = -T;
+                    vec3 T = normalize(vTangent.xyz);
+                    vec3 B = cross(N, T) * vTangent.w;
                     mat3 TBN = mat3(T, B, N);
                     N = normalize(TBN * tangentNormal);
                 }

@@ -61,6 +61,12 @@ public:
             glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, strideBytes,
                 reinterpret_cast<void*>(6 * sizeof(float)));
         }
+        if (vertexStride >= 12)
+        {
+            glEnableVertexAttribArray(5);
+            glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, strideBytes,
+                reinterpret_cast<void*>(8 * sizeof(float)));
+        }
 
         glBindVertexArray(0);
 

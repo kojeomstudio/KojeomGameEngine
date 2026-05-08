@@ -236,16 +236,17 @@ public:
             if (!meshData) continue;
 
             std::vector<float> flatVerts;
-            flatVerts.reserve(meshData->vertices.size() * 8);
+            flatVerts.reserve(meshData->vertices.size() * 12);
             for (const auto& v : meshData->vertices)
             {
                 flatVerts.insert(flatVerts.end(),
                     { v.position.x, v.position.y, v.position.z,
                       v.normal.x, v.normal.y, v.normal.z,
-                      v.uv.x, v.uv.y });
+                      v.uv.x, v.uv.y,
+                      v.tangent.x, v.tangent.y, v.tangent.z, v.tangent.w });
             }
 
-            AssetHandle gpuHandle = m_renderer->UploadMesh(flatVerts, meshData->indices);
+            AssetHandle gpuHandle = m_renderer->UploadMesh(flatVerts, meshData->indices, 12);
             mr->meshHandle = gpuHandle;
 
             if (mr->materialHandle != INVALID_HANDLE)
@@ -506,7 +507,7 @@ private:
                 float u = static_cast<float>(x) / static_cast<float>(w - 1);
                 float v = static_cast<float>(z) / static_cast<float>(h - 1);
 
-                vertices.insert(vertices.end(), { px, py, pz, normal.x, normal.y, normal.z, u, v });
+                vertices.insert(vertices.end(), { px, py, pz, normal.x, normal.y, normal.z, u, v, normal.z, normal.x, 0.0f, 1.0f });
             }
         }
 
@@ -524,7 +525,7 @@ private:
             }
         }
 
-        return m_renderer->UploadMesh(vertices, indices);
+        return m_renderer->UploadMesh(vertices, indices, 12);
     }
 
     void UploadAnimatorBoneMatrices()
