@@ -906,6 +906,14 @@ private:
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadowMapTexture);
 
+        if (m_pbrUniforms.brdfLUT >= 0 && m_brdfLUT)
+        {
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, m_brdfLUT);
+            glUniform1i(m_pbrUniforms.brdfLUT, 4);
+            glActiveTexture(GL_TEXTURE0);
+        }
+
         auto terrainFrustum = ExtractFrustumPlanes(scene.camera.viewProjectionMatrix);
 
         for (const auto& cmd : scene.terrainDrawCommands)
@@ -936,6 +944,17 @@ private:
         }
 
         m_textureManager.UnbindTexture(GL_TEXTURE2);
+        m_textureManager.UnbindTexture(GL_TEXTURE1);
+        m_textureManager.UnbindTexture(GL_TEXTURE0);
+        if (m_brdfLUT)
+        {
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glActiveTexture(GL_TEXTURE0);
+        }
+        m_textureManager.UnbindTexture(GL_TEXTURE3);
+        m_textureManager.UnbindTexture(GL_TEXTURE5);
+        m_textureManager.UnbindTexture(GL_TEXTURE6);
         glUseProgram(0);
     }
 
@@ -1014,7 +1033,6 @@ private:
         float nearP = scene.camera.nearPlane;
         float farP = scene.camera.farPlane;
         float clipRange = farP - nearP;
-        float ratio = farP / nearP;
 
         cascadeSplits[0] = nearP + clipRange * 0.05f;
         cascadeSplits[1] = nearP + clipRange * 0.15f;
@@ -1073,7 +1091,13 @@ private:
             Mat4 lightProj = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y,
                 -maxExtents.z * 4.0f, maxExtents.z * 4.0f);
             m_cascadeLightSpaceMatrices[cascade] = lightProj * lightView;
-            m_cascadeSplitDistances[cascade] = (splitDist - nearP) / clipRange;
+
+            float linearSplit = (splitDist - nearP) / clipRange;
+            float ndcDepth = linearSplit * 2.0f - 1.0f;
+            Mat4 projMat = glm::perspective(scene.camera.fov, scene.camera.aspectRatio, nearP, farP);
+            float viewDepth = -projMat[2][2] + ndcDepth * projMat[2][3];
+            float w = -projMat[3][2] + ndcDepth * projMat[3][3];
+            m_cascadeSplitDistances[cascade] = linearSplit;
         }
     }
 
@@ -2026,20 +2050,25 @@ private:
             const float PI = 3.14159265359;
             const int SHADOW_CASCADE_COUNT = 3;
 
+            float LinearizeDepth(float depth, float nearP, float farP)
+            {
+                return (2.0 * nearP * farP) / (farP + nearP - depth * (farP - nearP));
+            }
+
             float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
             {
-                vec4 fragPosViewSpace = uViewProjection * vec4(fragPos, 1.0);
-                float depthValue = abs(fragPosViewSpace.z);
+                vec4 clipPos = uViewProjection * vec4(fragPos, 1.0);
+                float ndcDepth = clipPos.z / clipPos.w;
+                float linearDepth = (ndcDepth + 1.0) * 0.5;
 
-                int cascadeIndex = 0;
+                int cascadeIndex = SHADOW_CASCADE_COUNT - 1;
                 for (int i = 0; i < SHADOW_CASCADE_COUNT - 1; ++i)
                 {
-                    if (depthValue < uCascadeSplitDistances[i])
+                    if (linearDepth < uCascadeSplitDistances[i])
                     {
                         cascadeIndex = i;
                         break;
                     }
-                    cascadeIndex = SHADOW_CASCADE_COUNT - 1;
                 }
 
                 vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(fragPos, 1.0);
@@ -2050,7 +2079,7 @@ private:
                 if (currentDepth > 1.0) return 0.0;
 
                 float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
-                bias *= 1.0 / (uCascadeSplitDistances[cascadeIndex] * 100.0 + 1.0);
+                bias *= 1.0 / (max(uCascadeSplitDistances[cascadeIndex], 0.01) * 100.0 + 1.0);
 
                 float shadow = 0.0;
                 vec2 texelSize = 1.0 / vec2(textureSize(uShadowMap, 0));
@@ -2064,10 +2093,31 @@ private:
                 }
                 shadow /= 9.0;
 
-                const float fadeStart = 0.8;
-                const float fadeEnd = 1.0;
-                float cascadeFade = 1.0 - clamp((currentDepth - fadeStart) / (fadeEnd - fadeStart), 0.0, 1.0);
-                shadow *= cascadeFade;
+                float nextSplit = uCascadeSplitDistances[min(cascadeIndex + 1, SHADOW_CASCADE_COUNT - 1)];
+                float splitSize = uCascadeSplitDistances[cascadeIndex];
+                float fadeRange = (nextSplit - splitSize) * 0.3;
+                if (fadeRange > 0.001 && linearDepth > splitSize - fadeRange)
+                {
+                    float fade = (linearDepth - (splitSize - fadeRange)) / fadeRange;
+                    shadow *= (1.0 - smoothstep(0.0, 1.0, fade));
+                    if (cascadeIndex < SHADOW_CASCADE_COUNT - 1)
+                    {
+                        vec4 nextLightSpace = uLightSpaceMatrix * vec4(fragPos, 1.0);
+                        vec3 nextProj = nextLightSpace.xyz / nextLightSpace.w;
+                        nextProj = nextProj * 0.5 + 0.5;
+                        float nextShadow = 0.0;
+                        for (int x = -1; x <= 1; ++x)
+                        {
+                            for (int y = -1; y <= 1; ++y)
+                            {
+                                float pcf = texture(uShadowMap, vec3(nextProj.xy + vec2(x, y) * texelSize, cascadeIndex + 1)).r;
+                                nextShadow += nextProj.z - bias > pcf ? 1.0 : 0.0;
+                            }
+                        }
+                        nextShadow /= 9.0;
+                        shadow += smoothstep(0.0, 1.0, fade) * nextShadow;
+                    }
+                }
 
                 return shadow;
             }
@@ -2185,26 +2235,35 @@ private:
 
                 vec3 F0 = mix(vec3(0.04), albedo, metallic);
                 vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
-                vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+                vec3 kD = (vec3(1.0 - F) * (1.0 - metallic));
 
                 float hemisphere = 0.5 + 0.5 * N.y;
-                vec3 hemisphereColor = mix(uAmbientGroundColor, uAmbientColor, hemisphere);
 
-                vec3 skyUp = uAmbientColor * 1.2;
-                vec3 skyHorizon = uAmbientColor * 0.8;
-                vec3 skyDown = uAmbientGroundColor * 0.6;
-                float skyFactor = hemisphere;
+                vec3 skyUp = uAmbientColor * 1.4;
+                vec3 skyHorizon = uAmbientColor * 0.9;
+                vec3 skyDown = uAmbientGroundColor * 0.5;
                 vec3 irradiance;
-                if (skyFactor > 0.5)
-                    irradiance = mix(skyHorizon, skyUp, (skyFactor - 0.5) * 2.0);
+                if (hemisphere > 0.5)
+                {
+                    float t = (hemisphere - 0.5) * 2.0;
+                    irradiance = mix(skyHorizon, skyUp, t);
+                    irradiance += uAmbientColor * 0.15 * pow(t, 2.0);
+                }
                 else
-                    irradiance = mix(skyDown, skyHorizon, skyFactor * 2.0);
-                irradiance += uAmbientColor * 0.2 * max(dot(N, normalize(-uLightDirection)), 0.0);
+                {
+                    float t = hemisphere * 2.0;
+                    irradiance = mix(skyDown, skyHorizon, t);
+                }
+
+                float backLight = max(dot(N, normalize(-uLightDirection)), 0.0);
+                irradiance += uAmbientColor * 0.1 * backLight;
+                irradiance += uAmbientColor * 0.05;
+
                 vec3 diffuseAmbient = irradiance * kD * albedo * ao;
 
                 vec2 brdf = texture(uBRDFLUT, vec2(NdotV, roughness)).rg;
                 vec3 specularAmbient = F * brdf.x + brdf.y;
-                vec3 ambient = diffuseAmbient + specularAmbient * irradiance * ao * 0.5;
+                vec3 ambient = diffuseAmbient + specularAmbient * irradiance * ao * 0.4;
 
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
                 if (uUseEmissiveTexture)

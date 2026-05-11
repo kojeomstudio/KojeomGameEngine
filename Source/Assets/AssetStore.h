@@ -403,8 +403,14 @@ public:
         }
         for (int i = 0; i < boneCount; ++i)
         {
+            int jointNodeIdx = skin.joints[i];
+            if (jointNodeIdx < 0 || jointNodeIdx >= static_cast<int>(model.nodes.size()))
+            {
+                KE_LOG_ERROR("Skeleton joint node index out of bounds: {} at {}", jointNodeIdx, i);
+                return INVALID_HANDLE;
+            }
             Bone bone;
-            bone.name = model.nodes[skin.joints[i]].name;
+            bone.name = model.nodes[jointNodeIdx].name;
             bone.parentIndex = -1;
             skelData.skeleton.AddBone(bone);
         }
@@ -412,9 +418,11 @@ public:
         for (int i = 0; i < boneCount; ++i)
         {
             int nodeIdx = skin.joints[i];
+            if (nodeIdx < 0 || nodeIdx >= static_cast<int>(model.nodes.size())) continue;
             const auto& node = model.nodes[nodeIdx];
             for (int child : node.children)
             {
+                if (child < 0 || child >= static_cast<int>(model.nodes.size())) continue;
                 for (int j = 0; j < boneCount; ++j)
                 {
                     if (skin.joints[j] == child)
@@ -432,8 +440,14 @@ public:
             const auto& acc = model.accessors[skin.inverseBindMatrices];
             const auto& bufView = model.bufferViews[acc.bufferView];
             const auto& buf = model.buffers[bufView.buffer];
-            const float* data = reinterpret_cast<const float*>(
-                &buf.data[bufView.byteOffset + acc.byteOffset]);
+            size_t ibmOffset = bufView.byteOffset + acc.byteOffset;
+            size_t requiredIBMBytes = static_cast<size_t>(boneCount) * 16 * sizeof(float);
+            if (ibmOffset + requiredIBMBytes > buf.data.size())
+            {
+                KE_LOG_ERROR("Skeleton inverse bind matrix buffer out of bounds: {}", path);
+                return INVALID_HANDLE;
+            }
+            const float* data = reinterpret_cast<const float*>(&buf.data[ibmOffset]);
 
             auto& bones = const_cast<std::vector<Bone>&>(skelData.skeleton.GetBones());
             for (int i = 0; i < boneCount; ++i)
@@ -503,7 +517,11 @@ public:
 
         for (const auto& channel : anim.channels)
         {
-            const auto& sampler = anim.samplers[channel.sampler];
+            if (channel.target_node < 0 || channel.target_node >= static_cast<int>(model.nodes.size()))
+            {
+                KE_LOG_WARN("Animation channel target_node out of bounds: {}", channel.target_node);
+                continue;
+            }
             const auto& targetNode = model.nodes[channel.target_node];
 
             int32_t boneIndex = skelData->skeleton.FindBoneIndex(targetNode.name);
@@ -513,6 +531,13 @@ public:
             animChannel.boneIndex = boneIndex;
             animChannel.boneName = targetNode.name;
 
+            if (channel.sampler < 0 || channel.sampler >= static_cast<int>(anim.samplers.size()))
+            {
+                KE_LOG_WARN("Animation channel sampler index out of bounds: {}", channel.sampler);
+                continue;
+            }
+            const auto& sampler = anim.samplers[channel.sampler];
+
             if (sampler.interpolation == "STEP")
                 animChannel.interpolation = AnimationInterpolation::Step;
             else
@@ -520,8 +545,15 @@ public:
 
             const auto& timeAcc = model.accessors[sampler.input];
             const auto& timeBuf = model.bufferViews[timeAcc.bufferView];
+            size_t timeOffset = timeBuf.byteOffset + timeAcc.byteOffset;
+            size_t requiredTimeBytes = timeAcc.count * sizeof(float);
+            if (timeOffset + requiredTimeBytes > model.buffers[timeBuf.buffer].data.size())
+            {
+                KE_LOG_WARN("Animation time buffer out of bounds, skipping channel");
+                continue;
+            }
             const float* times = reinterpret_cast<const float*>(
-                &model.buffers[timeBuf.buffer].data[timeBuf.byteOffset + timeAcc.byteOffset]);
+                &model.buffers[timeBuf.buffer].data[timeOffset]);
 
             float maxTime = 0.0f;
             for (int t = 0; t < static_cast<int>(timeAcc.count); ++t)
@@ -531,8 +563,16 @@ public:
 
             const auto& valAcc = model.accessors[sampler.output];
             const auto& valBuf = model.bufferViews[valAcc.bufferView];
+            size_t valOffset = valBuf.byteOffset + valAcc.byteOffset;
+            int componentsPerKey = (channel.target_path == "rotation") ? 4 : 3;
+            size_t requiredValBytes = valAcc.count * componentsPerKey * sizeof(float);
+            if (valOffset + requiredValBytes > model.buffers[valBuf.buffer].data.size())
+            {
+                KE_LOG_WARN("Animation value buffer out of bounds, skipping channel");
+                continue;
+            }
             const float* values = reinterpret_cast<const float*>(
-                &model.buffers[valBuf.buffer].data[valBuf.byteOffset + valAcc.byteOffset]);
+                &model.buffers[valBuf.buffer].data[valOffset]);
 
             if (channel.target_path == "translation")
             {
