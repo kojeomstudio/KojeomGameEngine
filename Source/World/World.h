@@ -855,6 +855,11 @@ public:
         }
         sceneJson["entities"] = entitiesJson;
 
+        if (!FileSystem::ValidatePath(scenePath))
+        {
+            KE_LOG_ERROR("SaveToJson: invalid scene path: {}", scenePath);
+            return false;
+        }
         return FileSystem::WriteTextFile(scenePath, sceneJson.dump(2));
     }
 

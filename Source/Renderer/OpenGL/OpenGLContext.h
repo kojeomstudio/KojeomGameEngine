@@ -123,6 +123,17 @@ public:
         glfwGetFramebufferSize(static_cast<GLFWwindow*>(windowHandle), width, height);
     }
 
+    static bool CheckGLError(const char* operation)
+    {
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR)
+        {
+            KE_LOG_ERROR("GL error after {} : 0x{:x}", operation, static_cast<unsigned int>(err));
+            return true;
+        }
+        return false;
+    }
+
 private:
     bool m_initialized = false;
 };

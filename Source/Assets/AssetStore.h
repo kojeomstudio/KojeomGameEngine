@@ -289,6 +289,50 @@ public:
         return handle;
     }
 
+    AssetHandle RegisterSkinnedMesh(const std::string& name, const SkinnedMeshData& mesh)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_skinnedMeshPaths.find(name);
+        if (it != m_skinnedMeshPaths.end()) return it->second;
+        AssetHandle handle = m_nextHandle++;
+        m_skinnedMeshPaths[name] = handle;
+        m_skinnedMeshes[handle] = mesh;
+        return handle;
+    }
+
+    AssetHandle RegisterSkeleton(const std::string& name, const SkeletonData& skelData)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_skeletonPaths.find(name);
+        if (it != m_skeletonPaths.end()) return it->second;
+        AssetHandle handle = m_nextHandle++;
+        m_skeletonPaths[name] = handle;
+        m_skeletons[handle] = skelData;
+        return handle;
+    }
+
+    AssetHandle RegisterAnimationClip(const std::string& name, const AnimationClipData& clipData)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_animationClipPaths.find(name);
+        if (it != m_animationClipPaths.end()) return it->second;
+        AssetHandle handle = m_nextHandle++;
+        m_animationClipPaths[name] = handle;
+        m_animationClips[handle] = clipData;
+        return handle;
+    }
+
+    AssetHandle RegisterTexture(const std::string& name, const TextureData& texData)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_texturePaths.find(name);
+        if (it != m_texturePaths.end()) return it->second;
+        AssetHandle handle = m_nextHandle++;
+        m_texturePaths[name] = handle;
+        m_textures[handle] = texData;
+        return handle;
+    }
+
     AssetHandle CreateTerrain(const std::string& name, int width, int height,
         float cellSize, float maxHeight, const std::vector<float>& heights)
     {
@@ -1408,6 +1452,27 @@ public:
                 issues.push_back("Texture handle " + std::to_string(h) + " has invalid dimensions");
             if (tex.pixels.empty())
                 issues.push_back("Texture handle " + std::to_string(h) + " has no pixel data");
+            size_t expectedSize = static_cast<size_t>(tex.width) * tex.height * tex.channels;
+            if (!tex.pixels.empty() && tex.pixels.size() != expectedSize)
+                issues.push_back("Texture handle " + std::to_string(h) + " pixel data size mismatch");
+        }
+
+        for (const auto& [h, terrain] : m_terrains)
+        {
+            if (terrain.width <= 0 || terrain.height <= 0)
+                issues.push_back("Terrain handle " + std::to_string(h) + " has invalid dimensions");
+            size_t expectedHeightmap = static_cast<size_t>(terrain.width) * terrain.height;
+            if (!terrain.heightmap.empty() && terrain.heightmap.size() != expectedHeightmap)
+                issues.push_back("Terrain handle " + std::to_string(h) + " heightmap size mismatch");
+            if (terrain.cellSize <= 0.0f)
+                issues.push_back("Terrain handle " + std::to_string(h) + " has invalid cellSize");
+        }
+
+        for (const auto& [h, clip] : m_animationClips)
+        {
+            auto clipIssues = clip.clip.Validate(256);
+            for (const auto& issue : clipIssues)
+                issues.push_back("AnimationClip handle " + std::to_string(h) + ": " + issue);
         }
 
         return issues;

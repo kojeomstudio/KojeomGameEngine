@@ -151,3 +151,14 @@ target_link_libraries(Simple3DEngine PRIVATE KojeomEngineLib)
 set_target_properties(Simple3DEngine PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 )
+
+# ---- Test Executable ----
+add_executable(KojeomEngineTests "${CMAKE_CURRENT_SOURCE_DIR}/Tests/UnitTests.cpp")
+target_link_libraries(KojeomEngineTests PRIVATE KojeomEngineLib)
+target_include_directories(KojeomEngineTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+set_target_properties(KojeomEngineTests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
+)
