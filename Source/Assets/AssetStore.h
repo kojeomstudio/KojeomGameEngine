@@ -795,6 +795,20 @@ public:
                 }
             }
 
+            const float* tangentData = nullptr;
+            if (primitive.attributes.count("TANGENT") > 0)
+            {
+                const auto& tanAcc = model.accessors[primitive.attributes.at("TANGENT")];
+                const auto& tanBuf = model.bufferViews[tanAcc.bufferView];
+                size_t tanOffset = tanBuf.byteOffset + tanAcc.byteOffset;
+                size_t requiredTanBytes = tanAcc.count * 4 * sizeof(float);
+                if (tanOffset + requiredTanBytes <= model.buffers[tanBuf.buffer].data.size())
+                {
+                    tangentData = reinterpret_cast<const float*>(
+                        &model.buffers[tanBuf.buffer].data[tanOffset]);
+                }
+            }
+
             int vertexCount = static_cast<int>(posAcc.count);
             uint32_t baseIdx = static_cast<uint32_t>(meshData.vertices.size());
 
@@ -804,6 +818,8 @@ public:
                 v.position = glm::vec3(posData[i * 3], posData[i * 3 + 1], posData[i * 3 + 2]);
                 if (normData) v.normal = glm::vec3(normData[i * 3], normData[i * 3 + 1], normData[i * 3 + 2]);
                 if (uvData) v.uv = glm::vec2(uvData[i * 2], uvData[i * 2 + 1]);
+                if (tangentData)
+                    v.tangent = glm::vec4(tangentData[i * 4], tangentData[i * 4 + 1], tangentData[i * 4 + 2], tangentData[i * 4 + 3]);
                 meshData.vertices.push_back(v);
             }
 
@@ -859,6 +875,9 @@ public:
         }
 
         ComputeBounds(meshData.vertices, meshData.boundsMin, meshData.boundsMax);
+        ValidateDegenerateTriangles(meshData.indices, meshData.vertices);
+        if (!meshData.vertices.empty() && !meshData.indices.empty())
+            ComputeTangents(meshData.vertices, meshData.indices);
 
         if (meshData.vertices.empty())
         {
@@ -954,6 +973,8 @@ private:
                     v.normal = glm::vec3(aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z);
                 if (aiMesh->HasTextureCoords(0))
                     v.uv = glm::vec2(aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y);
+                if (aiMesh->HasTangentsAndBitangents())
+                    v.tangent = glm::vec4(aiMesh->mTangents[i].x, aiMesh->mTangents[i].y, aiMesh->mTangents[i].z, 1.0f);
                 meshData.vertices.push_back(v);
             }
 
@@ -968,6 +989,9 @@ private:
         }
 
         ComputeBounds(meshData.vertices, meshData.boundsMin, meshData.boundsMax);
+        ValidateDegenerateTriangles(meshData.indices, meshData.vertices);
+        if (!meshData.vertices.empty() && !meshData.indices.empty())
+            ComputeTangents(meshData.vertices, meshData.indices);
 
         if (meshData.vertices.empty())
         {
@@ -1484,6 +1508,9 @@ private:
         const auto& mesh = model.meshes[0];
         outMesh.name = mesh.name;
 
+        int materialIndex = -1;
+        bool hasTangentAttribute = false;
+
         for (const auto& primitive : mesh.primitives)
         {
             if (!primitive.attributes.count("POSITION"))
@@ -1491,6 +1518,9 @@ private:
                 KE_LOG_WARN("glTF primitive missing POSITION, skipping");
                 continue;
             }
+
+            if (materialIndex < 0 && primitive.material >= 0)
+                materialIndex = primitive.material;
 
             const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
             const auto& posBuf = model.bufferViews[posAcc.bufferView];
@@ -1531,6 +1561,21 @@ private:
                 }
             }
 
+            const float* tangentData = nullptr;
+            if (primitive.attributes.count("TANGENT") > 0)
+            {
+                const auto& tanAcc = model.accessors[primitive.attributes.at("TANGENT")];
+                const auto& tanBuf = model.bufferViews[tanAcc.bufferView];
+                size_t tanOffset = tanBuf.byteOffset + tanAcc.byteOffset;
+                size_t requiredTanBytes = tanAcc.count * 4 * sizeof(float);
+                if (tanOffset + requiredTanBytes <= model.buffers[tanBuf.buffer].data.size())
+                {
+                    tangentData = reinterpret_cast<const float*>(
+                        &model.buffers[tanBuf.buffer].data[tanOffset]);
+                    hasTangentAttribute = true;
+                }
+            }
+
             int vertexCount = static_cast<int>(posAcc.count);
             uint32_t baseIdx = static_cast<uint32_t>(outMesh.vertices.size());
 
@@ -1540,6 +1585,8 @@ private:
                 v.position = glm::vec3(posData[i * 3], posData[i * 3 + 1], posData[i * 3 + 2]);
                 if (normData) v.normal = glm::vec3(normData[i * 3], normData[i * 3 + 1], normData[i * 3 + 2]);
                 if (uvData) v.uv = glm::vec2(uvData[i * 2], uvData[i * 2 + 1]);
+                if (tangentData)
+                    v.tangent = glm::vec4(tangentData[i * 4], tangentData[i * 4 + 1], tangentData[i * 4 + 2], tangentData[i * 4 + 3]);
                 outMesh.vertices.push_back(v);
             }
 
@@ -1597,7 +1644,7 @@ private:
         ComputeBounds(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
         ValidateDegenerateTriangles(outMesh.indices, outMesh.vertices);
 
-        if (!outMesh.vertices.empty() && !outMesh.indices.empty())
+        if (!outMesh.vertices.empty() && !outMesh.indices.empty() && !hasTangentAttribute)
             ComputeTangents(outMesh.vertices, outMesh.indices);
 
         if (outMesh.vertices.empty() || outMesh.indices.empty())

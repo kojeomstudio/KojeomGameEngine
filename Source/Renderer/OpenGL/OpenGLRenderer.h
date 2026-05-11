@@ -2173,9 +2173,12 @@ private:
                     L = lightVec / dist;
                     float distSq = dist * dist;
                     float cutoffRadius = uPointLightRanges[i];
-                    float attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * distSq);
-                    float cutoffFade = 1.0 - smoothstep(cutoffRadius * 0.8, cutoffRadius, dist);
-                    attenuation *= cutoffFade;
+                    float constant = 1.0;
+                    float linear = 2.0 / cutoffRadius;
+                    float quadratic = 1.0 / (cutoffRadius * cutoffRadius);
+                    float attenuation = 1.0 / (constant + linear * dist + quadratic * distSq);
+                    float cutoffFade = 1.0 - smoothstep(cutoffRadius * 0.7, cutoffRadius, dist);
+                    attenuation *= cutoffFade * cutoffFade;
                     radiance = uPointLightColors[i] * uPointLightIntensities[i] * attenuation;
                     Lo += CalcLighting(L, radiance, N, V, albedo, 0.0);
                 }
@@ -2187,13 +2190,21 @@ private:
                 float hemisphere = 0.5 + 0.5 * N.y;
                 vec3 hemisphereColor = mix(uAmbientGroundColor, uAmbientColor, hemisphere);
 
-                vec3 irradiance = hemisphereColor * (0.5 + 0.5 * max(dot(N, vec3(0.0, 1.0, 0.0)), 0.0));
-                irradiance += uAmbientColor * 0.3 * max(dot(N, normalize(-uLightDirection)), 0.0);
+                vec3 skyUp = uAmbientColor * 1.2;
+                vec3 skyHorizon = uAmbientColor * 0.8;
+                vec3 skyDown = uAmbientGroundColor * 0.6;
+                float skyFactor = hemisphere;
+                vec3 irradiance;
+                if (skyFactor > 0.5)
+                    irradiance = mix(skyHorizon, skyUp, (skyFactor - 0.5) * 2.0);
+                else
+                    irradiance = mix(skyDown, skyHorizon, skyFactor * 2.0);
+                irradiance += uAmbientColor * 0.2 * max(dot(N, normalize(-uLightDirection)), 0.0);
                 vec3 diffuseAmbient = irradiance * kD * albedo * ao;
 
                 vec2 brdf = texture(uBRDFLUT, vec2(NdotV, roughness)).rg;
                 vec3 specularAmbient = F * brdf.x + brdf.y;
-                vec3 ambient = diffuseAmbient + specularAmbient * hemisphereColor * ao;
+                vec3 ambient = diffuseAmbient + specularAmbient * irradiance * ao * 0.5;
 
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
                 if (uUseEmissiveTexture)
@@ -2228,6 +2239,7 @@ private:
             out vec3 vWorldPos;
             out vec3 vNormal;
             out vec2 vTexCoord;
+            out vec4 vTangent;
 
             void main()
             {
@@ -2241,12 +2253,19 @@ private:
                     weights.w * uBoneMatrices[boneIdx.w];
 
                 vec4 skinnedPos = skinMatrix * vec4(aPosition, 1.0);
-                vec4 skinnedNormal = skinMatrix * vec4(aNormal, 0.0);
+                vec3 skinnedNormal = mat3(skinMatrix) * aNormal;
 
                 vec4 worldPos = uModel * skinnedPos;
                 vWorldPos = worldPos.xyz;
-                vNormal = uNormalMatrix * skinnedNormal.xyz;
+                vNormal = normalize(uNormalMatrix * skinnedNormal);
                 vTexCoord = aTexCoord;
+
+                vec3 tangent = normalize(cross(vNormal, vec3(0.0, 1.0, 0.0)));
+                float dotCheck = abs(dot(vNormal, vec3(0.0, 1.0, 0.0)));
+                if (dotCheck > 0.999)
+                    tangent = normalize(cross(vNormal, vec3(1.0, 0.0, 0.0)));
+                vTangent = vec4(tangent, 1.0);
+
                 gl_Position = uViewProjection * worldPos;
             }
         )";

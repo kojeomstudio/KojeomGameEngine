@@ -359,7 +359,7 @@ public:
             if (!skelMesh) continue;
 
             std::vector<float> flatVerts;
-            flatVerts.reserve(skelMesh->vertices.size() * 14);
+            flatVerts.reserve(skelMesh->vertices.size() * 18);
             for (const auto& v : skelMesh->vertices)
             {
                 flatVerts.insert(flatVerts.end(),
@@ -368,7 +368,8 @@ public:
                       v.uv.x, v.uv.y,
                       v.boneWeights.x, v.boneWeights.y, v.boneWeights.z, v.boneWeights.w,
                       static_cast<float>(v.boneIndices.x), static_cast<float>(v.boneIndices.y),
-                      static_cast<float>(v.boneIndices.z), static_cast<float>(v.boneIndices.w) });
+                      static_cast<float>(v.boneIndices.z), static_cast<float>(v.boneIndices.w),
+                      1.0f, 0.0f, 0.0f, 1.0f });
             }
 
             AssetHandle gpuHandle = m_renderer->UploadSkinnedMesh(flatVerts, skelMesh->indices);

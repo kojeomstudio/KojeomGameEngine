@@ -89,7 +89,7 @@ public:
     {
         if (vertices.empty() || indices.empty()) return INVALID_HANDLE;
 
-        size_t vertexCount = vertices.size() / 14;
+        size_t vertexCount = vertices.size() / 18;
         for (auto idx : indices)
         {
             if (idx >= vertexCount)
@@ -118,7 +118,7 @@ public:
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t),
             indices.data(), GL_STATIC_DRAW);
 
-        int stride = 14 * static_cast<int>(sizeof(float));
+        int stride = 18 * static_cast<int>(sizeof(float));
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, nullptr);
         glEnableVertexAttribArray(1);
@@ -133,6 +133,9 @@ public:
         glEnableVertexAttribArray(4);
         glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, stride,
             reinterpret_cast<void*>(12 * sizeof(float)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, stride,
+            reinterpret_cast<void*>(16 * sizeof(float)));
 
         glBindVertexArray(0);
 
