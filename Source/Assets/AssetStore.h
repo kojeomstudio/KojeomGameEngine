@@ -149,27 +149,28 @@ public:
         auto it = m_meshPaths.find(path);
         if (it != m_meshPaths.end()) return it->second;
 
-        std::string ext = FileSystem::GetExtension(path);
+        std::string resolvedPath = FileSystem::ResolvePathCaseInsensitive(path);
+        std::string ext = FileSystem::GetExtension(resolvedPath);
         MeshData meshData;
         bool loaded = false;
 
         if (ext == ".obj")
-            loaded = LoadOBJMesh(path, meshData);
+            loaded = LoadOBJMesh(resolvedPath, meshData);
         else if (ext == ".gltf" || ext == ".glb")
-            loaded = LoadGLTFStaticMesh(path, meshData);
+            loaded = LoadGLTFStaticMesh(resolvedPath, meshData);
         else if (ext == ".fbx" || ext == ".FBX")
         {
-            return LoadFBXInternalLocked(path);
+            return LoadFBXInternalLocked(resolvedPath);
         }
         else
         {
-            KE_LOG_ERROR("Unsupported mesh format: {}", path);
+            KE_LOG_ERROR("Unsupported mesh format: {}", resolvedPath);
             return INVALID_HANDLE;
         }
 
         if (!loaded)
         {
-            KE_LOG_ERROR("Failed to load mesh: {}", path);
+            KE_LOG_ERROR("Failed to load mesh: {}", resolvedPath);
             return INVALID_HANDLE;
         }
 
@@ -177,7 +178,7 @@ public:
         m_meshPaths[path] = handle;
         m_meshes[handle] = std::move(meshData);
         KE_LOG_INFO("Loaded mesh: {} ({} vertices, {} indices)",
-            path, m_meshes[handle].vertices.size(), m_meshes[handle].indices.size());
+            resolvedPath, m_meshes[handle].vertices.size(), m_meshes[handle].indices.size());
         return handle;
     }
 
@@ -222,7 +223,8 @@ public:
         auto it = m_texturePaths.find(path);
         if (it != m_texturePaths.end()) return it->second;
 
-        if (!FileSystem::FileExists(path))
+        std::string resolvedPath = FileSystem::ResolvePathCaseInsensitive(path);
+        if (!FileSystem::FileExists(resolvedPath))
         {
             KE_LOG_ERROR("Texture file not found: {}", path);
             return INVALID_HANDLE;
@@ -230,11 +232,11 @@ public:
 
         TextureData texData;
         stbi_set_flip_vertically_on_load(true);
-        uint8_t* data = stbi_load(path.c_str(), &texData.width, &texData.height,
+        uint8_t* data = stbi_load(resolvedPath.c_str(), &texData.width, &texData.height,
             &texData.channels, 0);
         if (!data)
         {
-            KE_LOG_ERROR("Failed to load texture: {} - {}", path, stbi_failure_reason());
+            KE_LOG_ERROR("Failed to load texture: {} - {}", resolvedPath, stbi_failure_reason());
             return INVALID_HANDLE;
         }
 
@@ -242,7 +244,7 @@ public:
             texData.channels > 4)
         {
             KE_LOG_ERROR("Invalid texture dimensions/channels: {} ({}x{}, {}ch)",
-                path, texData.width, texData.height, texData.channels);
+                resolvedPath, texData.width, texData.height, texData.channels);
             stbi_image_free(data);
             return INVALID_HANDLE;
         }
@@ -251,19 +253,19 @@ public:
             static_cast<size_t>(texData.height) * static_cast<size_t>(texData.channels);
         if (pixelCount > static_cast<size_t>(256) * 1024 * 1024)
         {
-            KE_LOG_ERROR("Texture too large: {} ({} pixels)", path, pixelCount);
+            KE_LOG_ERROR("Texture too large: {} ({} pixels)", resolvedPath, pixelCount);
             stbi_image_free(data);
             return INVALID_HANDLE;
         }
 
         texData.pixels.assign(data, data + pixelCount);
-        texData.path = path;
+        texData.path = resolvedPath;
         stbi_image_free(data);
 
         AssetHandle handle = m_nextHandle++;
         m_texturePaths[path] = handle;
         m_textures[handle] = std::move(texData);
-        KE_LOG_INFO("Loaded texture: {} ({}x{}, {} channels)", path,
+        KE_LOG_INFO("Loaded texture: {} ({}x{}, {} channels)", resolvedPath,
             m_textures[handle].width, m_textures[handle].height, m_textures[handle].channels);
         return handle;
     }
@@ -317,15 +319,23 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
+        if (!FileSystem::ValidatePath(imagePath))
+        {
+            KE_LOG_ERROR("Path validation failed for heightmap: {}", imagePath);
+            return INVALID_HANDLE;
+        }
+
         auto it = m_terrainPaths.find(imagePath);
         if (it != m_terrainPaths.end()) return it->second;
 
+        std::string resolvedPath = FileSystem::ResolvePathCaseInsensitive(imagePath);
+
         int imgW, imgH, imgChannels;
         stbi_set_flip_vertically_on_load(false);
-        uint8_t* data = stbi_load(imagePath.c_str(), &imgW, &imgH, &imgChannels, 1);
+        uint8_t* data = stbi_load(resolvedPath.c_str(), &imgW, &imgH, &imgChannels, 1);
         if (!data)
         {
-            KE_LOG_ERROR("Failed to load heightmap: {}", imagePath);
+            KE_LOG_ERROR("Failed to load heightmap: {}", resolvedPath);
             return INVALID_HANDLE;
         }
 

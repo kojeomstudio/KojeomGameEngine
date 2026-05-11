@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <algorithm>
 #include <sys/stat.h>
+#include <dirent.h>
 
 namespace Kojeom
 {
@@ -165,6 +166,71 @@ public:
             }
         }
         return true;
+    }
+
+    static std::string ResolvePathCaseInsensitive(const std::string& path)
+    {
+        if (path.empty()) return path;
+        if (FileExists(path)) return path;
+
+        std::string normalized = NormalizePath(path);
+        std::vector<std::string> parts;
+        std::istringstream iss(normalized);
+        std::string part;
+        while (std::getline(iss, part, '/'))
+        {
+            if (!part.empty())
+                parts.push_back(part);
+        }
+
+        std::string resolved;
+        for (size_t i = 0; i < parts.size(); ++i)
+        {
+            if (i > 0 || (normalized.size() > 0 && normalized[0] == '/'))
+                resolved += "/";
+            else
+                resolved = ".";
+
+            std::string candidate = resolved + parts[i];
+            struct stat st;
+            if (stat(candidate.c_str(), &st) == 0)
+            {
+                resolved = candidate;
+                continue;
+            }
+
+            std::string dirToScan = resolved;
+            if (dirToScan.empty()) dirToScan = ".";
+
+            DIR* dir = opendir(dirToScan.c_str());
+            if (!dir) return path;
+
+            std::string lowerPart = parts[i];
+            std::transform(lowerPart.begin(), lowerPart.end(), lowerPart.begin(),
+                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+            bool found = false;
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != nullptr)
+            {
+                std::string entryName(entry->d_name);
+                std::string lowerEntry = entryName;
+                std::transform(lowerEntry.begin(), lowerEntry.end(), lowerEntry.begin(),
+                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+                if (lowerEntry == lowerPart)
+                {
+                    resolved += (resolved == "." ? "" : "/") + entryName;
+                    found = true;
+                    break;
+                }
+            }
+            closedir(dir);
+
+            if (!found) return path;
+        }
+
+        return resolved;
     }
 };
 }

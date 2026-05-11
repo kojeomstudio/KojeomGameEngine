@@ -179,9 +179,11 @@ public:
             return delta;
         }
 
-        if (m_world) m_world->Tick(delta);
-
-        UploadAnimatorBoneMatrices();
+        if (!m_paused)
+        {
+            if (m_world) m_world->Tick(delta);
+            UploadAnimatorBoneMatrices();
+        }
 
         if (m_renderer && m_world)
         {
@@ -225,6 +227,82 @@ public:
         return true;
     }
 
+    AssetHandle UploadMaterialToGPU(AssetHandle materialHandle)
+    {
+        auto* matData = m_assetStore->GetMaterial(materialHandle);
+        if (!matData) return INVALID_HANDLE;
+
+        AssetHandle albedoTexHandle = INVALID_HANDLE;
+        AssetHandle normalTexHandle = INVALID_HANDLE;
+        AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE;
+        AssetHandle emissiveTexHandle = INVALID_HANDLE;
+        AssetHandle aoTexHandle = INVALID_HANDLE;
+        bool hasTex = false, hasNormalTex = false, hasMRTex = false;
+        bool hasEmissiveTex = false, hasAOTex = false;
+
+        if (!matData->albedoTexturePath.empty())
+        {
+            auto texHandle = m_assetStore->LoadTexture(matData->albedoTexturePath);
+            auto* texData = m_assetStore->GetTexture(texHandle);
+            if (texData)
+            {
+                albedoTexHandle = m_renderer->UploadTextureSRGB(
+                    texData->width, texData->height, texData->channels, texData->pixels.data());
+                hasTex = true;
+            }
+        }
+        if (!matData->normalTexturePath.empty())
+        {
+            auto texHandle = m_assetStore->LoadTexture(matData->normalTexturePath);
+            auto* texData = m_assetStore->GetTexture(texHandle);
+            if (texData)
+            {
+                normalTexHandle = m_renderer->UploadTexture(
+                    texData->width, texData->height, texData->channels, texData->pixels.data());
+                hasNormalTex = true;
+            }
+        }
+        if (!matData->metallicRoughnessTexturePath.empty())
+        {
+            auto texHandle = m_assetStore->LoadTexture(matData->metallicRoughnessTexturePath);
+            auto* texData = m_assetStore->GetTexture(texHandle);
+            if (texData)
+            {
+                metallicRoughnessTexHandle = m_renderer->UploadTexture(
+                    texData->width, texData->height, texData->channels, texData->pixels.data());
+                hasMRTex = true;
+            }
+        }
+        if (!matData->emissiveTexturePath.empty())
+        {
+            auto texHandle = m_assetStore->LoadTexture(matData->emissiveTexturePath);
+            auto* texData = m_assetStore->GetTexture(texHandle);
+            if (texData)
+            {
+                emissiveTexHandle = m_renderer->UploadTextureSRGB(
+                    texData->width, texData->height, texData->channels, texData->pixels.data());
+                hasEmissiveTex = true;
+            }
+        }
+        if (!matData->aoTexturePath.empty())
+        {
+            auto texHandle = m_assetStore->LoadTexture(matData->aoTexturePath);
+            auto* texData = m_assetStore->GetTexture(texHandle);
+            if (texData)
+            {
+                aoTexHandle = m_renderer->UploadTexture(
+                    texData->width, texData->height, texData->channels, texData->pixels.data());
+                hasAOTex = true;
+            }
+        }
+        return m_renderer->RegisterMaterial(
+            matData->albedo, matData->metallic, matData->roughness,
+            albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
+            matData->emissive, matData->emissiveStrength,
+            metallicRoughnessTexHandle, hasMRTex, matData->ao,
+            emissiveTexHandle, hasEmissiveTex, aoTexHandle, hasAOTex);
+    }
+
     void UploadLoadedMeshesToGPU()
     {
         for (const auto& entity : m_world->GetEntities())
@@ -250,83 +328,9 @@ public:
             mr->meshHandle = gpuHandle;
 
             if (mr->materialHandle != INVALID_HANDLE)
-                {
-                    auto* matData = m_assetStore->GetMaterial(mr->materialHandle);
-                    if (matData)
-                    {
-                        AssetHandle albedoTexHandle = INVALID_HANDLE;
-                        AssetHandle normalTexHandle = INVALID_HANDLE;
-                        AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE;
-                        AssetHandle emissiveTexHandle = INVALID_HANDLE;
-                        AssetHandle aoTexHandle = INVALID_HANDLE;
-                        bool hasTex = false;
-                        bool hasNormalTex = false;
-                        bool hasMRTex = false;
-                        bool hasEmissiveTex = false;
-                        bool hasAOTex = false;
-                        if (!matData->albedoTexturePath.empty())
-                        {
-                            auto texHandle = m_assetStore->LoadTexture(matData->albedoTexturePath);
-                            auto* texData = m_assetStore->GetTexture(texHandle);
-                            if (texData)
-                            {
-                                albedoTexHandle = m_renderer->UploadTextureSRGB(
-                                    texData->width, texData->height, texData->channels, texData->pixels.data());
-                                hasTex = true;
-                            }
-                        }
-                        if (!matData->normalTexturePath.empty())
-                        {
-                            auto texHandle = m_assetStore->LoadTexture(matData->normalTexturePath);
-                            auto* texData = m_assetStore->GetTexture(texHandle);
-                            if (texData)
-                            {
-                                normalTexHandle = m_renderer->UploadTexture(
-                                    texData->width, texData->height, texData->channels, texData->pixels.data());
-                                hasNormalTex = true;
-                            }
-                        }
-                        if (!matData->metallicRoughnessTexturePath.empty())
-                        {
-                            auto texHandle = m_assetStore->LoadTexture(matData->metallicRoughnessTexturePath);
-                            auto* texData = m_assetStore->GetTexture(texHandle);
-                            if (texData)
-                            {
-                                metallicRoughnessTexHandle = m_renderer->UploadTexture(
-                                    texData->width, texData->height, texData->channels, texData->pixels.data());
-                                hasMRTex = true;
-                            }
-                        }
-                        if (!matData->emissiveTexturePath.empty())
-                        {
-                            auto texHandle = m_assetStore->LoadTexture(matData->emissiveTexturePath);
-                            auto* texData = m_assetStore->GetTexture(texHandle);
-                            if (texData)
-                            {
-                                emissiveTexHandle = m_renderer->UploadTextureSRGB(
-                                    texData->width, texData->height, texData->channels, texData->pixels.data());
-                                hasEmissiveTex = true;
-                            }
-                        }
-                        if (!matData->aoTexturePath.empty())
-                        {
-                            auto texHandle = m_assetStore->LoadTexture(matData->aoTexturePath);
-                            auto* texData = m_assetStore->GetTexture(texHandle);
-                            if (texData)
-                            {
-                                aoTexHandle = m_renderer->UploadTexture(
-                                    texData->width, texData->height, texData->channels, texData->pixels.data());
-                                hasAOTex = true;
-                            }
-                        }
-                        mr->materialHandle = m_renderer->RegisterMaterial(
-                            matData->albedo, matData->metallic, matData->roughness,
-                            albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
-                            matData->emissive, matData->emissiveStrength,
-                            metallicRoughnessTexHandle, hasMRTex, matData->ao,
-                            emissiveTexHandle, hasEmissiveTex, aoTexHandle, hasAOTex);
-                    }
-                }
+            {
+                mr->materialHandle = UploadMaterialToGPU(mr->materialHandle);
+            }
         }
 
         for (const auto& entity : m_world->GetEntities())
@@ -367,81 +371,7 @@ public:
 
             if (sm->materialHandle != INVALID_HANDLE)
             {
-                auto* matData = m_assetStore->GetMaterial(sm->materialHandle);
-                if (matData)
-                {
-                    AssetHandle albedoTexHandle = INVALID_HANDLE;
-                    AssetHandle normalTexHandle = INVALID_HANDLE;
-                    AssetHandle metallicRoughnessTexHandle = INVALID_HANDLE;
-                    AssetHandle emissiveTexHandle = INVALID_HANDLE;
-                    AssetHandle aoTexHandle = INVALID_HANDLE;
-                    bool hasTex = false;
-                    bool hasNormalTex = false;
-                    bool hasMRTex = false;
-                    bool hasEmissiveTex = false;
-                    bool hasAOTex = false;
-                    if (!matData->albedoTexturePath.empty())
-                    {
-                        auto texHandle = m_assetStore->LoadTexture(matData->albedoTexturePath);
-                        auto* texData = m_assetStore->GetTexture(texHandle);
-                        if (texData)
-                        {
-                            albedoTexHandle = m_renderer->UploadTextureSRGB(
-                                texData->width, texData->height, texData->channels, texData->pixels.data());
-                            hasTex = true;
-                        }
-                    }
-                    if (!matData->normalTexturePath.empty())
-                    {
-                        auto texHandle = m_assetStore->LoadTexture(matData->normalTexturePath);
-                        auto* texData = m_assetStore->GetTexture(texHandle);
-                        if (texData)
-                        {
-                            normalTexHandle = m_renderer->UploadTexture(
-                                texData->width, texData->height, texData->channels, texData->pixels.data());
-                            hasNormalTex = true;
-                        }
-                    }
-                    if (!matData->metallicRoughnessTexturePath.empty())
-                    {
-                        auto texHandle = m_assetStore->LoadTexture(matData->metallicRoughnessTexturePath);
-                        auto* texData = m_assetStore->GetTexture(texHandle);
-                        if (texData)
-                        {
-                            metallicRoughnessTexHandle = m_renderer->UploadTexture(
-                                texData->width, texData->height, texData->channels, texData->pixels.data());
-                            hasMRTex = true;
-                        }
-                    }
-                    if (!matData->emissiveTexturePath.empty())
-                    {
-                        auto texHandle = m_assetStore->LoadTexture(matData->emissiveTexturePath);
-                        auto* texData = m_assetStore->GetTexture(texHandle);
-                        if (texData)
-                        {
-                            emissiveTexHandle = m_renderer->UploadTextureSRGB(
-                                texData->width, texData->height, texData->channels, texData->pixels.data());
-                            hasEmissiveTex = true;
-                        }
-                    }
-                    if (!matData->aoTexturePath.empty())
-                    {
-                        auto texHandle = m_assetStore->LoadTexture(matData->aoTexturePath);
-                        auto* texData = m_assetStore->GetTexture(texHandle);
-                        if (texData)
-                        {
-                            aoTexHandle = m_renderer->UploadTexture(
-                                texData->width, texData->height, texData->channels, texData->pixels.data());
-                            hasAOTex = true;
-                        }
-                    }
-                    sm->materialHandle = m_renderer->RegisterMaterial(
-                        matData->albedo, matData->metallic, matData->roughness,
-                        albedoTexHandle, hasTex, normalTexHandle, hasNormalTex,
-                        matData->emissive, 1.0f, metallicRoughnessTexHandle, hasMRTex,
-                        matData->ao, emissiveTexHandle, hasEmissiveTex,
-                        aoTexHandle, hasAOTex);
-                }
+                sm->materialHandle = UploadMaterialToGPU(sm->materialHandle);
             }
 
             auto* anim = entity->GetAnimatorComponent();
@@ -461,6 +391,18 @@ public:
 
     bool IsRunning() const { return m_running; }
     void Stop() { m_running = false; }
+
+    bool IsPaused() const { return m_paused; }
+    void SetPaused(bool paused) { m_paused = paused; }
+
+    void RestartScene()
+    {
+        if (!m_world || !m_assetStore) return;
+        m_world->RemoveAllEntities();
+        m_paused = false;
+        m_running = true;
+        m_clock.Reset();
+    }
 
     IWindow* GetWindow() { return m_window.get(); }
     IInput* GetInput() { return m_input.get(); }
@@ -578,6 +520,7 @@ private:
     std::unique_ptr<World> m_world;
     Clock m_clock;
     bool m_running = false;
+    bool m_paused = false;
     AssetHandle m_nextBoneHandle = 0;
 };
 }

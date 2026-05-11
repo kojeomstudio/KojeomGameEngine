@@ -297,6 +297,26 @@ public:
     void SetDebugOverlayVisible(bool visible) { m_showDebugOverlay = visible; }
     bool IsDebugOverlayVisible() const { return m_showDebugOverlay; }
 
+    void UpdateMaterialProperty(AssetHandle materialHandle, const std::string& propertyName, float value) override
+    {
+        auto it = m_materialCache.find(materialHandle);
+        if (it == m_materialCache.end()) return;
+        auto& mat = it->second;
+        if (propertyName == "metallic") mat.metallic = value;
+        else if (propertyName == "roughness") mat.roughness = value;
+        else if (propertyName == "ao") mat.ao = value;
+        else if (propertyName == "emissiveStrength") mat.emissiveStrength = value;
+    }
+
+    void UpdateMaterialProperty(AssetHandle materialHandle, const std::string& propertyName, const Vec3& value) override
+    {
+        auto it = m_materialCache.find(materialHandle);
+        if (it == m_materialCache.end()) return;
+        auto& mat = it->second;
+        if (propertyName == "albedo") mat.albedo = value;
+        else if (propertyName == "emissive") mat.emissive = value;
+    }
+
     void UpdateDebugStats(float frameTimeMs, int entityCount, int loadedAssets)
     {
         m_debugStats.frameTimeMs = frameTimeMs;
@@ -1061,10 +1081,42 @@ private:
     {
         DestroySceneFBO();
         if (width <= 0 || height <= 0) return;
-        OpenGLFramebuffer fboCreator;
-        fboCreator.CreateSceneFBO(width, height, m_sceneColorTexture, m_sceneDepthTexture);
-        m_sceneFBO = fboCreator.GetFBO();
-        fboCreator.Release();
+
+        glGenTextures(1, &m_sceneNormalTexture);
+        glBindTexture(GL_TEXTURE_2D, m_sceneNormalTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, width, height, 0, GL_RG, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glGenTextures(1, &m_sceneColorTexture);
+        glBindTexture(GL_TEXTURE_2D, m_sceneColorTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        m_sceneDepthTexture = m_textureManager.CreateDepthTexture(width, height, GL_DEPTH_COMPONENT24);
+
+        glGenFramebuffers(1, &m_sceneFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_sceneColorTexture, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_sceneNormalTexture, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_sceneDepthTexture, 0);
+
+        GLenum drawBuffers[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+        glDrawBuffers(2, drawBuffers);
+
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+            KE_LOG_ERROR("Scene FBO incomplete: {}", static_cast<int>(status));
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        KE_LOG_INFO("Scene FBO created with normal buffer ({}x{})", width, height);
     }
 
     void DestroySceneFBO()
@@ -1072,6 +1124,7 @@ private:
         if (m_sceneFBO) { glDeleteFramebuffers(1, &m_sceneFBO); m_sceneFBO = 0; }
         if (m_sceneColorTexture) { glDeleteTextures(1, &m_sceneColorTexture); m_sceneColorTexture = 0; }
         if (m_sceneDepthTexture) { glDeleteTextures(1, &m_sceneDepthTexture); m_sceneDepthTexture = 0; }
+        if (m_sceneNormalTexture) { glDeleteTextures(1, &m_sceneNormalTexture); m_sceneNormalTexture = 0; }
     }
 
     void CreateShadowMap(int width, int height)
@@ -1229,6 +1282,11 @@ private:
         glBindTexture(GL_TEXTURE_2D, m_ssaoNoiseTexture);
         GLint noiseLoc = glGetUniformLocation(ssaoProg, "uNoiseTexture");
         if (noiseLoc >= 0) glUniform1i(noiseLoc, 1);
+
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, m_sceneNormalTexture);
+        GLint normalLoc = glGetUniformLocation(ssaoProg, "uNormalTexture");
+        if (normalLoc >= 0) glUniform1i(normalLoc, 2);
 
         Mat4 invVP = glm::inverse(scene.camera.viewProjectionMatrix);
         GLint invVPLoc = glGetUniformLocation(ssaoProg, "uInverseViewProjection");
@@ -1588,6 +1646,7 @@ private:
 
             uniform sampler2D uDepthTexture;
             uniform sampler2D uNoiseTexture;
+            uniform sampler2D uNormalTexture;
             uniform mat4 uViewProjection;
             uniform mat4 uInverseViewProjection;
             uniform vec3 uKernel[64];
@@ -1609,9 +1668,10 @@ private:
 
                 vec3 fragPos = ReconstructWorldPos(vTexCoord, depth);
 
-                vec3 dFdxPos = dFdx(fragPos);
-                vec3 dFdyPos = dFdy(fragPos);
-                vec3 normal = normalize(cross(dFdxPos, dFdyPos));
+                vec2 encodedNormal = texture(uNormalTexture, vTexCoord).rg;
+                vec3 normal = normalize(vec3(encodedNormal * 2.0 - 1.0, 0.0));
+                float nzSq = 1.0 - dot(normal.xy, normal.xy);
+                normal.z = (nzSq > 0.0) ? sqrt(nzSq) : 0.0;
 
                 vec2 noiseScale = uScreenSize / 4.0;
                 vec3 randomVec = texture(uNoiseTexture, vTexCoord * noiseScale).xyz * 2.0 - 1.0;
@@ -1751,7 +1811,8 @@ private:
             uniform float uPointLightRanges[4];
             uniform float uPointLightIntensities[4];
 
-            out vec4 FragColor;
+            layout(location = 0) out vec4 FragColor;
+            layout(location = 1) out vec2 NormalOutput;
 
             const float PI = 3.14159265359;
 
@@ -1906,6 +1967,7 @@ private:
                 vec3 color = ambient + Lo + emissiveContrib;
 
                 FragColor = vec4(color, 1.0);
+                NormalOutput = N.xy * 0.5 + 0.5;
             }
         )";
     }
@@ -2046,6 +2108,7 @@ private:
     GLuint m_sceneFBO = 0;
     GLuint m_sceneColorTexture = 0;
     GLuint m_sceneDepthTexture = 0;
+    GLuint m_sceneNormalTexture = 0;
     GLuint m_shadowMapFBO = 0;
     GLuint m_shadowMapTexture = 0;
     int m_shadowMapSize = 2048;

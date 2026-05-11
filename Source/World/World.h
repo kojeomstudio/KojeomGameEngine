@@ -201,6 +201,13 @@ public:
         m_entityMap.erase(id);
     }
 
+    void RemoveAllEntities()
+    {
+        m_entities.clear();
+        m_entityMap.clear();
+        m_nextEntityId = 1;
+    }
+
     Entity* GetEntity(EntityId id)
     {
         auto it = m_entityMap.find(id);

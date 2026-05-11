@@ -47,6 +47,8 @@ public:
     virtual AssetHandle GetDefaultCubeHandle() const = 0;
     virtual AssetHandle GetDefaultPlaneHandle() const = 0;
     virtual AssetHandle GetDefaultAlbedoTextureHandle() const = 0;
+    virtual void UpdateMaterialProperty(AssetHandle materialHandle, const std::string& propertyName, float value) = 0;
+    virtual void UpdateMaterialProperty(AssetHandle materialHandle, const std::string& propertyName, const Vec3& value) = 0;
 };
 
 class Renderer
@@ -185,6 +187,16 @@ public:
     }
 
     IRendererBackend* GetBackend() { return m_backend.get(); }
+
+    void UpdateMaterialProperty(AssetHandle materialHandle, const std::string& propertyName, float value)
+    {
+        if (m_backend) m_backend->UpdateMaterialProperty(materialHandle, propertyName, value);
+    }
+
+    void UpdateMaterialProperty(AssetHandle materialHandle, const std::string& propertyName, const Vec3& value)
+    {
+        if (m_backend) m_backend->UpdateMaterialProperty(materialHandle, propertyName, value);
+    }
 
 private:
     std::unique_ptr<IRendererBackend> m_backend;
