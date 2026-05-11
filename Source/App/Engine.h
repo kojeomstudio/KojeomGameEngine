@@ -158,6 +158,7 @@ public:
     {
         if (!m_running && !m_window && !m_renderer) return;
         m_running = false;
+        if (m_world) m_world->StopAllBehaviors(this);
         m_world.reset();
         m_assetStore.reset();
         m_renderer.reset();
@@ -181,7 +182,11 @@ public:
 
         if (!m_paused)
         {
-            if (m_world) m_world->Tick(delta);
+            if (m_world)
+            {
+                m_world->Tick(delta);
+                m_world->TickBehaviors(this, delta);
+            }
             UploadAnimatorBoneMatrices();
         }
 

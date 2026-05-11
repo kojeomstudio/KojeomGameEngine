@@ -30,6 +30,16 @@ public:
         if (vertices.empty() || indices.empty()) return INVALID_HANDLE;
         if (vertexStride < 3) return INVALID_HANDLE;
 
+        size_t vertexCount = vertices.size() / static_cast<size_t>(vertexStride);
+        for (auto idx : indices)
+        {
+            if (idx >= vertexCount)
+            {
+                KE_LOG_ERROR("Mesh upload rejected: index {} exceeds vertex count {}", idx, vertexCount);
+                return INVALID_HANDLE;
+            }
+        }
+
         AssetHandle handle = (preassignedHandle != INVALID_HANDLE) ? preassignedHandle : GenerateHandle();
 
         GLMeshData mesh{};
@@ -78,6 +88,16 @@ public:
         const std::vector<uint32_t>& indices, AssetHandle preassignedHandle)
     {
         if (vertices.empty() || indices.empty()) return INVALID_HANDLE;
+
+        size_t vertexCount = vertices.size() / 14;
+        for (auto idx : indices)
+        {
+            if (idx >= vertexCount)
+            {
+                KE_LOG_ERROR("Skinned mesh upload rejected: index {} exceeds vertex count {}", idx, vertexCount);
+                return INVALID_HANDLE;
+            }
+        }
 
         AssetHandle handle = (preassignedHandle != INVALID_HANDLE) ? preassignedHandle : GenerateHandle();
 

@@ -120,6 +120,7 @@ public:
         DestroyBloomFBOs();
         DestroyShadowMap();
         DestroySSAO();
+        DestroyFXAA();
 
         m_context.Shutdown();
         KE_LOG_INFO("OpenGL Renderer shutdown");
@@ -133,6 +134,7 @@ public:
         CreateSceneFBO(width, height);
         CreateBloomFBOs(width, height);
         CreateSSAOFBOs(width, height);
+        CreateFXAAFBO(width, height);
     }
 
     void BeginFrame() override
@@ -161,6 +163,7 @@ public:
         m_context.BindDefaultFramebuffer();
         RenderSSAO(scene);
         RenderBloom();
+        RenderFXAA();
         RenderPostProcess();
 
         RenderDebugOverlay();
@@ -354,6 +357,7 @@ private:
 
         CreateBloomShaders();
         CreateSSAOShaders();
+        CreateFXASShader();
         return true;
     }
 
@@ -402,6 +406,7 @@ private:
             m_pbrUniforms.emissiveTexture = cache(pbr, "uEmissiveTexture");
             m_pbrUniforms.useAOTexture = cache(pbr, "uUseAOTexture");
             m_pbrUniforms.aoTexture = cache(pbr, "uAOTexture");
+            m_cascadeSplitLoc = cache(pbr, "uCascadeSplitDistances");
         }
 
         GLuint skinned = m_shaderManager.GetProgram("skinned");
@@ -603,9 +608,12 @@ private:
 
         if (m_pbrUniforms.shadowMap >= 0) glUniform1i(m_pbrUniforms.shadowMap, 2);
         if (m_pbrUniforms.lightSpaceMatrix >= 0)
-            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
+            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadowMapTexture);
+
+        if (m_cascadeSplitLoc >= 0)
+            glUniform3f(m_cascadeSplitLoc, m_cascadeSplitDistances[0], m_cascadeSplitDistances[1], m_cascadeSplitDistances[2]);
 
         if (m_pbrUniforms.brdfLUT >= 0 && m_brdfLUT)
         {
@@ -658,6 +666,159 @@ private:
         glUseProgram(0);
     }
 
+    void RenderFXAA()
+    {
+        GLuint fxaaProg = m_shaderManager.GetProgram("fxaa");
+        if (!fxaaProg || !m_fxaaEnabled) return;
+
+        if (!m_fxaaFBO)
+            CreateFXAAFBO(m_windowWidth, m_windowHeight);
+
+        m_bufferManager.CreateScreenQuad(m_screenQuadVAO, m_screenQuadVBO);
+        m_context.EnableDepthTest(false);
+
+        m_context.BindFramebuffer(m_fxaaFBO);
+        m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
+        m_context.ClearColor();
+
+        glUseProgram(fxaaProg);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_sceneColorTexture);
+        GLint sceneTexLoc = glGetUniformLocation(fxaaProg, "uSceneTexture");
+        if (sceneTexLoc >= 0) glUniform1i(sceneTexLoc, 0);
+        GLint screenSizeLoc = glGetUniformLocation(fxaaProg, "uScreenSize");
+        if (screenSizeLoc >= 0)
+            glUniform2f(screenSizeLoc, 1.0f / static_cast<float>(m_windowWidth), 1.0f / static_cast<float>(m_windowHeight));
+
+        m_bufferManager.DrawScreenQuad(m_screenQuadVAO);
+
+        GLuint temp = m_sceneColorTexture;
+        m_sceneColorTexture = m_fxaaColorTexture;
+        m_fxaaColorTexture = temp;
+
+        m_context.BindDefaultFramebuffer();
+        m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
+        glUseProgram(0);
+        m_context.EnableDepthTest(true);
+    }
+
+    void CreateFXAAFBO(int width, int height)
+    {
+        DestroyFXAA();
+        if (width <= 0 || height <= 0) return;
+
+        glGenTextures(1, &m_fxaaColorTexture);
+        glBindTexture(GL_TEXTURE_2D, m_fxaaColorTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glGenFramebuffers(1, &m_fxaaFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_fxaaFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_fxaaColorTexture, 0);
+
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+            KE_LOG_ERROR("FXAA FBO incomplete: {}", static_cast<int>(status));
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void DestroyFXAA()
+    {
+        if (m_fxaaFBO) { glDeleteFramebuffers(1, &m_fxaaFBO); m_fxaaFBO = 0; }
+        if (m_fxaaColorTexture) { glDeleteTextures(1, &m_fxaaColorTexture); m_fxaaColorTexture = 0; }
+    }
+
+    void CreateFXASShader()
+    {
+        const char* screenVertSrc = R"(
+            #version 450 core
+            layout(location = 0) in vec2 aPosition;
+            layout(location = 1) in vec2 aTexCoord;
+            out vec2 vTexCoord;
+            void main()
+            {
+                vTexCoord = aTexCoord;
+                gl_Position = vec4(aPosition, 0.0, 1.0);
+            }
+        )";
+
+        const char* fxaaFrag = R"(
+            #version 450 core
+            in vec2 vTexCoord;
+            out vec4 FragColor;
+
+            uniform sampler2D uSceneTexture;
+            uniform vec2 uScreenSize;
+
+            #define FXAA_QUALITY__PS 5
+            #define FXAA_QUALITY__P0 1.0
+            #define FXAA_QUALITY__P1 1.5
+            #define FXAA_QUALITY__P2 2.0
+            #define FXAA_QUALITY__P3 4.0
+            #define FXAA_QUALITY__P4 12.0
+
+            void main()
+            {
+                vec2 posM = vTexCoord;
+                vec4 rgbyM = texture(uSceneTexture, posM);
+                float lumaM = dot(rgbyM.rgb, vec3(0.2126, 0.7152, 0.0722));
+
+                float lumaN = dot(texture(uSceneTexture, posM + vec2(0.0, -uScreenSize.y)).rgb, vec3(0.2126, 0.7152, 0.0722));
+                float lumaS = dot(texture(uSceneTexture, posM + vec2(0.0,  uScreenSize.y)).rgb, vec3(0.2126, 0.7152, 0.0722));
+                float lumaW = dot(texture(uSceneTexture, posM + vec2(-uScreenSize.x, 0.0)).rgb, vec3(0.2126, 0.7152, 0.0722));
+                float lumaE = dot(texture(uSceneTexture, posM + vec2( uScreenSize.x, 0.0)).rgb, vec3(0.2126, 0.7152, 0.0722));
+
+                float lumaNS = lumaN + lumaS;
+                float lumaWE = lumaW + lumaE;
+                float edgeHorz1 = abs(lumaN - lumaS) * 2.0 + abs(lumaM - lumaE);
+                float edgeVert1 = abs(lumaE - lumaW) * 2.0 + abs(lumaM - lumaN);
+
+                bool horzSpan = edgeHorz1 >= edgeVert1;
+                float contrast = max(abs(lumaNS - 2.0 * lumaM), abs(lumaWE - 2.0 * lumaM));
+                if (contrast < 0.0312)
+                {
+                    FragColor = rgbyM;
+                    return;
+                }
+
+                float lengthSpan = horzSpan ? uScreenSize.y : uScreenSize.x;
+                vec2 dir = horzSpan ? vec2(0.0, 1.0) : vec2(1.0, 0.0);
+                float sign = horzSpan ?
+                    (lumaN - lumaS) :
+                    (lumaE - lumaW);
+                dir = dir * (sign < 0.0 ? -1.0 : 1.0);
+
+                float lumaEnd1 = dot(texture(uSceneTexture, posM + dir * lengthSpan * 0.5).rgb, vec3(0.2126, 0.7152, 0.0722));
+                float lumaEnd2 = dot(texture(uSceneTexture, posM - dir * lengthSpan * 0.5).rgb, vec3(0.2126, 0.7152, 0.0722));
+                lumaEnd1 -= lumaM;
+                lumaEnd2 -= lumaM;
+
+                bool done1 = abs(lumaEnd1) >= contrast;
+                bool done2 = abs(lumaEnd2) >= contrast;
+                if (done1 && done2)
+                {
+                    FragColor = rgbyM;
+                    return;
+                }
+
+                float spanLength = 0.0;
+                if (!done1) spanLength += FXAA_QUALITY__P1 / lengthSpan;
+                if (!done2) spanLength += FXAA_QUALITY__P1 / lengthSpan;
+
+                float subpixelOffset = clamp(0.5 + spanLength * 0.5, 0.0, 1.0) * 0.5;
+                FragColor = texture(uSceneTexture, posM + dir * subpixelOffset * lengthSpan);
+            }
+        )";
+
+        GLuint prog = m_shaderManager.CreateProgram(screenVertSrc, fxaaFrag);
+        if (prog) m_shaderManager.AddShader("fxaa", prog);
+    }
+
     void RenderSkinnedMeshes(const RenderScene& scene)
     {
         GLuint skinnedProg = m_shaderManager.GetProgram("skinned");
@@ -668,9 +829,9 @@ private:
 
         if (m_skinnedUniforms.shadowMap >= 0) glUniform1i(m_skinnedUniforms.shadowMap, 2);
         if (m_skinnedUniforms.lightSpaceMatrix >= 0)
-            glUniformMatrix4fv(m_skinnedUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
+            glUniformMatrix4fv(m_skinnedUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadowMapTexture);
 
         if (m_skinnedUniforms.brdfLUT >= 0 && m_brdfLUT)
         {
@@ -741,9 +902,9 @@ private:
 
         if (m_pbrUniforms.shadowMap >= 0) glUniform1i(m_pbrUniforms.shadowMap, 2);
         if (m_pbrUniforms.lightSpaceMatrix >= 0)
-            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
+            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, m_shadowMapTexture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadowMapTexture);
 
         auto terrainFrustum = ExtractFrustumPlanes(scene.camera.viewProjectionMatrix);
 
@@ -786,108 +947,134 @@ private:
         if (m_shadowMapFBO == 0)
             CreateShadowMap(2048, 2048);
 
-        Vec3 sceneMin(std::numeric_limits<float>::max());
-        Vec3 sceneMax(std::numeric_limits<float>::lowest());
-
-        auto expandBounds = [&](const Mat4& worldMatrix, const Vec3& localCenter, float localRadius)
-        {
-            if (localRadius <= 0.0f) return;
-            for (int dx = -1; dx <= 1; dx += 2)
-                for (int dy = -1; dy <= 1; dy += 2)
-                    for (int dz = -1; dz <= 1; dz += 2)
-                    {
-                        Vec3 corner = localCenter + localRadius * Vec3(static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dz));
-                        Vec3 worldCorner = Vec3(worldMatrix * Vec4(corner, 1.0f));
-                        sceneMin = glm::min(sceneMin, worldCorner);
-                        sceneMax = glm::max(sceneMax, worldCorner);
-                    }
-        };
-
-        for (const auto& cmd : scene.staticDrawCommands)
-            expandBounds(cmd.worldMatrix, cmd.boundsCenter, cmd.boundsRadius);
-        for (const auto& cmd : scene.terrainDrawCommands)
-            expandBounds(cmd.worldMatrix, cmd.boundsCenter, cmd.boundsRadius);
-        for (const auto& cmd : scene.skinnedDrawCommands)
-        {
-            if (cmd.boundsRadius > 0.0f)
-                expandBounds(cmd.worldMatrix, cmd.boundsCenter, cmd.boundsRadius);
-            else
-            {
-                Vec3 skinnedCenter = Vec3(cmd.worldMatrix * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-                sceneMin = glm::min(sceneMin, skinnedCenter - Vec3(2.0f));
-                sceneMax = glm::max(sceneMax, skinnedCenter + Vec3(2.0f));
-            }
-        }
-
-        if (scene.staticDrawCommands.empty() && scene.terrainDrawCommands.empty() && scene.skinnedDrawCommands.empty())
-        {
-            sceneMin = Vec3(-10.0f);
-            sceneMax = Vec3(10.0f);
-        }
-
-        Vec3 center = (sceneMin + sceneMax) * 0.5f;
-        Vec3 extents = sceneMax - sceneMin;
-        float maxExtent = std::max({ extents.x, extents.y, extents.z }) * 0.5f;
-        float shadowRange = std::max(maxExtent, 10.0f) + 10.0f;
-
-        Mat4 lightProj = glm::ortho(-shadowRange, shadowRange, -shadowRange, shadowRange, 0.1f, shadowRange * 2.0f);
-        Mat4 lightView = glm::lookAt(-scene.light.direction * shadowRange + center, center, Vec3(0.0f, 1.0f, 0.0f));
-        m_lightSpaceMatrix = lightProj * lightView;
+        ComputeShadowCascades(scene);
 
         m_context.SetViewport(0, 0, m_shadowMapSize, m_shadowMapSize);
-        m_context.BindFramebuffer(m_shadowMapFBO);
-        m_context.ClearDepth();
 
-        glUseProgram(shadowProg);
-        GLint lightSpaceLoc = glGetUniformLocation(shadowProg, "uLightSpaceMatrix");
-        if (lightSpaceLoc >= 0)
-            glUniformMatrix4fv(lightSpaceLoc, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
-
-        GLint modelLoc = glGetUniformLocation(shadowProg, "uModel");
-
-        for (const auto& cmd : scene.staticDrawCommands)
+        for (int cascade = 0; cascade < SHADOW_CASCADE_COUNT; ++cascade)
         {
-            if (modelLoc >= 0)
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
-            const GLMeshData* mesh = m_bufferManager.GetMesh(cmd.meshHandle);
-            if (!mesh) mesh = &m_defaultMesh;
-            if (mesh && mesh->vao) m_bufferManager.DrawMesh(*mesh);
-        }
+            glBindFramebuffer(GL_FRAMEBUFFER, m_shadowMapFBO);
+            glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_shadowMapTexture, 0, cascade);
+            m_context.ClearDepth();
 
-        for (const auto& cmd : scene.terrainDrawCommands)
-        {
-            if (modelLoc >= 0)
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
-            const GLMeshData* mesh = m_bufferManager.GetMesh(cmd.terrainHandle);
-            if (mesh && mesh->vao) m_bufferManager.DrawMesh(*mesh);
-        }
+            glUseProgram(shadowProg);
+            GLint lightSpaceLoc = glGetUniformLocation(shadowProg, "uLightSpaceMatrix");
+            if (lightSpaceLoc >= 0)
+                glUniformMatrix4fv(lightSpaceLoc, 1, GL_FALSE, &m_cascadeLightSpaceMatrices[cascade][0][0]);
 
-        GLuint shadowSkinnedProg = m_shaderManager.GetProgram("shadow_skinned");
-        if (shadowSkinnedProg)
-        {
-            glUseProgram(shadowSkinnedProg);
-            GLint skinnedLightSpaceLoc = glGetUniformLocation(shadowSkinnedProg, "uLightSpaceMatrix");
-            if (skinnedLightSpaceLoc >= 0)
-                glUniformMatrix4fv(skinnedLightSpaceLoc, 1, GL_FALSE, &m_lightSpaceMatrix[0][0]);
-            GLint skinnedModelLoc = glGetUniformLocation(shadowSkinnedProg, "uModel");
+            GLint modelLoc = glGetUniformLocation(shadowProg, "uModel");
 
-            for (const auto& cmd : scene.skinnedDrawCommands)
+            for (const auto& cmd : scene.staticDrawCommands)
             {
-                if (skinnedModelLoc >= 0)
-                    glUniformMatrix4fv(skinnedModelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
-                auto boneIt = m_boneMatricesCache.find(cmd.boneMatricesHandle);
-                if (boneIt != m_boneMatricesCache.end())
-                {
-                    UploadBoneMatricesToUBO(boneIt->second);
-                }
-                const GLMeshData* mesh = m_bufferManager.GetMesh(cmd.skeletalMeshHandle);
+                if (modelLoc >= 0)
+                    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+                const GLMeshData* mesh = m_bufferManager.GetMesh(cmd.meshHandle);
+                if (!mesh) mesh = &m_defaultMesh;
                 if (mesh && mesh->vao) m_bufferManager.DrawMesh(*mesh);
+            }
+
+            for (const auto& cmd : scene.terrainDrawCommands)
+            {
+                if (modelLoc >= 0)
+                    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+                const GLMeshData* mesh = m_bufferManager.GetMesh(cmd.terrainHandle);
+                if (mesh && mesh->vao) m_bufferManager.DrawMesh(*mesh);
+            }
+
+            GLuint shadowSkinnedProg = m_shaderManager.GetProgram("shadow_skinned");
+            if (shadowSkinnedProg && !scene.skinnedDrawCommands.empty())
+            {
+                glUseProgram(shadowSkinnedProg);
+                GLint skinnedLightSpaceLoc = glGetUniformLocation(shadowSkinnedProg, "uLightSpaceMatrix");
+                if (skinnedLightSpaceLoc >= 0)
+                    glUniformMatrix4fv(skinnedLightSpaceLoc, 1, GL_FALSE, &m_cascadeLightSpaceMatrices[cascade][0][0]);
+                GLint skinnedModelLoc = glGetUniformLocation(shadowSkinnedProg, "uModel");
+
+                for (const auto& cmd : scene.skinnedDrawCommands)
+                {
+                    if (skinnedModelLoc >= 0)
+                        glUniformMatrix4fv(skinnedModelLoc, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
+                    auto boneIt = m_boneMatricesCache.find(cmd.boneMatricesHandle);
+                    if (boneIt != m_boneMatricesCache.end())
+                        UploadBoneMatricesToUBO(boneIt->second);
+                    const GLMeshData* mesh = m_bufferManager.GetMesh(cmd.skeletalMeshHandle);
+                    if (mesh && mesh->vao) m_bufferManager.DrawMesh(*mesh);
+                }
             }
         }
 
         m_context.BindDefaultFramebuffer();
         m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
         glUseProgram(0);
+    }
+
+    void ComputeShadowCascades(const RenderScene& scene)
+    {
+        float cascadeSplits[SHADOW_CASCADE_COUNT];
+        float nearP = scene.camera.nearPlane;
+        float farP = scene.camera.farPlane;
+        float clipRange = farP - nearP;
+        float ratio = farP / nearP;
+
+        cascadeSplits[0] = nearP + clipRange * 0.05f;
+        cascadeSplits[1] = nearP + clipRange * 0.15f;
+        cascadeSplits[2] = nearP + clipRange * 0.50f;
+
+        Mat4 invViewProj = glm::inverse(scene.camera.viewProjectionMatrix);
+
+        Vec3 lightDir = glm::normalize(-scene.light.direction);
+
+        for (int cascade = 0; cascade < SHADOW_CASCADE_COUNT; ++cascade)
+        {
+            float splitDist = cascadeSplits[cascade];
+            float prevSplitDist = (cascade == 0) ? nearP : cascadeSplits[cascade - 1];
+
+            Vec3 frustumCorners[8];
+            int cornerIdx = 0;
+            for (int z = 0; z < 2; ++z)
+            {
+                for (int y = -1; y <= 1; y += 2)
+                {
+                    for (int x = -1; x <= 1; x += 2)
+                    {
+                        Vec4 pt = invViewProj * Vec4(static_cast<float>(x), static_cast<float>(y),
+                            (z == 0) ? -1.0f : 1.0f, 1.0f);
+                        frustumCorners[cornerIdx++] = Vec3(pt) / pt.w;
+                    }
+                }
+            }
+
+            for (int i = 0; i < 4; ++i)
+            {
+                Vec3 ray = frustumCorners[i + 4] - frustumCorners[i];
+                Vec3 nearCorner = frustumCorners[i] + ray * (prevSplitDist - nearP) / clipRange;
+                Vec3 farCorner = frustumCorners[i] + ray * (splitDist - nearP) / clipRange;
+                frustumCorners[i + 4] = farCorner;
+                frustumCorners[i] = nearCorner;
+            }
+
+            Vec3 center(0.0f);
+            for (int i = 0; i < 8; ++i)
+                center += frustumCorners[i];
+            center /= 8.0f;
+
+            float radius = 0.0f;
+            for (int i = 0; i < 8; ++i)
+            {
+                float dist = glm::length(frustumCorners[i] - center);
+                radius = glm::max(radius, dist);
+            }
+            radius = std::ceil(radius * 16.0f) / 16.0f;
+
+            Vec3 maxExtents(radius);
+            Vec3 minExtents = -maxExtents;
+
+            Mat4 lightView = glm::lookAt(center - lightDir * radius, center, Vec3(0.0f, 1.0f, 0.0f));
+            Mat4 lightProj = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y,
+                -maxExtents.z * 4.0f, maxExtents.z * 4.0f);
+            m_cascadeLightSpaceMatrices[cascade] = lightProj * lightView;
+            m_cascadeSplitDistances[cascade] = (splitDist - nearP) / clipRange;
+        }
     }
 
     void RenderPostProcess()
@@ -1131,9 +1318,22 @@ private:
     {
         DestroyShadowMap();
         m_shadowMapSize = width;
-        m_shadowMapTexture = m_textureManager.CreateShadowMapTexture(width, height);
-        OpenGLFramebuffer fboCreator;
-        m_shadowMapFBO = fboCreator.CreateShadowMapFBO(width, height, m_shadowMapTexture);
+
+        glGenTextures(1, &m_shadowMapTexture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadowMapTexture);
+        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24,
+            width, height, SHADOW_CASCADE_COUNT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+        glGenFramebuffers(1, &m_shadowMapFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_shadowMapFBO);
+        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_shadowMapTexture, 0, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void DestroyShadowMap()
@@ -1617,10 +1817,18 @@ private:
 
     void UploadBoneMatricesToUBO(const std::vector<Mat4>& matrices)
     {
-        if (!m_boneUBO) return;
+        if (!m_boneUBO || matrices.empty()) return;
         GLsizei boneCount = static_cast<GLsizei>(std::min(matrices.size(), static_cast<size_t>(128)));
         GLsizeiptr dataSize = boneCount * sizeof(Mat4);
         glBindBuffer(GL_UNIFORM_BUFFER, m_boneUBO);
+        GLsizeiptr bufferSize = 0;
+        glGetBufferParameteriv(GL_UNIFORM_BUFFER, GL_BUFFER_SIZE, reinterpret_cast<GLint*>(&bufferSize));
+        if (dataSize > bufferSize)
+        {
+            KE_LOG_ERROR("Bone matrix data exceeds UBO size: {} > {}", dataSize, bufferSize);
+            glBindBuffer(GL_UNIFORM_BUFFER, 0);
+            return;
+        }
         glBufferSubData(GL_UNIFORM_BUFFER, 0, dataSize, matrices.data());
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
@@ -1801,7 +2009,8 @@ private:
             uniform sampler2D uAOTexture;
 
             uniform mat4 uLightSpaceMatrix;
-            uniform sampler2D uShadowMap;
+            uniform sampler2DArray uShadowMap;
+            uniform vec3 uCascadeSplitDistances;
 
             uniform sampler2D uBRDFLUT;
 
@@ -1815,25 +2024,51 @@ private:
             layout(location = 1) out vec2 NormalOutput;
 
             const float PI = 3.14159265359;
+            const int SHADOW_CASCADE_COUNT = 3;
 
-            float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+            float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir)
             {
+                vec4 fragPosViewSpace = uViewProjection * vec4(fragPos, 1.0);
+                float depthValue = abs(fragPosViewSpace.z);
+
+                int cascadeIndex = 0;
+                for (int i = 0; i < SHADOW_CASCADE_COUNT - 1; ++i)
+                {
+                    if (depthValue < uCascadeSplitDistances[i])
+                    {
+                        cascadeIndex = i;
+                        break;
+                    }
+                    cascadeIndex = SHADOW_CASCADE_COUNT - 1;
+                }
+
+                vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(fragPos, 1.0);
                 vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
                 projCoords = projCoords * 0.5 + 0.5;
-                if (projCoords.z > 1.0) return 0.0;
+
                 float currentDepth = projCoords.z;
+                if (currentDepth > 1.0) return 0.0;
+
                 float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
+                bias *= 1.0 / (uCascadeSplitDistances[cascadeIndex] * 100.0 + 1.0);
+
                 float shadow = 0.0;
-                vec2 texelSize = 1.0 / textureSize(uShadowMap, 0);
+                vec2 texelSize = 1.0 / vec2(textureSize(uShadowMap, 0));
                 for (int x = -1; x <= 1; ++x)
                 {
                     for (int y = -1; y <= 1; ++y)
                     {
-                        float pcfDepth = texture(uShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+                        float pcfDepth = texture(uShadowMap, vec3(projCoords.xy + vec2(x, y) * texelSize, cascadeIndex)).r;
                         shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
                     }
                 }
                 shadow /= 9.0;
+
+                const float fadeStart = 0.8;
+                const float fadeEnd = 1.0;
+                float cascadeFade = 1.0 - clamp((currentDepth - fadeStart) / (fadeEnd - fadeStart), 0.0, 1.0);
+                shadow *= cascadeFade;
+
                 return shadow;
             }
 
@@ -1924,8 +2159,7 @@ private:
                 vec3 V = normalize(uCameraPos - vWorldPos);
                 float NdotV = max(dot(N, V), 0.0);
 
-                vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(vWorldPos, 1.0);
-                float shadow = ShadowCalculation(fragPosLightSpace, N, normalize(-uLightDirection));
+                float shadow = ShadowCalculation(vWorldPos, N, normalize(-uLightDirection));
 
                 vec3 L = normalize(-uLightDirection);
                 vec3 radiance = uLightColor * uLightIntensity;
@@ -2114,7 +2348,10 @@ private:
     int m_shadowMapSize = 2048;
     GLuint m_screenQuadVAO = 0;
     GLuint m_screenQuadVBO = 0;
-    Mat4 m_lightSpaceMatrix = Mat4(1.0f);
+    static constexpr int SHADOW_CASCADE_COUNT = 3;
+    Mat4 m_cascadeLightSpaceMatrices[3] = {};
+    float m_cascadeSplitDistances[3] = {};
+    GLint m_cascadeSplitLoc = -1;
     int m_windowWidth = 1280;
     int m_windowHeight = 720;
 
@@ -2135,5 +2372,9 @@ private:
     bool m_showDebugOverlay = false;
     DebugOverlay m_debugOverlay;
     RenderStats m_debugStats{};
+
+    GLuint m_fxaaFBO = 0;
+    GLuint m_fxaaColorTexture = 0;
+    bool m_fxaaEnabled = true;
 };
 }

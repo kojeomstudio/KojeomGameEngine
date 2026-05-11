@@ -15,6 +15,7 @@
 #include "Renderer/Renderer.h"
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
+#include "World/NativeBehavior.h"
 
 namespace Kojeom
 {
@@ -22,6 +23,7 @@ using EntityId = uint64_t;
 constexpr EntityId INVALID_ENTITY_ID = 0;
 
 class World;
+class Engine;
 
 struct IComponent
 {
@@ -101,6 +103,38 @@ public:
     TransformComponent* GetTransform() { return &m_transform; }
     const TransformComponent* GetTransform() const { return &m_transform; }
 
+    void SetParent(EntityId parentId) { m_parentId = parentId; }
+    EntityId GetParentId() const { return m_parentId; }
+    bool HasParent() const { return m_parentId != INVALID_ENTITY_ID; }
+
+    void AddChild(EntityId childId) { m_children.push_back(childId); }
+    void RemoveChild(EntityId childId)
+    {
+        m_children.erase(
+            std::remove(m_children.begin(), m_children.end(), childId),
+            m_children.end());
+    }
+    const std::vector<EntityId>& GetChildren() const { return m_children; }
+    bool HasChildren() const { return !m_children.empty(); }
+
+    NativeBehaviorComponent& GetBehaviorComponent() { return m_behaviors; }
+    const NativeBehaviorComponent& GetBehaviorComponent() const { return m_behaviors; }
+
+    Mat4 GetWorldMatrix(const std::unordered_map<EntityId, Entity*>& entityMap) const
+    {
+        Mat4 localMatrix = m_transform.transform.ToMatrix();
+        if (m_parentId != INVALID_ENTITY_ID)
+        {
+            auto it = entityMap.find(m_parentId);
+            if (it != entityMap.end())
+            {
+                Mat4 parentMatrix = it->second->GetWorldMatrix(entityMap);
+                return parentMatrix * localMatrix;
+            }
+        }
+        return localMatrix;
+    }
+
     template<typename T, typename... Args>
     T* AddComponent(Args&&... args)
     {
@@ -116,6 +150,16 @@ public:
         {
             comp->Tick(deltaSeconds);
         }
+    }
+
+    void TickBehaviors(Engine* engine, float deltaSeconds)
+    {
+        m_behaviors.TickBehaviors(this, engine, deltaSeconds);
+    }
+
+    void StopBehaviors(Engine* engine)
+    {
+        m_behaviors.StopBehaviors(this, engine);
     }
 
     CameraComponent* GetCameraComponent()
@@ -173,6 +217,9 @@ private:
     std::string m_name;
     TransformComponent m_transform;
     std::vector<std::unique_ptr<IComponent>> m_components;
+    NativeBehaviorComponent m_behaviors;
+    EntityId m_parentId = INVALID_ENTITY_ID;
+    std::vector<EntityId> m_children;
 };
 
 class World
@@ -194,6 +241,20 @@ public:
 
     void RemoveEntity(EntityId id)
     {
+        auto* entity = GetEntity(id);
+        if (entity)
+        {
+            if (entity->HasParent())
+            {
+                auto* parent = GetEntity(entity->GetParentId());
+                if (parent) parent->RemoveChild(id);
+            }
+            for (EntityId childId : entity->GetChildren())
+            {
+                auto* child = GetEntity(childId);
+                if (child) child->SetParent(INVALID_ENTITY_ID);
+            }
+        }
         m_entities.erase(
             std::remove_if(m_entities.begin(), m_entities.end(),
                 [id](const std::unique_ptr<Entity>& e) { return e->GetId() == id; }),
@@ -214,12 +275,58 @@ public:
         return (it != m_entityMap.end()) ? it->second : nullptr;
     }
 
+    const Entity* GetEntity(EntityId id) const
+    {
+        auto it = m_entityMap.find(id);
+        return (it != m_entityMap.end()) ? it->second : nullptr;
+    }
+
     void Tick(float deltaSeconds)
     {
         for (auto& entity : m_entities)
         {
             entity->Tick(deltaSeconds);
         }
+    }
+
+    void TickBehaviors(Engine* engine, float deltaSeconds)
+    {
+        for (auto& entity : m_entities)
+        {
+            entity->TickBehaviors(engine, deltaSeconds);
+        }
+    }
+
+    void StopAllBehaviors(Engine* engine)
+    {
+        for (auto& entity : m_entities)
+        {
+            entity->StopBehaviors(engine);
+        }
+    }
+
+    bool AttachChild(EntityId parentId, EntityId childId)
+    {
+        auto* parent = GetEntity(parentId);
+        auto* child = GetEntity(childId);
+        if (!parent || !child || parentId == childId) return false;
+        if (child->HasParent())
+        {
+            auto* oldParent = GetEntity(child->GetParentId());
+            if (oldParent) oldParent->RemoveChild(childId);
+        }
+        child->SetParent(parentId);
+        parent->AddChild(childId);
+        return true;
+    }
+
+    void DetachFromParent(EntityId childId)
+    {
+        auto* child = GetEntity(childId);
+        if (!child || !child->HasParent()) return;
+        auto* parent = GetEntity(child->GetParentId());
+        if (parent) parent->RemoveChild(childId);
+        child->SetParent(INVALID_ENTITY_ID);
     }
 
     RenderScene BuildRenderScene() const
@@ -237,13 +344,15 @@ public:
                 scene.camera = cam->cameraData;
             }
 
+            Mat4 worldMat = entity->GetWorldMatrix(m_entityMap);
+
             auto* mr = entity->GetMeshRendererComponent();
             if (mr && mr->meshHandle != INVALID_HANDLE)
             {
                 StaticDrawCommand cmd;
                 cmd.meshHandle = mr->meshHandle;
                 cmd.materialHandle = mr->materialHandle;
-                cmd.worldMatrix = entity->GetTransform()->transform.ToMatrix();
+                cmd.worldMatrix = worldMat;
 
                 if (m_assetStore)
                 {
@@ -264,7 +373,7 @@ public:
                 TerrainDrawCommand cmd;
                 cmd.terrainHandle = tc->terrainHandle;
                 cmd.materialHandle = tc->materialHandle;
-                cmd.worldMatrix = entity->GetTransform()->transform.ToMatrix();
+                cmd.worldMatrix = worldMat;
 
                 if (m_assetStore)
                 {
@@ -293,7 +402,7 @@ public:
                 SkinnedDrawCommand cmd;
                 cmd.skeletalMeshHandle = sm->skeletalMeshHandle;
                 cmd.materialHandle = sm->materialHandle;
-                cmd.worldMatrix = entity->GetTransform()->transform.ToMatrix();
+                cmd.worldMatrix = worldMat;
                 cmd.boneCount = sm->boneCount;
                 if (anim && !anim->cachedSkinMatrices.empty())
                 {
@@ -576,6 +685,24 @@ public:
             }
         }
 
+        for (const auto& entJson : sceneJson["entities"])
+        {
+            if (entJson.contains("parent"))
+            {
+                std::string parentName = entJson["parent"].get<std::string>();
+                std::string childName = entJson.value("name", "Entity");
+                EntityId parentId = INVALID_ENTITY_ID;
+                EntityId childId = INVALID_ENTITY_ID;
+                for (const auto& e : m_entities)
+                {
+                    if (e->GetName() == parentName) parentId = e->GetId();
+                    if (e->GetName() == childName) childId = e->GetId();
+                }
+                if (parentId != INVALID_ENTITY_ID && childId != INVALID_ENTITY_ID)
+                    AttachChild(parentId, childId);
+            }
+        }
+
         result.success = result.errors.empty();
         if (result.success)
             KE_LOG_INFO("Scene loaded: {} ({} entities)", scenePath, result.entityCount);
@@ -624,6 +751,13 @@ public:
         {
             nlohmann::json entJson;
             entJson["name"] = entity->GetName();
+
+            if (entity->HasParent())
+            {
+                auto* parent = GetEntity(entity->GetParentId());
+                if (parent)
+                    entJson["parent"] = parent->GetName();
+            }
 
             auto* transform = entity->GetTransform();
             entJson["transform"]["position"] = {
@@ -731,5 +865,7 @@ private:
     std::optional<LightData> m_defaultLight;
     const AssetStore* m_assetStore = nullptr;
     static AssetStore* s_assetStore;
+
+    friend class Entity;
 };
 }
