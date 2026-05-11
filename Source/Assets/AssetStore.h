@@ -627,13 +627,13 @@ public:
                 }
             }
         }
-        clipData.clip.SetTicksPerSecond(ticksPerSecond);
+        clipData.clip.SetTicksPerSecond(1.0f);
 
         AssetHandle handle = m_nextHandle++;
         m_animationClipPaths[path] = handle;
         m_animationClips[handle] = std::move(clipData);
         KE_LOG_INFO("Loaded animation clip: {} ({} channels, {:.2f}s)",
-            path, clipData.clip.GetChannelCount(), clipData.clip.GetDurationSeconds());
+            path, m_animationClips[handle].clip.GetChannelCount(), m_animationClips[handle].clip.GetDurationSeconds());
         return handle;
     }
 
@@ -772,6 +772,7 @@ public:
         meshData.name = mesh.name;
 
         int materialIndex = -1;
+        bool hasTangentAttribute = false;
 
         for (const auto& primitive : mesh.primitives)
         {
@@ -846,6 +847,7 @@ public:
                 {
                     tangentData = reinterpret_cast<const float*>(
                         &model.buffers[tanBuf.buffer].data[tanOffset]);
+                    hasTangentAttribute = true;
                 }
             }
 
@@ -902,6 +904,22 @@ public:
                         meshData.indices.push_back(baseIdx + idx32[i + 2]);
                     }
                 }
+                else if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+                {
+                    size_t requiredIdxBytes = idxAcc.count * sizeof(uint8_t);
+                    if (idxOffset + requiredIdxBytes > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF index buffer out of bounds: {}", path);
+                        return INVALID_HANDLE;
+                    }
+                    const uint8_t* idx8 = &buf.data[idxOffset];
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    {
+                        meshData.indices.push_back(baseIdx + idx8[i]);
+                        meshData.indices.push_back(baseIdx + idx8[i + 1]);
+                        meshData.indices.push_back(baseIdx + idx8[i + 2]);
+                    }
+                }
             }
             else
             {
@@ -916,7 +934,7 @@ public:
 
         ComputeBounds(meshData.vertices, meshData.boundsMin, meshData.boundsMax);
         ValidateDegenerateTriangles(meshData.indices, meshData.vertices);
-        if (!meshData.vertices.empty() && !meshData.indices.empty())
+        if (!meshData.vertices.empty() && !meshData.indices.empty() && !hasTangentAttribute)
             ComputeTangents(meshData.vertices, meshData.indices);
 
         if (meshData.vertices.empty())
@@ -1669,6 +1687,22 @@ private:
                         outMesh.indices.push_back(baseIdx + idx32[i + 2]);
                     }
                 }
+                else if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+                {
+                    size_t requiredBytes = idxAcc.count * sizeof(uint8_t);
+                    if (idxOffset + requiredBytes > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF index buffer out of bounds: {}", path);
+                        return false;
+                    }
+                    const uint8_t* idx8 = &buf.data[idxOffset];
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    {
+                        outMesh.indices.push_back(baseIdx + idx8[i]);
+                        outMesh.indices.push_back(baseIdx + idx8[i + 1]);
+                        outMesh.indices.push_back(baseIdx + idx8[i + 2]);
+                    }
+                }
             }
             else
             {
@@ -1851,7 +1885,7 @@ private:
                         outMesh.indices.push_back(baseIdx + idx16[i + 2]);
                     }
                 }
-                else
+                else if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
                 {
                     if (idxOffset + idxAcc.count * sizeof(uint32_t) > buf.data.size())
                     {
@@ -1864,6 +1898,21 @@ private:
                         outMesh.indices.push_back(baseIdx + idx32[i]);
                         outMesh.indices.push_back(baseIdx + idx32[i + 1]);
                         outMesh.indices.push_back(baseIdx + idx32[i + 2]);
+                    }
+                }
+                else if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+                {
+                    if (idxOffset + idxAcc.count * sizeof(uint8_t) > buf.data.size())
+                    {
+                        KE_LOG_ERROR("glTF skinned index buffer out of bounds: {}", path);
+                        return false;
+                    }
+                    const uint8_t* idx8 = &buf.data[idxOffset];
+                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    {
+                        outMesh.indices.push_back(baseIdx + idx8[i]);
+                        outMesh.indices.push_back(baseIdx + idx8[i + 1]);
+                        outMesh.indices.push_back(baseIdx + idx8[i + 2]);
                     }
                 }
             }
@@ -2030,6 +2079,6 @@ private:
     std::unordered_map<std::string, AssetHandle> m_terrainPaths;
     std::unordered_map<std::string, AssetHandle> m_skeletonPaths;
     std::unordered_map<std::string, AssetHandle> m_animationClipPaths;
-    std::mutex m_mutex;
+    mutable std::mutex m_mutex;
 };
 }

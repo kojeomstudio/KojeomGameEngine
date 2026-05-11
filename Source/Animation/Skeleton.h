@@ -83,38 +83,49 @@ class Pose
 {
 public:
     Pose() = default;
-    explicit Pose(size_t boneCount) : m_localTransforms(boneCount), m_globalTransforms(boneCount) {}
+    explicit Pose(size_t boneCount) : m_localTransforms(boneCount), m_globalMatrices(boneCount, glm::mat4(1.0f)) {}
 
     void Resize(size_t boneCount)
     {
         m_localTransforms.resize(boneCount);
-        m_globalTransforms.resize(boneCount);
+        m_globalMatrices.resize(boneCount, glm::mat4(1.0f));
     }
 
     size_t GetBoneCount() const { return m_localTransforms.size(); }
 
     BoneTransform& GetLocalTransform(size_t index) { return m_localTransforms[index]; }
     const BoneTransform& GetLocalTransform(size_t index) const { return m_localTransforms[index]; }
-    BoneTransform& GetGlobalTransform(size_t index) { return m_globalTransforms[index]; }
-    const BoneTransform& GetGlobalTransform(size_t index) const { return m_globalTransforms[index]; }
+    BoneTransform& GetGlobalTransform(size_t index) { return m_globalTransformsTRS[index]; }
+    const BoneTransform& GetGlobalTransform(size_t index) const { return m_globalTransformsTRS[index]; }
 
     void ComputeGlobalTransforms(const Skeleton& skeleton)
     {
+        if (m_globalMatrices.size() != m_localTransforms.size())
+            m_globalMatrices.resize(m_localTransforms.size(), glm::mat4(1.0f));
+
         for (size_t i = 0; i < m_localTransforms.size(); ++i)
         {
             const Bone& bone = skeleton.GetBone(i);
+            glm::mat4 localMat = m_localTransforms[i].ToMatrix();
             if (bone.parentIndex == -1)
             {
-                m_globalTransforms[i] = m_localTransforms[i];
+                m_globalMatrices[i] = localMat;
             }
             else
             {
-                glm::mat4 parentMatrix = m_globalTransforms[bone.parentIndex].ToMatrix();
-                m_globalTransforms[i] = BoneTransform{};
-                m_globalTransforms[i].position = glm::vec3(parentMatrix * glm::vec4(m_localTransforms[i].position, 1.0f));
-                m_globalTransforms[i].rotation = m_globalTransforms[bone.parentIndex].rotation * m_localTransforms[i].rotation;
-                m_globalTransforms[i].scale = m_localTransforms[i].scale;
+                m_globalMatrices[i] = m_globalMatrices[bone.parentIndex] * localMat;
             }
+        }
+
+        m_globalTransformsTRS.resize(m_localTransforms.size());
+        for (size_t i = 0; i < m_globalMatrices.size(); ++i)
+        {
+            glm::mat4& m = m_globalMatrices[i];
+            m_globalTransformsTRS[i].position = glm::vec3(m[3]);
+            glm::vec3 scaleX(m[0][0], m[0][1], m[0][2]);
+            glm::vec3 scaleY(m[1][0], m[1][1], m[1][2]);
+            glm::vec3 scaleZ(m[2][0], m[2][1], m[2][2]);
+            m_globalTransformsTRS[i].scale = glm::vec3(glm::length(scaleX), glm::length(scaleY), glm::length(scaleZ));
         }
     }
 
@@ -123,13 +134,14 @@ public:
         std::vector<glm::mat4> matrices(m_localTransforms.size());
         for (size_t i = 0; i < m_localTransforms.size(); ++i)
         {
-            matrices[i] = m_globalTransforms[i].ToMatrix() * skeleton.GetBone(i).inverseBindMatrix;
+            matrices[i] = m_globalMatrices[i] * skeleton.GetBone(i).inverseBindMatrix;
         }
         return matrices;
     }
 
 private:
     std::vector<BoneTransform> m_localTransforms;
-    std::vector<BoneTransform> m_globalTransforms;
+    std::vector<glm::mat4> m_globalMatrices;
+    std::vector<BoneTransform> m_globalTransformsTRS;
 };
 }

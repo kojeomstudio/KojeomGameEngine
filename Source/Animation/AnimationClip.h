@@ -131,6 +131,7 @@ public:
         }
 
         float sampleTime = timeSeconds;
+        if (sampleTime < 0.0f) sampleTime = 0.0f;
         if (sampleTime > clipTime)
         {
             sampleTime = std::fmod(sampleTime, clipTime);
@@ -192,7 +193,7 @@ private:
         if (keys.empty()) return glm::vec3(0.0f);
         if (keys.size() == 1) return keys[0].value;
 
-        size_t idx = 0;
+        size_t idx = keys.size() - 2;
         for (size_t i = 0; i < keys.size() - 1; ++i)
         {
             if (time >= keys[i].time && time < keys[i + 1].time)
@@ -220,7 +221,7 @@ private:
         if (keys.empty()) return glm::vec3(0.0f);
         if (keys.size() == 1) return keys[0].value;
 
-        size_t idx = 0;
+        size_t idx = keys.size() - 2;
         for (size_t i = 0; i < keys.size() - 1; ++i)
         {
             if (time >= keys[i].time && time < keys[i + 1].time)
@@ -237,7 +238,7 @@ private:
         if (keys.empty()) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
         if (keys.size() == 1) return keys[0].value;
 
-        size_t idx = 0;
+        size_t idx = keys.size() - 2;
         for (size_t i = 0; i < keys.size() - 1; ++i)
         {
             if (time >= keys[i].time && time < keys[i + 1].time)
@@ -265,7 +266,7 @@ private:
         if (keys.empty()) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
         if (keys.size() == 1) return keys[0].value;
 
-        size_t idx = 0;
+        size_t idx = keys.size() - 2;
         for (size_t i = 0; i < keys.size() - 1; ++i)
         {
             if (time >= keys[i].time && time < keys[i + 1].time)
@@ -349,11 +350,21 @@ public:
             m_rootMotionBone < static_cast<int32_t>(m_skeleton->GetBoneCount()))
         {
             auto& boneTransform = m_currentPose.GetGlobalTransform(m_rootMotionBone);
-            m_rootMotionDelta.deltaPosition = boneTransform.position - m_prevRootPosition;
-            m_rootMotionDelta.deltaRotation = boneTransform.rotation * glm::inverse(m_prevRootRotation);
-            m_rootMotionDelta.hasRootMotion = true;
-            m_prevRootPosition = boneTransform.position;
-            m_prevRootRotation = boneTransform.rotation;
+            if (m_firstRootMotionFrame)
+            {
+                m_prevRootPosition = boneTransform.position;
+                m_prevRootRotation = boneTransform.rotation;
+                m_rootMotionDelta = {};
+                m_firstRootMotionFrame = false;
+            }
+            else
+            {
+                m_rootMotionDelta.deltaPosition = boneTransform.position - m_prevRootPosition;
+                m_rootMotionDelta.deltaRotation = boneTransform.rotation * glm::inverse(m_prevRootRotation);
+                m_rootMotionDelta.hasRootMotion = true;
+                m_prevRootPosition = boneTransform.position;
+                m_prevRootRotation = boneTransform.rotation;
+            }
         }
     }
 
@@ -378,6 +389,7 @@ private:
     EventCallback m_eventCallback;
     bool m_rootMotionEnabled = false;
     int32_t m_rootMotionBone = -1;
+    bool m_firstRootMotionFrame = true;
     glm::vec3 m_prevRootPosition = glm::vec3(0.0f);
     glm::quat m_prevRootRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     RootMotionData m_rootMotionDelta;
@@ -433,7 +445,7 @@ public:
         if (m_blendMode == BlendMode::Blend2D)
             return Sample2D(glm::vec2(blendParam, 0.0f));
 
-        size_t lowerIdx = 0;
+        size_t lowerIdx = m_nodes.size() - 2;
         for (size_t i = 0; i < m_nodes.size() - 1; ++i)
         {
             if (blendParam >= m_nodes[i].position && blendParam <= m_nodes[i + 1].position)
@@ -498,10 +510,8 @@ public:
         for (size_t b = 0; b < m_skeleton->GetBoneCount(); ++b)
         {
             glm::vec3 pos(0.0f);
-            glm::quat rot(0.0f, 0.0f, 0.0f, 0.0f);
+            glm::quat rot(1.0f, 0.0f, 0.0f, 0.0f);
             glm::vec3 scl(0.0f);
-
-            float firstWeight = (weighted.empty()) ? 0.0f : weighted[0].weight;
 
             for (size_t w = 0; w < weighted.size(); ++w)
             {
@@ -511,11 +521,13 @@ public:
                 scl += bt.scale * wt.weight;
             }
 
-            rot = poses[weighted[0].index].GetLocalTransform(b).rotation * firstWeight;
+            rot = poses[weighted[0].index].GetLocalTransform(b).rotation;
             for (size_t w = 1; w < weighted.size(); ++w)
             {
-                const auto& wt = weighted[w];
-                rot = glm::slerp(rot, poses[wt.index].GetLocalTransform(b).rotation, wt.weight / (weighted[w - 1].weight + wt.weight));
+                float accumWeight = 0.0f;
+                for (size_t k = 0; k <= w; ++k) accumWeight += weighted[k].weight;
+                rot = glm::slerp(rot, poses[weighted[w].index].GetLocalTransform(b).rotation,
+                    weighted[w].weight / std::max(accumWeight, 0.0001f));
             }
             rot = glm::normalize(rot);
 
@@ -763,6 +775,7 @@ public:
         if (it == m_states.end()) return;
 
         const State& state = it->second;
+        if (!state.clip) return;
         m_playbackTime += deltaSeconds * state.speed;
 
         float clipDuration = state.clip->GetDurationSeconds();

@@ -163,8 +163,8 @@ public:
         m_context.BindDefaultFramebuffer();
         RenderSSAO(scene);
         RenderBloom();
-        RenderFXAA();
         RenderPostProcess();
+        RenderFXAA();
 
         RenderDebugOverlay();
     }
@@ -608,7 +608,7 @@ private:
 
         if (m_pbrUniforms.shadowMap >= 0) glUniform1i(m_pbrUniforms.shadowMap, 2);
         if (m_pbrUniforms.lightSpaceMatrix >= 0)
-            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
+            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 3, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadowMapTexture);
 
@@ -669,21 +669,40 @@ private:
     void RenderFXAA()
     {
         GLuint fxaaProg = m_shaderManager.GetProgram("fxaa");
-        if (!fxaaProg || !m_fxaaEnabled) return;
-
-        if (!m_fxaaFBO)
-            CreateFXAAFBO(m_windowWidth, m_windowHeight);
+        if (!fxaaProg || !m_fxaaEnabled)
+        {
+            m_context.BindDefaultFramebuffer();
+            m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
+            m_context.ClearColor();
+            m_context.EnableDepthTest(false);
+            m_bufferManager.CreateScreenQuad(m_screenQuadVAO, m_screenQuadVBO);
+            GLuint ppProg = m_shaderManager.GetProgram("postprocess");
+            if (ppProg)
+            {
+                glUseProgram(ppProg);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, m_fxaaColorTexture);
+                glUniform1i(glGetUniformLocation(ppProg, "uSceneTexture"), 0);
+                glUniform1i(glGetUniformLocation(ppProg, "uUseBloom"), 0);
+                glUniform1i(glGetUniformLocation(ppProg, "uUseSSAO"), 0);
+                glUniform1f(glGetUniformLocation(ppProg, "uExposure"), 1.0f);
+                m_bufferManager.DrawScreenQuad(m_screenQuadVAO);
+                glUseProgram(0);
+            }
+            m_context.EnableDepthTest(true);
+            return;
+        }
 
         m_bufferManager.CreateScreenQuad(m_screenQuadVAO, m_screenQuadVBO);
         m_context.EnableDepthTest(false);
 
-        m_context.BindFramebuffer(m_fxaaFBO);
+        m_context.BindDefaultFramebuffer();
         m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
         m_context.ClearColor();
 
         glUseProgram(fxaaProg);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_sceneColorTexture);
+        glBindTexture(GL_TEXTURE_2D, m_fxaaColorTexture);
         GLint sceneTexLoc = glGetUniformLocation(fxaaProg, "uSceneTexture");
         if (sceneTexLoc >= 0) glUniform1i(sceneTexLoc, 0);
         GLint screenSizeLoc = glGetUniformLocation(fxaaProg, "uScreenSize");
@@ -692,12 +711,6 @@ private:
 
         m_bufferManager.DrawScreenQuad(m_screenQuadVAO);
 
-        GLuint temp = m_sceneColorTexture;
-        m_sceneColorTexture = m_fxaaColorTexture;
-        m_fxaaColorTexture = temp;
-
-        m_context.BindDefaultFramebuffer();
-        m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
         glUseProgram(0);
         m_context.EnableDepthTest(true);
     }
@@ -829,7 +842,7 @@ private:
 
         if (m_skinnedUniforms.shadowMap >= 0) glUniform1i(m_skinnedUniforms.shadowMap, 2);
         if (m_skinnedUniforms.lightSpaceMatrix >= 0)
-            glUniformMatrix4fv(m_skinnedUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
+            glUniformMatrix4fv(m_skinnedUniforms.lightSpaceMatrix, 3, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadowMapTexture);
 
@@ -902,7 +915,7 @@ private:
 
         if (m_pbrUniforms.shadowMap >= 0) glUniform1i(m_pbrUniforms.shadowMap, 2);
         if (m_pbrUniforms.lightSpaceMatrix >= 0)
-            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 1, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
+            glUniformMatrix4fv(m_pbrUniforms.lightSpaceMatrix, 3, GL_FALSE, &m_cascadeLightSpaceMatrices[0][0][0]);
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadowMapTexture);
 
@@ -1092,12 +1105,9 @@ private:
                 -maxExtents.z * 4.0f, maxExtents.z * 4.0f);
             m_cascadeLightSpaceMatrices[cascade] = lightProj * lightView;
 
-            float linearSplit = (splitDist - nearP) / clipRange;
-            float ndcDepth = linearSplit * 2.0f - 1.0f;
-            Mat4 projMat = glm::perspective(scene.camera.fov, scene.camera.aspectRatio, nearP, farP);
-            float viewDepth = -projMat[2][2] + ndcDepth * projMat[2][3];
-            float w = -projMat[3][2] + ndcDepth * projMat[3][3];
-            m_cascadeSplitDistances[cascade] = linearSplit;
+            float z_view = -(nearP + splitDist * clipRange / (farP - nearP));
+            float z_ndc = (-(farP + nearP) / (farP - nearP)) + (2.0f * farP * nearP) / ((farP - nearP) * (-z_view));
+            m_cascadeSplitDistances[cascade] = (z_ndc + 1.0f) * 0.5f;
         }
     }
 
@@ -1106,10 +1116,15 @@ private:
         GLuint ppProg = m_shaderManager.GetProgram("postprocess");
         if (!ppProg) return;
 
-        m_context.ClearColor();
-        m_context.EnableDepthTest(false);
+        if (!m_fxaaFBO)
+            CreateFXAAFBO(m_windowWidth, m_windowHeight);
 
         m_bufferManager.CreateScreenQuad(m_screenQuadVAO, m_screenQuadVBO);
+
+        m_context.BindFramebuffer(m_fxaaFBO);
+        m_context.SetViewport(0, 0, m_windowWidth, m_windowHeight);
+        m_context.ClearColor();
+        m_context.EnableDepthTest(false);
 
         glUseProgram(ppProg);
         glActiveTexture(GL_TEXTURE0);
@@ -1794,10 +1809,8 @@ private:
             {
                 vec3 color = texture(uSceneTexture, vTexCoord).rgb;
                 float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
-                if (brightness > uThreshold)
-                    FragColor = vec4(color, 1.0);
-                else
-                    FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                float contribution = clamp(brightness - uThreshold, 0.0, uThreshold);
+                FragColor = vec4(color * (contribution / max(uThreshold, 0.001)), 1.0);
             }
         )";
 
@@ -1844,12 +1857,11 @@ private:
         if (!m_boneUBO || matrices.empty()) return;
         GLsizei boneCount = static_cast<GLsizei>(std::min(matrices.size(), static_cast<size_t>(128)));
         GLsizeiptr dataSize = boneCount * sizeof(Mat4);
+        constexpr GLsizeiptr kUBOSize = 128 * sizeof(Mat4);
         glBindBuffer(GL_UNIFORM_BUFFER, m_boneUBO);
-        GLsizeiptr bufferSize = 0;
-        glGetBufferParameteriv(GL_UNIFORM_BUFFER, GL_BUFFER_SIZE, reinterpret_cast<GLint*>(&bufferSize));
-        if (dataSize > bufferSize)
+        if (dataSize > kUBOSize)
         {
-            KE_LOG_ERROR("Bone matrix data exceeds UBO size: {} > {}", dataSize, bufferSize);
+            KE_LOG_ERROR("Bone matrix data exceeds UBO size: {} > {}", dataSize, kUBOSize);
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
             return;
         }
@@ -1906,7 +1918,7 @@ private:
                 normal.z = (nzSq > 0.0) ? sqrt(nzSq) : 0.0;
 
                 vec2 noiseScale = uScreenSize / 4.0;
-                vec3 randomVec = texture(uNoiseTexture, vTexCoord * noiseScale).xyz * 2.0 - 1.0;
+                vec3 randomVec = texture(uNoiseTexture, vTexCoord * noiseScale).xyz;
 
                 vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
                 vec3 bitangent = cross(normal, tangent);
@@ -1930,11 +1942,11 @@ private:
 
                     float zDiff = length(sampleWorldPos - fragPos);
                     float rangeCheck = smoothstep(0.0, 1.0, uRadius / max(zDiff, 0.001));
-                    occlusion += (zDiff <= uRadius - uBias ? 1.0 : 0.0) * rangeCheck;
+                    float rangeDepth = abs(sampleWorldPos.z - fragPos.z);
+                    occlusion += (rangeDepth <= uRadius + uBias ? 1.0 : 0.0) * rangeCheck;
                 }
 
                 FragColor = 1.0 - (occlusion / 64.0);
-                FragColor = max(FragColor, 0.3);
             }
         )";
 
@@ -2032,9 +2044,10 @@ private:
             uniform bool uUseAOTexture;
             uniform sampler2D uAOTexture;
 
-            uniform mat4 uLightSpaceMatrix;
+            uniform mat4 uLightSpaceMatrix[3];
             uniform sampler2DArray uShadowMap;
             uniform vec3 uCascadeSplitDistances;
+            uniform float uCascadeNearFar[2];
 
             uniform sampler2D uBRDFLUT;
 
@@ -2071,7 +2084,7 @@ private:
                     }
                 }
 
-                vec4 fragPosLightSpace = uLightSpaceMatrix * vec4(fragPos, 1.0);
+                vec4 fragPosLightSpace = uLightSpaceMatrix[cascadeIndex] * vec4(fragPos, 1.0);
                 vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
                 projCoords = projCoords * 0.5 + 0.5;
 
@@ -2102,7 +2115,7 @@ private:
                     shadow *= (1.0 - smoothstep(0.0, 1.0, fade));
                     if (cascadeIndex < SHADOW_CASCADE_COUNT - 1)
                     {
-                        vec4 nextLightSpace = uLightSpaceMatrix * vec4(fragPos, 1.0);
+                        vec4 nextLightSpace = uLightSpaceMatrix[cascadeIndex + 1] * vec4(fragPos, 1.0);
                         vec3 nextProj = nextLightSpace.xyz / nextLightSpace.w;
                         nextProj = nextProj * 0.5 + 0.5;
                         float nextShadow = 0.0;
@@ -2203,7 +2216,7 @@ private:
                     metallic = mrSample.b * metallic;
                 }
 
-                roughness = clamp(roughness, 0.04, 1.0);
+                roughness = clamp(roughness, 0.01, 1.0);
 
                 vec3 N = GetNormal();
                 vec3 V = normalize(uCameraPos - vWorldPos);
@@ -2381,7 +2394,7 @@ private:
                 if (uUseSSAO)
                 {
                     float ssao = texture(uSSAOTexture, vTexCoord).r;
-                    color *= ssao;
+                    color = mix(color, color * ssao, 0.6);
                 }
 
                 if (uUseBloom)
