@@ -1105,8 +1105,8 @@ private:
                 -maxExtents.z * 4.0f, maxExtents.z * 4.0f);
             m_cascadeLightSpaceMatrices[cascade] = lightProj * lightView;
 
-            float z_view = -(nearP + splitDist * clipRange / (farP - nearP));
-            float z_ndc = (-(farP + nearP) / (farP - nearP)) + (2.0f * farP * nearP) / ((farP - nearP) * (-z_view));
+            float d = splitDist;
+            float z_ndc = (farP + nearP) / (farP - nearP) - 2.0f * farP * nearP / ((farP - nearP) * d);
             m_cascadeSplitDistances[cascade] = (z_ndc + 1.0f) * 0.5f;
         }
     }
@@ -1536,9 +1536,8 @@ private:
 
         for (int i = 0; i < 64 && i < static_cast<int>(m_ssaoKernel.size()); ++i)
         {
-            std::string uname = "uKernel[" + std::to_string(i) + "]";
-            GLint loc = glGetUniformLocation(ssaoProg, uname.c_str());
-            if (loc >= 0) glUniform3fv(loc, 1, &m_ssaoKernel[i][0]);
+            if (i < static_cast<int>(m_ssaoKernelLocs.size()) && m_ssaoKernelLocs[i] >= 0)
+                glUniform3fv(m_ssaoKernelLocs[i], 1, &m_ssaoKernel[i][0]);
         }
 
         GLint screenSizeLoc = glGetUniformLocation(ssaoProg, "uScreenSize");
@@ -1951,7 +1950,17 @@ private:
         )";
 
         GLuint ssaoProg = m_shaderManager.CreateProgram(screenVertSrc, ssaoFrag);
-        if (ssaoProg) m_shaderManager.AddShader("ssao", ssaoProg);
+        if (ssaoProg)
+        {
+            m_shaderManager.AddShader("ssao", ssaoProg);
+            m_ssaoKernelLocs.clear();
+            m_ssaoKernelLocs.reserve(64);
+            for (int i = 0; i < 64; ++i)
+            {
+                std::string uname = "uKernel[" + std::to_string(i) + "]";
+                m_ssaoKernelLocs.push_back(glGetUniformLocation(ssaoProg, uname.c_str()));
+            }
+        }
 
         const char* ssaoBlurFrag = R"(
             #version 450 core
@@ -2047,7 +2056,6 @@ private:
             uniform mat4 uLightSpaceMatrix[3];
             uniform sampler2DArray uShadowMap;
             uniform vec3 uCascadeSplitDistances;
-            uniform float uCascadeNearFar[2];
 
             uniform sampler2D uBRDFLUT;
 
@@ -2467,5 +2475,7 @@ private:
     GLuint m_fxaaFBO = 0;
     GLuint m_fxaaColorTexture = 0;
     bool m_fxaaEnabled = true;
+
+    std::vector<GLint> m_ssaoKernelLocs;
 };
 }

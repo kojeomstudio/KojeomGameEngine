@@ -317,6 +317,11 @@ public:
 
             auto* meshData = m_assetStore->GetMesh(mr->meshHandle);
             if (!meshData) continue;
+            if (meshData->vertices.empty() || meshData->indices.empty())
+            {
+                KE_LOG_WARN("Skipping GPU upload for empty mesh on entity '{}'", entity->GetName());
+                continue;
+            }
 
             std::vector<float> flatVerts;
             flatVerts.reserve(meshData->vertices.size() * 12);
@@ -347,6 +352,11 @@ public:
             if (!terrain) continue;
 
             AssetHandle gpuMesh = GenerateTerrainMesh(terrain);
+            if (gpuMesh == INVALID_HANDLE)
+            {
+                KE_LOG_WARN("Failed to generate terrain mesh for entity '{}'", entity->GetName());
+                continue;
+            }
             tc->terrainHandle = gpuMesh;
         }
 
@@ -357,6 +367,11 @@ public:
 
             auto* skelMesh = m_assetStore->GetSkinnedMesh(sm->skeletalMeshHandle);
             if (!skelMesh) continue;
+            if (skelMesh->vertices.empty() || skelMesh->indices.empty())
+            {
+                KE_LOG_WARN("Skipping GPU upload for empty skinned mesh on entity '{}'", entity->GetName());
+                continue;
+            }
 
             std::vector<float> flatVerts;
             flatVerts.reserve(skelMesh->vertices.size() * 18);
@@ -435,8 +450,26 @@ private:
         int h = terrain->height;
         float cellSize = terrain->cellSize;
 
+        if (w <= 1 || h <= 1 || w > 4096 || h > 4096)
+        {
+            KE_LOG_ERROR("Invalid terrain dimensions for mesh: {}x{}", w, h);
+            return INVALID_HANDLE;
+        }
+
+        size_t vertexCount = static_cast<size_t>(w) * static_cast<size_t>(h);
+        size_t maxVertices = static_cast<size_t>(4096) * 4096;
+        if (vertexCount > maxVertices)
+        {
+            KE_LOG_ERROR("Terrain vertex count exceeds limit: {}", vertexCount);
+            return INVALID_HANDLE;
+        }
+
         std::vector<float> vertices;
         std::vector<uint32_t> indices;
+
+        vertices.reserve(vertexCount * 12);
+        size_t indexCount = static_cast<size_t>(w - 1) * static_cast<size_t>(h - 1) * 6;
+        indices.reserve(indexCount);
 
         for (int z = 0; z < h; ++z)
         {

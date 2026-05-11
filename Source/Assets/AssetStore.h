@@ -1598,6 +1598,7 @@ private:
         }
 
         ComputeBounds(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
+        ValidateDegenerateTriangles(outMesh.indices, outMesh.vertices);
         if (!outMesh.vertices.empty() && !outMesh.indices.empty())
             ComputeTangents(outMesh.vertices, outMesh.indices);
         return !outMesh.vertices.empty();
@@ -1994,6 +1995,7 @@ private:
 
         ComputeBoundsSkinned(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
         ValidateAndFixWeights(outMesh);
+        ClampBoneIndices(outMesh, 128);
 
         if (outMesh.vertices.empty() || outMesh.indices.empty())
         {
@@ -2107,6 +2109,23 @@ private:
             else if (std::abs(total - 1.0f) > 0.01f)
             {
                 v.boneWeights /= total;
+            }
+        }
+    }
+
+    void ClampBoneIndices(SkinnedMeshData& mesh, int maxBoneIndex)
+    {
+        for (auto& v : mesh.vertices)
+        {
+            float* bi = &v.boneIndices.x;
+            for (int j = 0; j < 4; ++j)
+            {
+                int idx = static_cast<int>(bi[j]);
+                if (idx < 0 || idx >= maxBoneIndex)
+                {
+                    bi[j] = 0.0f;
+                    (&v.boneWeights.x)[j] = 0.0f;
+                }
             }
         }
     }
