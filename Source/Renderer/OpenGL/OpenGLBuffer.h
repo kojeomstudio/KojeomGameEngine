@@ -30,7 +30,21 @@ public:
         if (vertices.empty() || indices.empty()) return INVALID_HANDLE;
         if (vertexStride < 3) return INVALID_HANDLE;
 
+        constexpr size_t kMaxVertices = 16 * 1024 * 1024;
+        constexpr size_t kMaxIndices = 32 * 1024 * 1024;
+
         size_t vertexCount = vertices.size() / static_cast<size_t>(vertexStride);
+        if (vertexCount > kMaxVertices)
+        {
+            KE_LOG_ERROR("Mesh upload rejected: vertex count {} exceeds limit {}", vertexCount, kMaxVertices);
+            return INVALID_HANDLE;
+        }
+        if (indices.size() > kMaxIndices)
+        {
+            KE_LOG_ERROR("Mesh upload rejected: index count {} exceeds limit {}", indices.size(), kMaxIndices);
+            return INVALID_HANDLE;
+        }
+
         for (auto idx : indices)
         {
             if (idx >= vertexCount)
@@ -89,7 +103,21 @@ public:
     {
         if (vertices.empty() || indices.empty()) return INVALID_HANDLE;
 
+        constexpr size_t kMaxVertices = 16 * 1024 * 1024;
+        constexpr size_t kMaxIndices = 32 * 1024 * 1024;
+
         size_t vertexCount = vertices.size() / 18;
+        if (vertexCount > kMaxVertices)
+        {
+            KE_LOG_ERROR("Skinned mesh upload rejected: vertex count {} exceeds limit {}", vertexCount, kMaxVertices);
+            return INVALID_HANDLE;
+        }
+        if (indices.size() > kMaxIndices)
+        {
+            KE_LOG_ERROR("Skinned mesh upload rejected: index count {} exceeds limit {}", indices.size(), kMaxIndices);
+            return INVALID_HANDLE;
+        }
+
         for (auto idx : indices)
         {
             if (idx >= vertexCount)

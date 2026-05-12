@@ -1338,6 +1338,8 @@ public:
         size_t totalVertexCount = 0;
         size_t totalIndexCount = 0;
         size_t totalTextureBytes = 0;
+        size_t totalMeshBytes = 0;
+        size_t totalMemoryBytes = 0;
     };
 
     AssetStats GetStats() const
@@ -1355,16 +1357,19 @@ public:
         {
             stats.totalVertexCount += mesh.vertices.size();
             stats.totalIndexCount += mesh.indices.size();
+            stats.totalMeshBytes += mesh.vertices.size() * sizeof(Vertex) + mesh.indices.size() * sizeof(uint32_t);
         }
         for (const auto& [h, mesh] : m_skinnedMeshes)
         {
             stats.totalVertexCount += mesh.vertices.size();
             stats.totalIndexCount += mesh.indices.size();
+            stats.totalMeshBytes += mesh.vertices.size() * sizeof(SkinnedVertex) + mesh.indices.size() * sizeof(uint32_t);
         }
         for (const auto& [h, tex] : m_textures)
         {
             stats.totalTextureBytes += tex.pixels.size();
         }
+        stats.totalMemoryBytes = stats.totalMeshBytes + stats.totalTextureBytes;
         return stats;
     }
 
@@ -1623,6 +1628,15 @@ private:
         }
         if (!warn.empty()) KE_LOG_WARN("glTF warning: {}", warn);
 
+        for (const auto& ext : model.extensionsRequired)
+        {
+            if (ext.find("KHR_draco") != std::string::npos)
+            {
+                KE_LOG_ERROR("glTF requires Draco compression which is not supported: {} (extension: {})", path, ext);
+                return false;
+            }
+        }
+
         if (model.meshes.empty())
         {
             KE_LOG_ERROR("glTF has no meshes: {}", path);
@@ -1812,6 +1826,15 @@ private:
         {
             KE_LOG_ERROR("glTF load failed: {} - {}", path, err);
             return false;
+        }
+
+        for (const auto& ext : model.extensionsRequired)
+        {
+            if (ext.find("KHR_draco") != std::string::npos)
+            {
+                KE_LOG_ERROR("glTF requires Draco compression which is not supported: {} (extension: {})", path, ext);
+                return false;
+            }
         }
 
         if (model.meshes.empty()) return false;

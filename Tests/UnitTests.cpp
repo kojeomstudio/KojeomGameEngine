@@ -1319,6 +1319,115 @@ KE_TEST(AppConfigAllModes)
     return {};
 }
 
+KE_TEST(AssetStatsMemoryTracking)
+{
+    Kojeom::AssetStore store;
+
+    Kojeom::MeshData mesh;
+    mesh.vertices.resize(100);
+    mesh.indices.resize(300);
+    mesh.boundsMin = Vec3(-1.0f);
+    mesh.boundsMax = Vec3(1.0f);
+    mesh.name = "memory_test";
+    store.RegisterInternalMesh("memory_test", mesh);
+
+    Kojeom::TextureData tex;
+    tex.width = 4;
+    tex.height = 4;
+    tex.channels = 4;
+    tex.pixels.resize(64, 128);
+    tex.path = "mem_test_tex";
+    store.RegisterTexture("mem_test_tex", tex);
+
+    auto stats = store.GetStats();
+    KE_EXPECT_TRUE(stats.totalMeshBytes > 0);
+    KE_EXPECT_TRUE(stats.totalTextureBytes == 64);
+    KE_EXPECT_TRUE(stats.totalMemoryBytes == stats.totalMeshBytes + stats.totalTextureBytes);
+    KE_EXPECT_TRUE(stats.totalVertexCount == 100);
+    KE_EXPECT_TRUE(stats.totalIndexCount == 300);
+    return {};
+}
+
+KE_TEST(AssetStoreValidateTerrainBounds)
+{
+    Kojeom::AssetStore store;
+    std::vector<float> heights = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+    AssetHandle handle = store.CreateTerrain("terrain_bounds", 3, 3, 1.0f, 10.0f, heights);
+    KE_EXPECT_TRUE(handle != INVALID_HANDLE);
+
+    const Kojeom::TerrainData* terrain = store.GetTerrain(handle);
+    KE_EXPECT_TRUE(terrain != nullptr);
+
+    auto issues = store.ValidateAllAssets();
+    KE_EXPECT_TRUE(issues.empty());
+
+    float h = terrain->GetHeightInterpolated(1.5f, 1.5f);
+    KE_EXPECT_TRUE(h >= 0.0f && h <= 10.0f);
+    return {};
+}
+
+KE_TEST(AssetStoreEmptyMeshValidation)
+{
+    Kojeom::AssetStore store;
+    Kojeom::MeshData emptyMesh;
+    emptyMesh.name = "empty";
+    AssetHandle handle = store.RegisterInternalMesh("empty_mesh", emptyMesh);
+    auto issues = store.ValidateAllAssets();
+    bool foundEmptyIssue = false;
+    for (const auto& issue : issues)
+    {
+        if (issue.find("no vertices") != std::string::npos)
+            foundEmptyIssue = true;
+    }
+    KE_EXPECT_TRUE(foundEmptyIssue);
+    return {};
+}
+
+KE_TEST(WorldNestedHierarchy)
+{
+    Kojeom::World world;
+    auto* root = world.CreateEntity("Root");
+    auto* child1 = world.CreateEntity("Child1");
+    auto* child2 = world.CreateEntity("Child2");
+
+    world.AttachChild(root->GetId(), child1->GetId());
+    world.AttachChild(child1->GetId(), child2->GetId());
+
+    KE_EXPECT_TRUE(child2->HasParent());
+    KE_EXPECT_TRUE(child2->GetParentId() == child1->GetId());
+    KE_EXPECT_TRUE(child1->HasChildren());
+    KE_EXPECT_TRUE(child1->GetChildren().size() == 1);
+    KE_EXPECT_TRUE(root->HasChildren());
+    return {};
+}
+
+KE_TEST(AnimationClipMissingBone)
+{
+    Kojeom::Skeleton skeleton;
+    Kojeom::Bone root;
+    root.name = "Root";
+    root.parentIndex = -1;
+    root.inverseBindMatrix = Mat4(1.0f);
+    skeleton.AddBone(root);
+
+    Kojeom::AnimationClip clip;
+    clip.SetDuration(1.0f);
+    clip.SetTicksPerSecond(1.0f);
+
+    Kojeom::AnimationChannel ch;
+    ch.boneIndex = 5;
+    ch.boneName = "NonExistent";
+    Kojeom::VectorKey k;
+    k.time = 0.0f;
+    k.value = Vec3(1.0f);
+    ch.positionKeys.push_back(k);
+    clip.AddChannel(ch);
+
+    Kojeom::Pose pose = clip.Sample(0.0f, skeleton);
+    KE_EXPECT_TRUE(pose.GetBoneCount() == 1);
+    return {};
+}
+
 int main()
 {
     Kojeom::Log::Init("test_results.log");
