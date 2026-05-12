@@ -234,6 +234,7 @@ public:
         stbi_set_flip_vertically_on_load(true);
         uint8_t* data = stbi_load(resolvedPath.c_str(), &texData.width, &texData.height,
             &texData.channels, 0);
+        stbi_set_flip_vertically_on_load(false);
         if (!data)
         {
             KE_LOG_ERROR("Failed to load texture: {} - {}", resolvedPath, stbi_failure_reason());
@@ -377,6 +378,7 @@ public:
         int imgW, imgH, imgChannels;
         stbi_set_flip_vertically_on_load(false);
         uint8_t* data = stbi_load(resolvedPath.c_str(), &imgW, &imgH, &imgChannels, 1);
+        stbi_set_flip_vertically_on_load(true);
         if (!data)
         {
             KE_LOG_ERROR("Failed to load heightmap: {}", resolvedPath);
@@ -408,18 +410,26 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        auto it = m_skeletonPaths.find(path);
+        std::string resolvedPath = FileSystem::ResolvePathCaseInsensitive(path);
+
+        auto it = m_skeletonPaths.find(resolvedPath);
         if (it != m_skeletonPaths.end()) return it->second;
+
+        if (!FileSystem::FileExists(resolvedPath))
+        {
+            KE_LOG_ERROR("Skeleton file not found: {}", path);
+            return INVALID_HANDLE;
+        }
 
         tinygltf::Model model;
         tinygltf::TinyGLTF loader;
         std::string err, warn;
 
         bool ret = false;
-        if (FileSystem::GetExtension(path) == ".glb")
-            ret = loader.LoadBinaryFromFile(&model, &err, &warn, path);
+        if (FileSystem::GetExtension(resolvedPath) == ".glb")
+            ret = loader.LoadBinaryFromFile(&model, &err, &warn, resolvedPath);
         else
-            ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+            ret = loader.LoadASCIIFromFile(&model, &err, &warn, resolvedPath);
 
         if (!ret)
         {
@@ -509,9 +519,9 @@ public:
         }
 
         AssetHandle handle = m_nextHandle++;
-        m_skeletonPaths[path] = handle;
+        m_skeletonPaths[resolvedPath] = handle;
         m_skeletons[handle] = std::move(skelData);
-        KE_LOG_INFO("Loaded skeleton: {} ({} bones)", path, boneCount);
+        KE_LOG_INFO("Loaded skeleton: {} ({} bones)", resolvedPath, boneCount);
         return handle;
     }
 
@@ -519,7 +529,9 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        auto it = m_animationClipPaths.find(path);
+        std::string resolvedPath = FileSystem::ResolvePathCaseInsensitive(path);
+
+        auto it = m_animationClipPaths.find(resolvedPath);
         if (it != m_animationClipPaths.end()) return it->second;
 
         auto* skelData = GetSkeleton(skeletonHandle);
@@ -529,15 +541,21 @@ public:
             return INVALID_HANDLE;
         }
 
+        if (!FileSystem::FileExists(resolvedPath))
+        {
+            KE_LOG_ERROR("Animation file not found: {}", path);
+            return INVALID_HANDLE;
+        }
+
         tinygltf::Model model;
         tinygltf::TinyGLTF loader;
         std::string err, warn;
 
         bool ret = false;
-        if (FileSystem::GetExtension(path) == ".glb")
-            ret = loader.LoadBinaryFromFile(&model, &err, &warn, path);
+        if (FileSystem::GetExtension(resolvedPath) == ".glb")
+            ret = loader.LoadBinaryFromFile(&model, &err, &warn, resolvedPath);
         else
-            ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+            ret = loader.LoadASCIIFromFile(&model, &err, &warn, resolvedPath);
 
         if (!ret)
         {
@@ -674,10 +692,10 @@ public:
         clipData.clip.SetTicksPerSecond(1.0f);
 
         AssetHandle handle = m_nextHandle++;
-        m_animationClipPaths[path] = handle;
+        m_animationClipPaths[resolvedPath] = handle;
         m_animationClips[handle] = std::move(clipData);
         KE_LOG_INFO("Loaded animation clip: {} ({} channels, {:.2f}s)",
-            path, m_animationClips[handle].clip.GetChannelCount(), m_animationClips[handle].clip.GetDurationSeconds());
+            resolvedPath, m_animationClips[handle].clip.GetChannelCount(), m_animationClips[handle].clip.GetDurationSeconds());
         return handle;
     }
 
@@ -898,6 +916,7 @@ public:
             int vertexCount = static_cast<int>(posAcc.count);
             uint32_t baseIdx = static_cast<uint32_t>(meshData.vertices.size());
 
+            meshData.vertices.reserve(meshData.vertices.size() + vertexCount);
             for (int i = 0; i < vertexCount; ++i)
             {
                 Vertex v{};
@@ -1050,7 +1069,7 @@ private:
         Assimp::Importer importer;
         unsigned int flags = aiProcess_Triangulate | aiProcess_GenNormals |
             aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace |
-            aiProcess_FlipUVs;
+            aiProcess_FlipUVs | aiProcess_ImproveCacheLocality;
 
         const aiScene* scene = importer.ReadFile(path, flags);
         if (!scene || !scene->HasMeshes())
@@ -1161,6 +1180,7 @@ private:
                                     reinterpret_cast<const uint8_t*>(aiTex->pcData),
                                     static_cast<int>(aiTex->mWidth),
                                     &w, &h, &ch, 4);
+                                stbi_set_flip_vertically_on_load(false);
                                 if (data)
                                 {
                                     texData.width = w;
@@ -1717,6 +1737,7 @@ private:
             int vertexCount = static_cast<int>(posAcc.count);
             uint32_t baseIdx = static_cast<uint32_t>(outMesh.vertices.size());
 
+            outMesh.vertices.reserve(outMesh.vertices.size() + vertexCount);
             for (int i = 0; i < vertexCount; ++i)
             {
                 Vertex v{};
@@ -1734,6 +1755,13 @@ private:
                 const auto& idxBuf = model.bufferViews[idxAcc.bufferView];
                 const auto& buf = model.buffers[idxBuf.buffer];
                 size_t idxOffset = idxBuf.byteOffset + idxAcc.byteOffset;
+
+                if (idxAcc.count % 3 != 0)
+                {
+                    KE_LOG_WARN("glTF index count not triangle-multiple: {} ({}), truncating", path, idxAcc.count);
+                }
+
+                outMesh.indices.reserve(outMesh.indices.size() + idxAcc.count);
 
                 if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
                 {

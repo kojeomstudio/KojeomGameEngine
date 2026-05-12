@@ -625,8 +625,17 @@ private:
 
         auto frustumPlanes = ExtractFrustumPlanes(scene.camera.viewProjectionMatrix);
 
-        for (const auto& cmd : scene.staticDrawCommands)
+        std::vector<size_t> sortedIndices(scene.staticDrawCommands.size());
+        for (size_t i = 0; i < sortedIndices.size(); ++i) sortedIndices[i] = i;
+        std::sort(sortedIndices.begin(), sortedIndices.end(), [&](size_t a, size_t b) {
+            return scene.staticDrawCommands[a].materialHandle < scene.staticDrawCommands[b].materialHandle;
+        });
+
+        AssetHandle lastMaterial = INVALID_HANDLE + 1;
+        for (size_t idx : sortedIndices)
         {
+            const auto& cmd = scene.staticDrawCommands[idx];
+
             if (m_pbrUniforms.model >= 0)
                 glUniformMatrix4fv(m_pbrUniforms.model, 1, GL_FALSE, &cmd.worldMatrix[0][0]);
 
@@ -640,7 +649,11 @@ private:
             float cullRadius = (cmd.boundsRadius > 0.0f) ? cmd.boundsRadius : 100.0f;
             if (!IsSphereInFrustum(frustumPlanes, worldPos, cullRadius)) continue;
 
-            SetMaterialUniforms(cmd.materialHandle, m_pbrUniforms);
+            if (cmd.materialHandle != lastMaterial)
+            {
+                SetMaterialUniforms(cmd.materialHandle, m_pbrUniforms);
+                lastMaterial = cmd.materialHandle;
+            }
 
             const GLMeshData* mesh = m_bufferManager.GetMesh(cmd.meshHandle);
             if (!mesh) mesh = &m_defaultMesh;
@@ -1808,8 +1821,12 @@ private:
             {
                 vec3 color = texture(uSceneTexture, vTexCoord).rgb;
                 float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
-                float contribution = clamp(brightness - uThreshold, 0.0, uThreshold);
-                FragColor = vec4(color * (contribution / max(uThreshold, 0.001)), 1.0);
+                float softThreshold = uThreshold * 0.5;
+                float contribution = clamp(brightness - softThreshold, 0.0, uThreshold + softThreshold);
+                contribution = smoothstep(0.0, uThreshold, contribution);
+                float knee = 1.0 / max(uThreshold - softThreshold, 0.001);
+                float curve = clamp((brightness - softThreshold) * knee, 0.0, 1.0);
+                FragColor = vec4(color * curve, 1.0);
             }
         )";
 
@@ -1924,6 +1941,7 @@ private:
                 mat3 TBN = mat3(tangent, bitangent, normal);
 
                 float occlusion = 0.0;
+                int validSamples = 0;
                 for (int i = 0; i < 64; ++i)
                 {
                     vec3 sampleDir = TBN * uKernel[i];
@@ -1939,13 +1957,14 @@ private:
                     float sampleDepth = texture(uDepthTexture, sampleUV).r;
                     vec3 sampleWorldPos = ReconstructWorldPos(sampleUV, sampleDepth);
 
-                    float zDiff = length(sampleWorldPos - fragPos);
-                    float rangeCheck = smoothstep(0.0, 1.0, uRadius / max(zDiff, 0.001));
-                    float rangeDepth = abs(sampleWorldPos.z - fragPos.z);
-                    occlusion += (rangeDepth <= uRadius + uBias ? 1.0 : 0.0) * rangeCheck;
+                    float zDiff = sampleWorldPos.z - fragPos.z;
+                    float rangeCheck = smoothstep(0.0, 1.0, uRadius / max(abs(zDiff), 0.001));
+                    float depthDiff = abs(zDiff);
+                    occlusion += (depthDiff <= uRadius + uBias ? 1.0 : 0.0) * rangeCheck;
+                    validSamples++;
                 }
 
-                FragColor = 1.0 - (occlusion / 64.0);
+                FragColor = 1.0 - (occlusion / max(validSamples, 1));
             }
         )";
 
@@ -2156,11 +2175,29 @@ private:
                 vec3 N = normalize(vNormal);
                 if (uUseNormalTexture)
                 {
+                    vec3 dpdx = dFdx(vWorldPos);
+                    vec3 dpdy = dFdy(vWorldPos);
+                    vec2 duvdx = dFdx(vTexCoord);
+                    vec2 duvdy = dFdy(vTexCoord);
+                    vec3 dp2perp = cross(dpdy, N);
+                    vec3 dp1perp = cross(N, dpdx);
+                    float det = dot(dpdx, dp2perp);
+                    float invDet = 1.0 / (abs(det) + 1e-8);
+                    vec3 dpdu = (dp2perp * duvdx.x + dp1perp * duvdy.x) * invDet;
+                    vec3 dpdv = (dp2perp * duvdx.y + dp1perp * duvdy.y) * invDet;
+                    float signDet = sign(det);
+                    vec3 T = normalize(dpdu * signDet);
+                    vec3 B = normalize(cross(N, T));
+                    float handedness = dot(cross(dpdu, dpdv), N) * signDet;
+                    if (handedness < 0.0) B = -B;
                     vec3 tangentNormal = texture(uNormalTexture, vTexCoord).rgb * 2.0 - 1.0;
+                    N = normalize(T * tangentNormal.x + B * tangentNormal.y + N * tangentNormal.z);
+                }
+                else if (vTangent.w != 0.0)
+                {
                     vec3 T = normalize(vTangent.xyz);
                     vec3 B = cross(N, T) * vTangent.w;
-                    mat3 TBN = mat3(T, B, N);
-                    N = normalize(TBN * tangentNormal);
+                    N = normalize(N);
                 }
                 return N;
             }
@@ -2270,30 +2307,38 @@ private:
 
                 float hemisphere = 0.5 + 0.5 * N.y;
 
-                vec3 skyUp = uAmbientColor * 1.4;
-                vec3 skyHorizon = uAmbientColor * 0.9;
-                vec3 skyDown = uAmbientGroundColor * 0.5;
+                vec3 skyUp = uAmbientColor * 1.6;
+                vec3 skyHorizon = uAmbientColor * 1.0;
+                vec3 skyDown = uAmbientGroundColor * 0.6;
                 vec3 irradiance;
-                if (hemisphere > 0.5)
+                float wrappedHemi = clamp(hemisphere + 0.2, 0.0, 1.0);
+                if (wrappedHemi > 0.5)
                 {
-                    float t = (hemisphere - 0.5) * 2.0;
-                    irradiance = mix(skyHorizon, skyUp, t);
-                    irradiance += uAmbientColor * 0.15 * pow(t, 2.0);
+                    float t = (wrappedHemi - 0.5) * 2.0;
+                    irradiance = mix(skyHorizon, skyUp, t * t);
                 }
                 else
                 {
-                    float t = hemisphere * 2.0;
+                    float t = wrappedHemi * 2.0;
                     irradiance = mix(skyDown, skyHorizon, t);
                 }
 
+                float horizonOcclusion = smoothstep(-0.1, 0.3, N.y);
+                irradiance *= mix(0.6, 1.0, horizonOcclusion);
+
                 float backLight = max(dot(N, normalize(-uLightDirection)), 0.0);
-                irradiance += uAmbientColor * 0.1 * backLight;
-                irradiance += uAmbientColor * 0.05;
+                irradiance += uAmbientColor * 0.12 * backLight * backLight;
+                irradiance += uAmbientColor * 0.06;
 
                 vec3 diffuseAmbient = irradiance * kD * albedo * ao;
 
                 vec2 brdf = texture(uBRDFLUT, vec2(NdotV, roughness)).rg;
-                vec3 specularAmbient = specularAO * (F * brdf.x + brdf.y) * irradiance;
+                vec3 Fss = F * brdf.x + vec3(brdf.y);
+                float Ess = brdf.x + brdf.y;
+                vec3 Fms = Fss * Fss / (vec3(1.0) - Fss * (1.0 - Ess) + 1e-5);
+                vec3 multiScatterContrib = Fms * irradiance * ao;
+                vec3 singleScatterContrib = specularAO * Fss * irradiance;
+                vec3 specularAmbient = singleScatterContrib + multiScatterContrib * 0.5;
                 vec3 ambient = diffuseAmbient + specularAmbient;
 
                 vec3 emissiveContrib = uEmissive * uEmissiveStrength;
@@ -2424,6 +2469,14 @@ private:
                 color *= uExposure;
                 color = ACESFilm(color);
                 color = pow(color, vec3(1.0 / 2.2));
+
+                float vignetteStrength = 0.35;
+                vec2 vignetteCenter = vTexCoord - 0.5;
+                float vignetteDist = dot(vignetteCenter, vignetteCenter);
+                float vignette = 1.0 - vignetteStrength * vignetteDist * 2.0;
+                vignette = clamp(vignette, 0.0, 1.0);
+                vignette = smoothstep(0.0, 1.0, vignette);
+                color *= vignette;
 
                 FragColor = vec4(color, 1.0);
             }
