@@ -382,6 +382,13 @@ public:
             return INVALID_HANDLE;
         }
 
+        if (imgW <= 0 || imgH <= 0 || imgW > 4096 || imgH > 4096)
+        {
+            KE_LOG_ERROR("Heightmap dimensions out of range: {}x{}", imgW, imgH);
+            stbi_image_free(data);
+            return INVALID_HANDLE;
+        }
+
         std::vector<float> heights(static_cast<size_t>(imgW) * imgH);
         for (int i = 0; i < imgW * imgH; ++i)
         {
@@ -406,6 +413,11 @@ public:
     AssetHandle LoadSkeleton(const std::string& path)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Skeleton path validation failed: {}", path);
+            return INVALID_HANDLE;
+        }
 
         std::string resolvedPath = FileSystem::ResolvePathCaseInsensitive(path);
 
@@ -767,7 +779,7 @@ public:
             texData.path = virtualPath;
             if (texData.channels < 1 || texData.channels > 4) return "";
             size_t pixelCount = static_cast<size_t>(texData.width) * texData.height * texData.channels;
-            if (image.image.size() >= static_cast<int>(pixelCount))
+            if (image.image.size() >= pixelCount)
             {
                 texData.pixels.assign(image.image.begin(), image.image.begin() + pixelCount);
                 AssetHandle handle = m_nextHandle++;
@@ -2119,6 +2131,13 @@ private:
         if (outMesh.vertices.empty() || outMesh.indices.empty())
         {
             KE_LOG_ERROR("glTF skinned mesh has no valid geometry: {}", path);
+            return false;
+        }
+
+        if (outMesh.vertices.size() > MAX_VERTEX_COUNT || outMesh.indices.size() > MAX_INDEX_COUNT)
+        {
+            KE_LOG_ERROR("Skinned mesh exceeds size limits ({}v, {}i): {}",
+                outMesh.vertices.size(), outMesh.indices.size(), path);
             return false;
         }
 

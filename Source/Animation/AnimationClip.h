@@ -672,7 +672,6 @@ public:
     void SetBool(const std::string& name, bool value)
     {
         m_boolParams[name] = value;
-        m_triggers.erase(name);
     }
 
     void SetFloat(const std::string& name, float value)

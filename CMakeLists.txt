@@ -145,6 +145,14 @@ target_compile_definitions(KojeomEngineLib PUBLIC
     $<$<CONFIG:Release>:KOJEOM_RELEASE>
 )
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(KojeomEngineLib PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow -Wnon-virtual-dtor
+        -Wold-style-cast -Wcast-align -Wunused
+        -Woverloaded-virtual -Wconversion -Wsign-conversion
+    )
+endif()
+
 # ---- Main Executable ----
 add_executable(Simple3DEngine "${CMAKE_CURRENT_SOURCE_DIR}/Source/Main.cpp")
 target_link_libraries(Simple3DEngine PRIVATE KojeomEngineLib)

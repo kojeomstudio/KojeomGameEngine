@@ -55,6 +55,9 @@ struct UniformLocations
     GLint ambientGroundColor = -1;
     GLint ambientGroundBlend = -1;
     GLint brdfLUT = -1;
+    GLint viewProjectionFrag = -1;
+    GLint nearPlane = -1;
+    GLint farPlane = -1;
 };
 
 class OpenGLRenderer : public IRendererBackend
@@ -434,6 +437,9 @@ private:
             m_pbrUniforms.useAOTexture = cache(pbr, "uUseAOTexture");
             m_pbrUniforms.aoTexture = cache(pbr, "uAOTexture");
             m_cascadeSplitLoc = cache(pbr, "uCascadeSplitDistances");
+            m_pbrUniforms.viewProjectionFrag = cache(pbr, "uViewProjection");
+            m_pbrUniforms.nearPlane = cache(pbr, "uNearPlane");
+            m_pbrUniforms.farPlane = cache(pbr, "uFarPlane");
         }
 
         GLuint skinned = m_shaderManager.GetProgram("skinned");
@@ -472,6 +478,9 @@ private:
             m_skinnedUniforms.emissiveTexture = cache(skinned, "uEmissiveTexture");
             m_skinnedUniforms.useAOTexture = cache(skinned, "uUseAOTexture");
             m_skinnedUniforms.aoTexture = cache(skinned, "uAOTexture");
+            m_skinnedUniforms.viewProjectionFrag = cache(skinned, "uViewProjection");
+            m_skinnedUniforms.nearPlane = cache(skinned, "uNearPlane");
+            m_skinnedUniforms.farPlane = cache(skinned, "uFarPlane");
         }
     }
 
@@ -496,6 +505,12 @@ private:
         }
         if (locs.ambientGroundBlend >= 0)
             glUniform1f(locs.ambientGroundBlend, 0.5f);
+        if (locs.viewProjectionFrag >= 0)
+            glUniformMatrix4fv(locs.viewProjectionFrag, 1, GL_FALSE, &scene.camera.viewProjectionMatrix[0][0]);
+        if (locs.nearPlane >= 0)
+            glUniform1f(locs.nearPlane, scene.camera.nearPlane);
+        if (locs.farPlane >= 0)
+            glUniform1f(locs.farPlane, scene.camera.farPlane);
 
         int plCount = std::min(scene.light.pointLightCount,
             static_cast<int>(LightData::MAX_POINT_LIGHTS));
@@ -2108,6 +2123,10 @@ private:
             uniform sampler2DArray uShadowMap;
             uniform vec3 uCascadeSplitDistances;
 
+            uniform mat4 uViewProjection;
+            uniform float uNearPlane;
+            uniform float uFarPlane;
+
             uniform sampler2D uBRDFLUT;
 
             uniform int uPointLightCount;
@@ -2131,6 +2150,7 @@ private:
             {
                 vec4 clipPos = uViewProjection * vec4(fragPos, 1.0);
                 float ndcDepth = clipPos.z / clipPos.w;
+                float viewDepth = LinearizeDepth(ndcDepth, uNearPlane, uFarPlane);
                 float linearDepth = (ndcDepth + 1.0) * 0.5;
 
                 int cascadeIndex = SHADOW_CASCADE_COUNT - 1;

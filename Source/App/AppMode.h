@@ -39,7 +39,7 @@ public:
         auto endTime = std::chrono::high_resolution_clock::now();
         result.durationSeconds = std::chrono::duration<float>(endTime - startTime).count();
         result.averageFrameMs = (result.frames > 0) ?
-            (result.durationSeconds * 1000.0f / result.frames) : 0.0f;
+            (result.durationSeconds * 1000.0f / static_cast<float>(result.frames)) : 0.0f;
         result.entities = static_cast<int>(engine.GetWorld()->GetEntityCount());
         result.success = (result.frames == targetFrames);
 
@@ -66,7 +66,7 @@ public:
         result.backend = engine.GetConfig().backend;
         result.scene = engine.GetConfig().scenePath;
 
-        auto* assetStore = engine.GetAssetStore();
+        engine.GetAssetStore();
         auto sceneContent = FileSystem::ReadTextFile(engine.GetConfig().scenePath);
         if (sceneContent.empty())
         {
@@ -245,7 +245,7 @@ public:
         auto endTime = std::chrono::high_resolution_clock::now();
         result.durationSeconds = std::chrono::duration<float>(endTime - startTime).count();
         result.averageFrameMs = (result.frames > 0) ?
-            (result.durationSeconds * 1000.0f / result.frames) : 0.0f;
+            (result.durationSeconds * 1000.0f / static_cast<float>(result.frames)) : 0.0f;
         result.entities = static_cast<int>(engine.GetWorld()->GetEntityCount());
 
         RenderScene scene = engine.GetWorld()->BuildRenderScene();
@@ -393,7 +393,7 @@ public:
             if (pixels && imgW > 0 && imgH > 0)
             {
                 bool allBlack = true;
-                size_t pixelCount = static_cast<size_t>(imgW) * imgH * 3;
+                size_t pixelCount = static_cast<size_t>(imgW) * static_cast<size_t>(imgH) * 3;
                 double totalBrightness = 0.0;
                 size_t sampleCount = 0;
                 for (size_t i = 0; i < pixelCount; i += 3)
@@ -462,7 +462,7 @@ public:
         auto endTime = std::chrono::high_resolution_clock::now();
         result.durationSeconds = std::chrono::duration<float>(endTime - startTime).count();
         result.averageFrameMs = (result.frames > 0) ?
-            (result.durationSeconds * 1000.0f / result.frames) : 0.0f;
+            (result.durationSeconds * 1000.0f / static_cast<float>(result.frames)) : 0.0f;
         result.entities = static_cast<int>(engine.GetWorld()->GetEntityCount());
         result.success = (result.frames == targetFrames);
 
@@ -474,7 +474,7 @@ public:
             FileSystem::WriteTextFile(engine.GetConfig().resultJsonPath, j.dump(2));
         }
 
-        double fps = (result.durationSeconds > 0.001) ? result.frames / result.durationSeconds : 0.0;
+        double fps = (result.durationSeconds > 0.001) ? static_cast<double>(result.frames) / result.durationSeconds : 0.0;
         KE_LOG_INFO("Benchmark: {} frames in {:.2f}s ({:.1f} ms/frame, {:.1f} FPS, min={:.1f}ms, max={:.1f}ms)",
             result.frames, result.durationSeconds, result.averageFrameMs,
             fps, minFrameMs, maxFrameMs);

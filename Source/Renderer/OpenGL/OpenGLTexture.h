@@ -83,6 +83,8 @@ public:
         if (m_bgVBO) glDeleteBuffers(1, &m_bgVBO);
         if (m_bgProgram) glDeleteProgram(m_bgProgram);
         if (m_charProgram) glDeleteProgram(m_charProgram);
+        if (m_charVAO) glDeleteVertexArrays(1, &m_charVAO);
+        if (m_charVBO) glDeleteBuffers(1, &m_charVBO);
     }
 
 private:
@@ -194,18 +196,24 @@ private:
         GLuint charProg = GetCharProgram();
         glUseProgram(charProg);
 
-        GLuint vao = 0, vbo = 0;
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        if (!m_charVAO)
+        {
+            glGenVertexArrays(1, &m_charVAO);
+            glGenBuffers(1, &m_charVBO);
+            glBindVertexArray(m_charVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, m_charVBO);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(BitmapVertex), nullptr);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(BitmapVertex),
+                reinterpret_cast<void*>(2 * sizeof(float)));
+            glBindVertexArray(0);
+        }
+
+        glBindVertexArray(m_charVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, m_charVBO);
         glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(BitmapVertex),
             verts.data(), GL_DYNAMIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(BitmapVertex), nullptr);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(BitmapVertex),
-            reinterpret_cast<void*>(2 * sizeof(float)));
 
         GLint colorLoc = glGetUniformLocation(charProg, "uColor");
         if (colorLoc >= 0) glUniform4f(colorLoc, 0.0f, 1.0f, 0.0f, 1.0f);
@@ -213,8 +221,6 @@ private:
         glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(verts.size()));
 
         glBindVertexArray(0);
-        glDeleteVertexArrays(1, &vao);
-        glDeleteBuffers(1, &vbo);
         glUseProgram(0);
     }
 
@@ -339,6 +345,8 @@ private:
     GLuint m_charProgram = 0;
     GLuint m_bgVAO = 0;
     GLuint m_bgVBO = 0;
+    GLuint m_charVAO = 0;
+    GLuint m_charVBO = 0;
     int m_screenWidth = 0;
     int m_screenHeight = 0;
 };

@@ -28,7 +28,7 @@ class Engine;
 struct IComponent
 {
     virtual ~IComponent() = default;
-    virtual void Tick(float deltaSeconds) {}
+    virtual void Tick(float /*deltaSeconds*/) {}
 };
 
 struct TransformComponent : public IComponent
@@ -41,7 +41,7 @@ struct CameraComponent : public IComponent
     CameraData cameraData;
     bool isActive = false;
 
-    void Tick(float deltaSeconds) override
+    void Tick(float /*deltaSeconds*/) override
     {
         cameraData.UpdateMatrices();
     }
@@ -380,8 +380,8 @@ public:
                     auto* terrain = m_assetStore->GetTerrain(tc->terrainHandle);
                     if (terrain)
                     {
-                        float halfW = terrain->width * terrain->cellSize * 0.5f;
-                        float halfH = terrain->height * terrain->cellSize * 0.5f;
+                        float halfW = static_cast<float>(terrain->width) * terrain->cellSize * 0.5f;
+                        float halfH = static_cast<float>(terrain->height) * terrain->cellSize * 0.5f;
                         cmd.boundsCenter = Vec3(halfW, terrain->maxHeight * 0.5f, halfH);
                         cmd.boundsRadius = glm::length(Vec3(halfW, terrain->maxHeight, halfH));
                     }
@@ -634,10 +634,10 @@ public:
                     int tw = terJson["size"][0];
                     int th = terJson["size"][1];
                     float maxH = terJson.value("maxHeight", 10.0f);
-                    std::vector<float> heights(static_cast<size_t>(tw) * th, 0.0f);
+                    std::vector<float> heights(static_cast<size_t>(tw) * static_cast<size_t>(th), 0.0f);
                     if (terJson.contains("heights") && terJson["heights"].is_array())
                     {
-                        for (int i = 0; i < std::min(static_cast<int>(terJson["heights"].size()), tw * th); ++i)
+                        for (size_t i = 0; i < std::min(terJson["heights"].size(), static_cast<size_t>(tw) * static_cast<size_t>(th)); ++i)
                             heights[i] = terJson["heights"][i].get<float>();
                     }
                     tc->terrainHandle = assetStore->CreateTerrain("terrain", tw, th, tc->cellSize, maxH, heights);

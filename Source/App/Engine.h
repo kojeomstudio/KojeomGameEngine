@@ -210,7 +210,7 @@ public:
             float delta = TickOneFrame();
             if (delta > 0.5f) continue;
 
-            if (m_input->GetState().IsKeyPressed(KeyCode::Escape))
+            if (m_input && m_input->GetState().IsKeyPressed(KeyCode::Escape))
             {
                 m_running = false;
             }
