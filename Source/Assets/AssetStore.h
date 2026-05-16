@@ -142,12 +142,9 @@ public:
 
         if (!FileSystem::ValidatePath(path))
         {
-            KE_LOG_ERROR("Path validation failed for mesh: {}", path);
+            KE_LOG_ERROR("Skeleton path validation failed: {}", path);
             return INVALID_HANDLE;
         }
-
-        auto it = m_meshPaths.find(path);
-        if (it != m_meshPaths.end()) return it->second;
 
         std::string resolvedPath = FileSystem::ResolvePathCaseInsensitive(path);
         std::string ext = FileSystem::GetExtension(resolvedPath);
@@ -528,6 +525,12 @@ public:
     AssetHandle LoadAnimationClip(const std::string& path, AssetHandle skeletonHandle)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+
+        if (!FileSystem::ValidatePath(path))
+        {
+            KE_LOG_ERROR("Animation clip path validation failed: {}", path);
+            return INVALID_HANDLE;
+        }
 
         std::string resolvedPath = FileSystem::ResolvePathCaseInsensitive(path);
 
@@ -944,8 +947,10 @@ public:
                         return INVALID_HANDLE;
                     }
                     const uint16_t* idx16 = reinterpret_cast<const uint16_t*>(&buf.data[idxOffset]);
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         meshData.indices.push_back(baseIdx + idx16[i]);
                         meshData.indices.push_back(baseIdx + idx16[i + 1]);
                         meshData.indices.push_back(baseIdx + idx16[i + 2]);
@@ -960,8 +965,10 @@ public:
                         return INVALID_HANDLE;
                     }
                     const uint32_t* idx32 = reinterpret_cast<const uint32_t*>(&buf.data[idxOffset]);
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         meshData.indices.push_back(baseIdx + idx32[i]);
                         meshData.indices.push_back(baseIdx + idx32[i + 1]);
                         meshData.indices.push_back(baseIdx + idx32[i + 2]);
@@ -976,8 +983,10 @@ public:
                         return INVALID_HANDLE;
                     }
                     const uint8_t* idx8 = &buf.data[idxOffset];
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         meshData.indices.push_back(baseIdx + idx8[i]);
                         meshData.indices.push_back(baseIdx + idx8[i + 1]);
                         meshData.indices.push_back(baseIdx + idx8[i + 2]);
@@ -1772,8 +1781,10 @@ private:
                         return false;
                     }
                     const uint16_t* idx16 = reinterpret_cast<const uint16_t*>(&buf.data[idxOffset]);
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         outMesh.indices.push_back(baseIdx + idx16[i]);
                         outMesh.indices.push_back(baseIdx + idx16[i + 1]);
                         outMesh.indices.push_back(baseIdx + idx16[i + 2]);
@@ -1788,8 +1799,10 @@ private:
                         return false;
                     }
                     const uint32_t* idx32 = reinterpret_cast<const uint32_t*>(&buf.data[idxOffset]);
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         outMesh.indices.push_back(baseIdx + idx32[i]);
                         outMesh.indices.push_back(baseIdx + idx32[i + 1]);
                         outMesh.indices.push_back(baseIdx + idx32[i + 2]);
@@ -1804,8 +1817,10 @@ private:
                         return false;
                     }
                     const uint8_t* idx8 = &buf.data[idxOffset];
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         outMesh.indices.push_back(baseIdx + idx8[i]);
                         outMesh.indices.push_back(baseIdx + idx8[i + 1]);
                         outMesh.indices.push_back(baseIdx + idx8[i + 2]);
@@ -1995,8 +2010,10 @@ private:
                         return false;
                     }
                     const uint16_t* idx16 = reinterpret_cast<const uint16_t*>(&buf.data[idxOffset]);
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         outMesh.indices.push_back(baseIdx + idx16[i]);
                         outMesh.indices.push_back(baseIdx + idx16[i + 1]);
                         outMesh.indices.push_back(baseIdx + idx16[i + 2]);
@@ -2010,8 +2027,10 @@ private:
                         return false;
                     }
                     const uint32_t* idx32 = reinterpret_cast<const uint32_t*>(&buf.data[idxOffset]);
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         outMesh.indices.push_back(baseIdx + idx32[i]);
                         outMesh.indices.push_back(baseIdx + idx32[i + 1]);
                         outMesh.indices.push_back(baseIdx + idx32[i + 2]);
@@ -2025,8 +2044,10 @@ private:
                         return false;
                     }
                     const uint8_t* idx8 = &buf.data[idxOffset];
-                    for (int i = 0; i < static_cast<int>(idxAcc.count); i += 3)
+                    int triCount = static_cast<int>(idxAcc.count / 3);
+                    for (int t = 0; t < triCount; ++t)
                     {
+                        int i = t * 3;
                         outMesh.indices.push_back(baseIdx + idx8[i]);
                         outMesh.indices.push_back(baseIdx + idx8[i + 1]);
                         outMesh.indices.push_back(baseIdx + idx8[i + 2]);

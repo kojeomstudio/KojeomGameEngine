@@ -318,6 +318,8 @@ public:
         m_playbackTime += deltaSeconds * m_speed;
 
         float clipDuration = m_currentClip->GetDurationSeconds();
+        if (clipDuration <= 0.0f) return;
+
         if (m_playbackTime >= clipDuration)
         {
             if (m_loop)
@@ -779,6 +781,8 @@ public:
         m_playbackTime += deltaSeconds * state.speed;
 
         float clipDuration = state.clip->GetDurationSeconds();
+        if (clipDuration <= 0.0f) return;
+
         if (m_playbackTime >= clipDuration)
         {
             if (state.loop)

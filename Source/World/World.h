@@ -662,8 +662,10 @@ public:
                     {
                         auto* skelMesh = assetStore->GetSkinnedMesh(smComp->skeletalMeshHandle);
                         if (skelMesh)
-                            smComp->boneCount = static_cast<uint32_t>(
-                                skelMesh->vertices.empty() ? 0 : 128);
+                        {
+                            auto* skel = assetStore->GetSkeleton(skelHandle);
+                            smComp->boneCount = skel ? static_cast<uint32_t>(skel->skeleton.GetBones().size()) : 0;
+                        }
                     }
                 }
 

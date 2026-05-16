@@ -218,6 +218,16 @@ jobs:
           fi
           echo "Build output verified successfully"
 
+      - name: Run unit tests
+        run: |
+          ./build/bin/KojeomEngineTests
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "Unit tests failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+          echo "Unit tests passed"
+
       - name: Run headless asset validation
         run: |
           ./build/bin/Simple3DEngine --mode validate-assets --scene Scenes/TestScene.json --result-json Saved/TestResults/assets.json

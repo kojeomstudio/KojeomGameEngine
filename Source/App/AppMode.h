@@ -474,9 +474,10 @@ public:
             FileSystem::WriteTextFile(engine.GetConfig().resultJsonPath, j.dump(2));
         }
 
+        double fps = (result.durationSeconds > 0.001) ? result.frames / result.durationSeconds : 0.0;
         KE_LOG_INFO("Benchmark: {} frames in {:.2f}s ({:.1f} ms/frame, {:.1f} FPS, min={:.1f}ms, max={:.1f}ms)",
             result.frames, result.durationSeconds, result.averageFrameMs,
-            result.frames / result.durationSeconds, minFrameMs, maxFrameMs);
+            fps, minFrameMs, maxFrameMs);
 
         return result.success ? 0 : 5;
     }

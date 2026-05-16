@@ -46,7 +46,8 @@ public:
             }
             else if (arg == "--frames" && i + 1 < argc)
             {
-                config.frameLimit = std::stoi(argv[++i]);
+                try { config.frameLimit = std::stoi(argv[++i]); }
+                catch (const std::exception&) { KE_LOG_ERROR("Invalid --frames value: {}", argv[i]); config.frameLimit = 0; }
             }
             else if (arg == "--headless")
             {
@@ -71,11 +72,13 @@ public:
             }
             else if (arg == "--width" && i + 1 < argc)
             {
-                config.windowWidth = std::stoi(argv[++i]);
+                try { config.windowWidth = std::stoi(argv[++i]); }
+                catch (const std::exception&) { KE_LOG_ERROR("Invalid --width value: {}", argv[i]); }
             }
             else if (arg == "--height" && i + 1 < argc)
             {
-                config.windowHeight = std::stoi(argv[++i]);
+                try { config.windowHeight = std::stoi(argv[++i]); }
+                catch (const std::exception&) { KE_LOG_ERROR("Invalid --height value: {}", argv[i]); }
             }
         }
         return config;

@@ -97,6 +97,8 @@ public:
         m_input = std::make_unique<GlfwInput>();
 
         auto* glfwWin = static_cast<GlfwWindow*>(m_window.get());
+        glfwSetWindowUserPointer(glfwWin->GetGLFWWindow(), this);
+
         glfwWin->SetKeyCallback([](GLFWwindow* w, int key, int scancode, int action, int mods)
         {
             auto* engine = static_cast<Engine*>(glfwGetWindowUserPointer(w));
@@ -117,8 +119,6 @@ public:
             auto* engine = static_cast<Engine*>(glfwGetWindowUserPointer(w));
             if (engine && engine->GetRenderer()) engine->GetRenderer()->OnResize(width, height);
         });
-
-        glfwSetWindowUserPointer(glfwWin->GetGLFWWindow(), this);
 
         if (glfwRawMouseMotionSupported())
             glfwSetInputMode(glfwWin->GetGLFWWindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
@@ -374,7 +374,7 @@ public:
             }
 
             std::vector<float> flatVerts;
-            flatVerts.reserve(skelMesh->vertices.size() * 18);
+            flatVerts.reserve(skelMesh->vertices.size() * 20);
             for (const auto& v : skelMesh->vertices)
             {
                 flatVerts.insert(flatVerts.end(),
