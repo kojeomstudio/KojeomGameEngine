@@ -1005,6 +1005,7 @@ public:
         }
 
         ComputeBounds(meshData.vertices, meshData.boundsMin, meshData.boundsMax);
+        SanitizeVertices(meshData.vertices);
         ValidateDegenerateTriangles(meshData.indices, meshData.vertices);
         if (!meshData.vertices.empty() && !meshData.indices.empty() && !hasTangentAttribute)
             ComputeTangents(meshData.vertices, meshData.indices);
@@ -1014,6 +1015,9 @@ public:
             KE_LOG_ERROR("glTF mesh has no vertices: {}", path);
             return INVALID_HANDLE;
         }
+
+        if (!ValidateMeshSize(meshData.vertices, meshData.indices, path))
+            return INVALID_HANDLE;
 
         glm::vec3 extents = meshData.boundsMax - meshData.boundsMin;
         bool hasDegenerateBounds = (extents.x < 0.0001f || extents.y < 0.0001f || extents.z < 0.0001f);
@@ -1119,6 +1123,7 @@ private:
         }
 
         ComputeBounds(meshData.vertices, meshData.boundsMin, meshData.boundsMax);
+        SanitizeVertices(meshData.vertices);
         ValidateDegenerateTriangles(meshData.indices, meshData.vertices);
         if (!meshData.vertices.empty() && !meshData.indices.empty())
             ComputeTangents(meshData.vertices, meshData.indices);
@@ -1128,6 +1133,9 @@ private:
             KE_LOG_ERROR("FBX mesh has no vertices: {}", path);
             return INVALID_HANDLE;
         }
+
+        if (!ValidateMeshSize(meshData.vertices, meshData.indices, path))
+            return INVALID_HANDLE;
 
         AssetHandle handle = m_nextHandle++;
         m_meshPaths[path] = handle;
@@ -1457,6 +1465,13 @@ public:
                     break;
                 }
             }
+            size_t nanCount = 0;
+            for (size_t i = 0; i < mesh.vertices.size() && nanCount < 3; ++i)
+            {
+                if (!IsFiniteVertex(mesh.vertices[i])) ++nanCount;
+            }
+            if (nanCount > 0)
+                issues.push_back("Mesh handle " + std::to_string(h) + " has " + std::to_string(nanCount) + "+ vertices with NaN/Inf");
         }
 
         for (const auto& [h, mesh] : m_skinnedMeshes)
@@ -1510,6 +1525,31 @@ public:
         }
 
         return issues;
+    }
+
+    static bool IsFiniteVertex(const Vertex& v)
+    {
+        return std::isfinite(v.position.x) && std::isfinite(v.position.y) && std::isfinite(v.position.z)
+            && std::isfinite(v.normal.x) && std::isfinite(v.normal.y) && std::isfinite(v.normal.z)
+            && std::isfinite(v.uv.x) && std::isfinite(v.uv.y);
+    }
+
+    static constexpr size_t MAX_VERTEX_COUNT = 4'000'000;
+    static constexpr size_t MAX_INDEX_COUNT = 8'000'000;
+
+    bool ValidateMeshSize(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const std::string& path)
+    {
+        if (vertices.size() > MAX_VERTEX_COUNT)
+        {
+            KE_LOG_ERROR("Mesh exceeds max vertex count ({} > {}): {}", vertices.size(), MAX_VERTEX_COUNT, path);
+            return false;
+        }
+        if (indices.size() > MAX_INDEX_COUNT)
+        {
+            KE_LOG_ERROR("Mesh exceeds max index count ({} > {}): {}", indices.size(), MAX_INDEX_COUNT, path);
+            return false;
+        }
+        return true;
     }
 
 private:
@@ -1632,9 +1672,12 @@ private:
         }
 
         ComputeBounds(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
+        SanitizeVertices(outMesh.vertices);
         ValidateDegenerateTriangles(outMesh.indices, outMesh.vertices);
         if (!outMesh.vertices.empty() && !outMesh.indices.empty())
             ComputeTangents(outMesh.vertices, outMesh.indices);
+        if (!outMesh.vertices.empty() && !ValidateMeshSize(outMesh.vertices, outMesh.indices, path))
+            return false;
         return !outMesh.vertices.empty();
     }
 
@@ -1839,6 +1882,7 @@ private:
         }
 
         ComputeBounds(outMesh.vertices, outMesh.boundsMin, outMesh.boundsMax);
+        SanitizeVertices(outMesh.vertices);
         ValidateDegenerateTriangles(outMesh.indices, outMesh.vertices);
 
         if (!outMesh.vertices.empty() && !outMesh.indices.empty() && !hasTangentAttribute)
@@ -1849,6 +1893,9 @@ private:
             KE_LOG_ERROR("glTF mesh has no valid geometry: {}", path);
             return false;
         }
+
+        if (!ValidateMeshSize(outMesh.vertices, outMesh.indices, path))
+            return false;
 
         return true;
     }
@@ -2202,21 +2249,39 @@ private:
         }
     }
 
+    void SanitizeVertices(std::vector<Vertex>& vertices)
+    {
+        size_t removedCount = 0;
+        for (auto& v : vertices)
+        {
+            if (!IsFiniteVertex(v))
+            {
+                v = Vertex{};
+                ++removedCount;
+            }
+        }
+        if (removedCount > 0)
+            KE_LOG_WARN("Sanitized {} vertices with NaN/Inf values", removedCount);
+    }
+
     void ValidateDegenerateTriangles(std::vector<uint32_t>& indices, const std::vector<Vertex>& vertices)
     {
         std::vector<uint32_t> cleaned;
         cleaned.reserve(indices.size());
+        size_t degenerateCount = 0;
         for (size_t i = 0; i + 2 < indices.size(); i += 3)
         {
             uint32_t i0 = indices[i];
             uint32_t i1 = indices[i + 1];
             uint32_t i2 = indices[i + 2];
-            if (i0 == i1 || i1 == i2 || i0 == i2) continue;
-            if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size()) continue;
+            if (i0 == i1 || i1 == i2 || i0 == i2) { ++degenerateCount; continue; }
+            if (i0 >= vertices.size() || i1 >= vertices.size() || i2 >= vertices.size()) { ++degenerateCount; continue; }
             cleaned.push_back(i0);
             cleaned.push_back(i1);
             cleaned.push_back(i2);
         }
+        if (degenerateCount > 0)
+            KE_LOG_WARN("Removed {} degenerate/out-of-bounds triangles", degenerateCount);
         indices = std::move(cleaned);
     }
 

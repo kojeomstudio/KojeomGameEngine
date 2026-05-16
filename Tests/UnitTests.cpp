@@ -1428,6 +1428,40 @@ KE_TEST(AnimationClipMissingBone)
     return {};
 }
 
+KE_TEST(VertexNaNValidation)
+{
+    Kojeom::Vertex v;
+    v.position = glm::vec3(1.0f, NAN, 3.0f);
+    v.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+    v.uv = glm::vec2(0.0f, 0.0f);
+    KE_EXPECT_TRUE(!Kojeom::AssetStore::IsFiniteVertex(v));
+
+    Kojeom::Vertex valid;
+    valid.position = glm::vec3(1.0f, 2.0f, 3.0f);
+    valid.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+    valid.uv = glm::vec2(0.5f, 0.5f);
+    KE_EXPECT_TRUE(Kojeom::AssetStore::IsFiniteVertex(valid));
+
+    Kojeom::Vertex infV;
+    infV.position = glm::vec3(INFINITY, 0.0f, 0.0f);
+    infV.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+    infV.uv = glm::vec2(0.0f, 0.0f);
+    KE_EXPECT_TRUE(!Kojeom::AssetStore::IsFiniteVertex(infV));
+    return {};
+}
+
+KE_TEST(MeshSizeValidation)
+{
+    Kojeom::AssetStore store;
+    std::vector<Kojeom::Vertex> tooManyVertices(Kojeom::AssetStore::MAX_VERTEX_COUNT + 1);
+    std::vector<uint32_t> indices = {0, 1, 2};
+    KE_EXPECT_TRUE(!store.ValidateMeshSize(tooManyVertices, indices, "test"));
+
+    std::vector<Kojeom::Vertex> okVertices(100);
+    KE_EXPECT_TRUE(store.ValidateMeshSize(okVertices, indices, "test"));
+    return {};
+}
+
 int main()
 {
     Kojeom::Log::Init("test_results.log");

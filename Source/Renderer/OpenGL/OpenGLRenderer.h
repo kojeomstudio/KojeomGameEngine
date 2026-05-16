@@ -343,21 +343,48 @@ private:
     bool CreateAllShaders()
     {
         GLuint pbr = m_shaderManager.CreateProgram(PBRVertexSrc(), PBRFragmentSrc());
-        if (!pbr) return false;
+        if (!pbr)
+        {
+            KE_LOG_ERROR("Failed to compile/link PBR shader program");
+            return false;
+        }
         m_shaderManager.AddShader("pbr", pbr);
 
         GLuint skinned = m_shaderManager.CreateProgram(SkinnedVertexSrc(), SkinnedFragmentSrc());
-        if (!skinned) return false;
+        if (!skinned)
+        {
+            KE_LOG_ERROR("Failed to compile/link skinned shader program");
+            return false;
+        }
         m_shaderManager.AddShader("skinned", skinned);
 
         GLuint shadow = CreateShadowShader();
+        if (!shadow)
+        {
+            KE_LOG_ERROR("Failed to compile/link shadow shader program");
+            return false;
+        }
+
         GLuint shadowSkinned = CreateShadowSkinnedShader();
+        if (!shadowSkinned)
+        {
+            KE_LOG_ERROR("Failed to compile/link shadow skinned shader program");
+            return false;
+        }
+
         GLuint postProcess = m_shaderManager.CreateProgram(PostProcessVertexSrc(), PostProcessFragmentSrc());
-        if (postProcess) m_shaderManager.AddShader("postprocess", postProcess);
+        if (!postProcess)
+        {
+            KE_LOG_ERROR("Failed to compile/link post-process shader program");
+            return false;
+        }
+        m_shaderManager.AddShader("postprocess", postProcess);
 
         CreateBloomShaders();
         CreateSSAOShaders();
         CreateFXASShader();
+
+        KE_LOG_INFO("All shader programs compiled successfully");
         return true;
     }
 
@@ -1060,9 +1087,14 @@ private:
         float farP = scene.camera.farPlane;
         float clipRange = farP - nearP;
 
-        cascadeSplits[0] = nearP + clipRange * 0.05f;
-        cascadeSplits[1] = nearP + clipRange * 0.15f;
-        cascadeSplits[2] = nearP + clipRange * 0.50f;
+        float cascadeLambda = 0.75f;
+        for (int i = 0; i < SHADOW_CASCADE_COUNT; ++i)
+        {
+            float p = static_cast<float>(i + 1) / static_cast<float>(SHADOW_CASCADE_COUNT);
+            float logSplit = nearP * std::pow(farP / nearP, p);
+            float linSplit = nearP + clipRange * p;
+            cascadeSplits[i] = cascadeLambda * logSplit + (1.0f - cascadeLambda) * linSplit;
+        }
 
         Mat4 invViewProj = glm::inverse(scene.camera.viewProjectionMatrix);
 
@@ -2255,7 +2287,7 @@ private:
             void main()
             {
                 vec3 albedo = uUseAlbedoTexture ? texture(uAlbedoTexture, vTexCoord).rgb : uAlbedo;
-                float metallic = uMetallic;
+                float metallic = clamp(uMetallic, 0.0, 1.0);
                 float roughness = uRoughness;
                 float ao = uAO;
 
