@@ -32,8 +32,8 @@ public:
         }
 
         glEnable(GL_DEBUG_OUTPUT);
-        glDebugMessageCallback([](GLenum source, GLenum type, GLuint id, GLenum severity,
-            GLsizei length, const GLchar* message, const void* userParam)
+        glDebugMessageCallback([]([[maybe_unused]] GLenum source, [[maybe_unused]] GLenum type, GLuint id, GLenum severity,
+            [[maybe_unused]] GLsizei length, const GLchar* message, [[maybe_unused]] const void* userParam)
         {
             if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
                 return;

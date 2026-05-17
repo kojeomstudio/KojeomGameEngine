@@ -1462,6 +1462,37 @@ KE_TEST(MeshSizeValidation)
     return {};
 }
 
+KE_TEST(FilePathValidationAbsolutePath)
+{
+    KE_EXPECT_TRUE(Kojeom::FileSystem::ValidatePath("Scenes/TestScene.json"));
+    KE_EXPECT_TRUE(Kojeom::FileSystem::ValidatePath("/home/user/project/Scenes/TestScene.json"));
+    KE_EXPECT_TRUE(Kojeom::FileSystem::ValidatePath("C:/Projects/Engine/Assets/mesh.obj"));
+    return {};
+}
+
+KE_TEST(FilePathValidationTraversalBlocked)
+{
+    KE_EXPECT_TRUE(!Kojeom::FileSystem::ValidatePath("../secret.txt"));
+    KE_EXPECT_TRUE(!Kojeom::FileSystem::ValidatePath("foo/../../etc/passwd"));
+    KE_EXPECT_TRUE(!Kojeom::FileSystem::ValidatePath("mesh%2e%2e/secret"));
+    return {};
+}
+
+KE_TEST(RenderSceneClearResetsLightAndCamera)
+{
+    Kojeom::RenderScene scene;
+    scene.light.direction = Vec3(1.0f, 2.0f, 3.0f);
+    scene.light.intensity = 5.0f;
+    scene.camera.fov = 90.0f;
+    scene.staticDrawCommands.push_back({});
+    scene.Clear();
+    KE_EXPECT_TRUE(scene.staticDrawCommands.empty());
+    KE_EXPECT_FLOAT_EQ(scene.light.direction.x, 0.0f, 0.001f);
+    KE_EXPECT_FLOAT_EQ(scene.light.intensity, 1.0f, 0.001f);
+    KE_EXPECT_FLOAT_EQ(scene.camera.fov, 60.0f, 0.001f);
+    return {};
+}
+
 int main()
 {
     Kojeom::Log::Init("test_results.log");

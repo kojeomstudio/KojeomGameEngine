@@ -163,7 +163,7 @@ public:
             else
                 transform.rotation = glm::normalize(transform.rotation);
 
-            pose.GetLocalTransform(channel.boneIndex) = transform;
+            pose.GetLocalTransform(static_cast<size_t>(channel.boneIndex)) = transform;
         }
 
         pose.ComputeGlobalTransforms(skeleton);
@@ -351,7 +351,7 @@ public:
         if (m_rootMotionEnabled && m_rootMotionBone >= 0 &&
             m_rootMotionBone < static_cast<int32_t>(m_skeleton->GetBoneCount()))
         {
-            auto& boneTransform = m_currentPose.GetGlobalTransform(m_rootMotionBone);
+            auto& boneTransform = m_currentPose.GetGlobalTransform(static_cast<size_t>(m_rootMotionBone));
             if (m_firstRootMotionFrame)
             {
                 m_prevRootPosition = boneTransform.position;

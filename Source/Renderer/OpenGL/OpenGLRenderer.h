@@ -1160,7 +1160,9 @@ private:
             Vec3 maxExtents(radius);
             Vec3 minExtents = -maxExtents;
 
-            Mat4 lightView = glm::lookAt(center - lightDir * radius, center, Vec3(0.0f, 1.0f, 0.0f));
+            Vec3 upVec = (std::abs(glm::dot(glm::normalize(lightDir), Vec3(0.0f, 1.0f, 0.0f))) > 0.99f)
+                ? Vec3(1.0f, 0.0f, 0.0f) : Vec3(0.0f, 1.0f, 0.0f);
+            Mat4 lightView = glm::lookAt(center - lightDir * radius, center, upVec);
             Mat4 lightProj = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y,
                 -maxExtents.z * 4.0f, maxExtents.z * 4.0f);
             m_cascadeLightSpaceMatrices[cascade] = lightProj * lightView;
@@ -2004,10 +2006,10 @@ private:
                     float sampleDepth = texture(uDepthTexture, sampleUV).r;
                     vec3 sampleWorldPos = ReconstructWorldPos(sampleUV, sampleDepth);
 
-                    float zDiff = sampleWorldPos.z - fragPos.z;
-                    float rangeCheck = smoothstep(0.0, 1.0, uRadius / max(abs(zDiff), 0.001));
-                    float depthDiff = abs(zDiff);
-                    occlusion += (depthDiff <= uRadius + uBias ? 1.0 : 0.0) * rangeCheck;
+                    vec3 sampleDiff = sampleWorldPos - fragPos;
+                    float dist = length(sampleDiff);
+                    float rangeCheck = smoothstep(0.0, 1.0, uRadius / max(dist, 0.001));
+                    occlusion += (dist <= uRadius + uBias ? 1.0 : 0.0) * rangeCheck;
                     validSamples++;
                 }
 

@@ -98,7 +98,7 @@ struct TerrainData
     float GetHeight(int x, int z) const
     {
         if (x < 0 || x >= width || z < 0 || z >= height) return 0.0f;
-        return heightmap[z * width + x];
+        return heightmap[static_cast<size_t>(z) * static_cast<size_t>(width) + static_cast<size_t>(x)];
     }
     float GetHeightInterpolated(float worldX, float worldZ) const
     {
@@ -350,7 +350,7 @@ public:
         terrain.heightmap = heights;
         if (terrain.heightmap.empty())
         {
-            terrain.heightmap.resize(static_cast<size_t>(width) * height, 0.0f);
+            terrain.heightmap.resize(static_cast<size_t>(width) * static_cast<size_t>(height), 0.0f);
         }
         m_terrains[handle] = std::move(terrain);
         KE_LOG_INFO("Created terrain: {} ({}x{}, cellSize={})", name, width, height, cellSize);
@@ -389,10 +389,10 @@ public:
             return INVALID_HANDLE;
         }
 
-        std::vector<float> heights(static_cast<size_t>(imgW) * imgH);
+        std::vector<float> heights(static_cast<size_t>(imgW) * static_cast<size_t>(imgH));
         for (int i = 0; i < imgW * imgH; ++i)
         {
-            heights[i] = (static_cast<float>(data[i]) / 255.0f) * maxHeight;
+            heights[static_cast<size_t>(i)] = (static_cast<float>(data[i]) / 255.0f) * maxHeight;
         }
         stbi_image_free(data);
 
@@ -862,9 +862,10 @@ public:
                 continue;
             }
 
-            const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
-            const auto& posBuf = model.bufferViews[posAcc.bufferView];
-            size_t posDataSize = model.buffers[posBuf.buffer].data.size();
+            size_t posAccIdx = static_cast<size_t>(primitive.attributes.at("POSITION"));
+            const auto& posAcc = model.accessors[posAccIdx];
+            const auto& posBuf = model.bufferViews[static_cast<size_t>(posAcc.bufferView)];
+            size_t posDataSize = model.buffers[static_cast<size_t>(posBuf.buffer)].data.size();
             size_t posOffset = posBuf.byteOffset + posAcc.byteOffset;
             size_t requiredPosBytes = posAcc.count * 3 * sizeof(float);
             if (posOffset + requiredPosBytes > posDataSize)
@@ -873,16 +874,17 @@ public:
                 return INVALID_HANDLE;
             }
             const float* posData = reinterpret_cast<const float*>(
-                &model.buffers[posBuf.buffer].data[posOffset]);
+                &model.buffers[static_cast<size_t>(posBuf.buffer)].data[posOffset]);
 
             const float* normData = nullptr;
             if (primitive.attributes.count("NORMAL") > 0)
             {
-                const auto& normAcc = model.accessors[primitive.attributes.at("NORMAL")];
-                const auto& normBuf = model.bufferViews[normAcc.bufferView];
+                size_t normAccIdx = static_cast<size_t>(primitive.attributes.at("NORMAL"));
+                const auto& normAcc = model.accessors[normAccIdx];
+                const auto& normBuf = model.bufferViews[static_cast<size_t>(normAcc.bufferView)];
                 size_t normOffset = normBuf.byteOffset + normAcc.byteOffset;
                 size_t requiredNormBytes = normAcc.count * 3 * sizeof(float);
-                if (normOffset + requiredNormBytes > model.buffers[normBuf.buffer].data.size())
+                if (normOffset + requiredNormBytes > model.buffers[static_cast<size_t>(normBuf.buffer)].data.size())
                 {
                     KE_LOG_WARN("glTF normal buffer out of bounds, ignoring normals");
                     normData = nullptr;
@@ -890,18 +892,19 @@ public:
                 else
                 {
                     normData = reinterpret_cast<const float*>(
-                        &model.buffers[normBuf.buffer].data[normOffset]);
+                        &model.buffers[static_cast<size_t>(normBuf.buffer)].data[normOffset]);
                 }
             }
 
             const float* uvData = nullptr;
             if (primitive.attributes.count("TEXCOORD_0") > 0)
             {
-                const auto& uvAcc = model.accessors[primitive.attributes.at("TEXCOORD_0")];
-                const auto& uvBuf = model.bufferViews[uvAcc.bufferView];
+                size_t uvAccIdx = static_cast<size_t>(primitive.attributes.at("TEXCOORD_0"));
+                const auto& uvAcc = model.accessors[uvAccIdx];
+                const auto& uvBuf = model.bufferViews[static_cast<size_t>(uvAcc.bufferView)];
                 size_t uvOffset = uvBuf.byteOffset + uvAcc.byteOffset;
                 size_t requiredUvBytes = uvAcc.count * 2 * sizeof(float);
-                if (uvOffset + requiredUvBytes > model.buffers[uvBuf.buffer].data.size())
+                if (uvOffset + requiredUvBytes > model.buffers[static_cast<size_t>(uvBuf.buffer)].data.size())
                 {
                     KE_LOG_WARN("glTF UV buffer out of bounds, ignoring UVs");
                     uvData = nullptr;
@@ -909,21 +912,22 @@ public:
                 else
                 {
                     uvData = reinterpret_cast<const float*>(
-                        &model.buffers[uvBuf.buffer].data[uvOffset]);
+                        &model.buffers[static_cast<size_t>(uvBuf.buffer)].data[uvOffset]);
                 }
             }
 
             const float* tangentData = nullptr;
             if (primitive.attributes.count("TANGENT") > 0)
             {
-                const auto& tanAcc = model.accessors[primitive.attributes.at("TANGENT")];
-                const auto& tanBuf = model.bufferViews[tanAcc.bufferView];
+                size_t tanAccIdx = static_cast<size_t>(primitive.attributes.at("TANGENT"));
+                const auto& tanAcc = model.accessors[tanAccIdx];
+                const auto& tanBuf = model.bufferViews[static_cast<size_t>(tanAcc.bufferView)];
                 size_t tanOffset = tanBuf.byteOffset + tanAcc.byteOffset;
                 size_t requiredTanBytes = tanAcc.count * 4 * sizeof(float);
-                if (tanOffset + requiredTanBytes <= model.buffers[tanBuf.buffer].data.size())
+                if (tanOffset + requiredTanBytes <= model.buffers[static_cast<size_t>(tanBuf.buffer)].data.size())
                 {
                     tangentData = reinterpret_cast<const float*>(
-                        &model.buffers[tanBuf.buffer].data[tanOffset]);
+                        &model.buffers[static_cast<size_t>(tanBuf.buffer)].data[tanOffset]);
                     hasTangentAttribute = true;
                 }
             }
@@ -945,9 +949,9 @@ public:
 
             if (primitive.indices >= 0)
             {
-                const auto& idxAcc = model.accessors[primitive.indices];
-                const auto& idxBuf = model.bufferViews[idxAcc.bufferView];
-                const auto& buf = model.buffers[idxBuf.buffer];
+                const auto& idxAcc = model.accessors[static_cast<size_t>(primitive.indices)];
+                const auto& idxBuf = model.bufferViews[static_cast<size_t>(idxAcc.bufferView)];
+                const auto& buf = model.buffers[static_cast<size_t>(idxBuf.buffer)];
                 size_t idxOffset = idxBuf.byteOffset + idxAcc.byteOffset;
 
                 if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
@@ -1009,9 +1013,9 @@ public:
             {
                 for (int i = 0; i < vertexCount; i += 3)
                 {
-                    meshData.indices.push_back(baseIdx + i);
-                    meshData.indices.push_back(baseIdx + i + 1);
-                    meshData.indices.push_back(baseIdx + i + 2);
+                    meshData.indices.push_back(baseIdx + static_cast<uint32_t>(i));
+                    meshData.indices.push_back(baseIdx + static_cast<uint32_t>(i + 1));
+                    meshData.indices.push_back(baseIdx + static_cast<uint32_t>(i + 2));
                 }
             }
         }
@@ -1194,10 +1198,10 @@ private:
                             TextureData texData;
                             if (aiTex->mHeight > 0)
                             {
-                                texData.width = aiTex->mWidth;
-                                texData.height = aiTex->mHeight;
+                                texData.width = static_cast<int>(aiTex->mWidth);
+                                texData.height = static_cast<int>(aiTex->mHeight);
                                 texData.channels = 4;
-                                size_t pixelCount = static_cast<size_t>(texData.width) * texData.height * texData.channels;
+                                size_t pixelCount = static_cast<size_t>(texData.width) * static_cast<size_t>(texData.height) * static_cast<size_t>(texData.channels);
                                 const uint8_t* pixelData = reinterpret_cast<const uint8_t*>(aiTex->pcData);
                                 texData.pixels.assign(pixelData, pixelData + pixelCount);
                             }
@@ -1215,7 +1219,7 @@ private:
                                     texData.width = w;
                                     texData.height = h;
                                     texData.channels = 4;
-                                    size_t pixelCount = static_cast<size_t>(w) * h * 4;
+                                    size_t pixelCount = static_cast<size_t>(w) * static_cast<size_t>(h) * 4;
                                     texData.pixels.assign(data, data + pixelCount);
                                     stbi_image_free(data);
                                 }
@@ -1224,9 +1228,9 @@ private:
                             if (texData.width > 0 && texData.height > 0 && !texData.pixels.empty())
                             {
                                 texData.path = virtualPath;
-                                AssetHandle handle = m_nextHandle++;
-                                m_texturePaths[virtualPath] = handle;
-                                m_textures[handle] = std::move(texData);
+                                AssetHandle texHandle = m_nextHandle++;
+                                m_texturePaths[virtualPath] = texHandle;
+                                m_textures[texHandle] = std::move(texData);
                                 KE_LOG_INFO("Extracted FBX embedded texture {} ({}x{})", virtualPath, texData.width, texData.height);
                                 return virtualPath;
                             }
@@ -1513,7 +1517,7 @@ public:
                 issues.push_back("Texture handle " + std::to_string(h) + " has invalid dimensions");
             if (tex.pixels.empty())
                 issues.push_back("Texture handle " + std::to_string(h) + " has no pixel data");
-            size_t expectedSize = static_cast<size_t>(tex.width) * tex.height * tex.channels;
+            size_t expectedSize = static_cast<size_t>(tex.width) * static_cast<size_t>(tex.height) * static_cast<size_t>(tex.channels);
             if (!tex.pixels.empty() && tex.pixels.size() != expectedSize)
                 issues.push_back("Texture handle " + std::to_string(h) + " pixel data size mismatch");
         }
@@ -1522,7 +1526,7 @@ public:
         {
             if (terrain.width <= 0 || terrain.height <= 0)
                 issues.push_back("Terrain handle " + std::to_string(h) + " has invalid dimensions");
-            size_t expectedHeightmap = static_cast<size_t>(terrain.width) * terrain.height;
+            size_t expectedHeightmap = static_cast<size_t>(terrain.width) * static_cast<size_t>(terrain.height);
             if (!terrain.heightmap.empty() && terrain.heightmap.size() != expectedHeightmap)
                 issues.push_back("Terrain handle " + std::to_string(h) + " heightmap size mismatch");
             if (terrain.cellSize <= 0.0f)
@@ -1662,11 +1666,11 @@ private:
                         return;
                     }
                     Vertex vtx{};
-                    vtx.position = positions[iv - 1];
+                    vtx.position = positions[static_cast<size_t>(iv - 1)];
                     if (ivn > 0 && ivn <= static_cast<int>(normals.size()))
-                        vtx.normal = normals[ivn - 1];
+                        vtx.normal = normals[static_cast<size_t>(ivn - 1)];
                     if (ivt > 0 && ivt <= static_cast<int>(uvs.size()))
-                        vtx.uv = uvs[ivt - 1];
+                        vtx.uv = uvs[static_cast<size_t>(ivt - 1)];
                     outMesh.vertices.push_back(vtx);
                 };
 
@@ -1744,9 +1748,10 @@ private:
             if (materialIndex < 0 && primitive.material >= 0)
                 materialIndex = primitive.material;
 
-            const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
-            const auto& posBuf = model.bufferViews[posAcc.bufferView];
-            size_t posDataSize = model.buffers[posBuf.buffer].data.size();
+            size_t posAccIdx = static_cast<size_t>(primitive.attributes.at("POSITION"));
+            const auto& posAcc = model.accessors[posAccIdx];
+            const auto& posBuf = model.bufferViews[static_cast<size_t>(posAcc.bufferView)];
+            size_t posDataSize = model.buffers[static_cast<size_t>(posBuf.buffer)].data.size();
             size_t posOffset = posBuf.byteOffset + posAcc.byteOffset;
             size_t requiredPosBytes = posAcc.count * 3 * sizeof(float);
             if (posOffset + requiredPosBytes > posDataSize)
@@ -1755,45 +1760,48 @@ private:
                 return false;
             }
             const float* posData = reinterpret_cast<const float*>(
-                &model.buffers[posBuf.buffer].data[posOffset]);
+                &model.buffers[static_cast<size_t>(posBuf.buffer)].data[posOffset]);
 
             const float* normData = nullptr;
             if (primitive.attributes.count("NORMAL") > 0)
             {
-                const auto& normAcc = model.accessors[primitive.attributes.at("NORMAL")];
-                const auto& normBuf = model.bufferViews[normAcc.bufferView];
+                size_t normAccIdx = static_cast<size_t>(primitive.attributes.at("NORMAL"));
+                const auto& normAcc = model.accessors[normAccIdx];
+                const auto& normBuf = model.bufferViews[static_cast<size_t>(normAcc.bufferView)];
                 size_t normOffset = normBuf.byteOffset + normAcc.byteOffset;
-                if (normOffset + normAcc.count * 3 * sizeof(float) <= model.buffers[normBuf.buffer].data.size())
+                if (normOffset + normAcc.count * 3 * sizeof(float) <= model.buffers[static_cast<size_t>(normBuf.buffer)].data.size())
                 {
                     normData = reinterpret_cast<const float*>(
-                        &model.buffers[normBuf.buffer].data[normOffset]);
+                        &model.buffers[static_cast<size_t>(normBuf.buffer)].data[normOffset]);
                 }
             }
 
             const float* uvData = nullptr;
             if (primitive.attributes.count("TEXCOORD_0") > 0)
             {
-                const auto& uvAcc = model.accessors[primitive.attributes.at("TEXCOORD_0")];
-                const auto& uvBuf = model.bufferViews[uvAcc.bufferView];
+                size_t uvAccIdx = static_cast<size_t>(primitive.attributes.at("TEXCOORD_0"));
+                const auto& uvAcc = model.accessors[uvAccIdx];
+                const auto& uvBuf = model.bufferViews[static_cast<size_t>(uvAcc.bufferView)];
                 size_t uvOffset = uvBuf.byteOffset + uvAcc.byteOffset;
-                if (uvOffset + uvAcc.count * 2 * sizeof(float) <= model.buffers[uvBuf.buffer].data.size())
+                if (uvOffset + uvAcc.count * 2 * sizeof(float) <= model.buffers[static_cast<size_t>(uvBuf.buffer)].data.size())
                 {
                     uvData = reinterpret_cast<const float*>(
-                        &model.buffers[uvBuf.buffer].data[uvOffset]);
+                        &model.buffers[static_cast<size_t>(uvBuf.buffer)].data[uvOffset]);
                 }
             }
 
             const float* tangentData = nullptr;
             if (primitive.attributes.count("TANGENT") > 0)
             {
-                const auto& tanAcc = model.accessors[primitive.attributes.at("TANGENT")];
-                const auto& tanBuf = model.bufferViews[tanAcc.bufferView];
+                size_t tanAccIdx = static_cast<size_t>(primitive.attributes.at("TANGENT"));
+                const auto& tanAcc = model.accessors[tanAccIdx];
+                const auto& tanBuf = model.bufferViews[static_cast<size_t>(tanAcc.bufferView)];
                 size_t tanOffset = tanBuf.byteOffset + tanAcc.byteOffset;
                 size_t requiredTanBytes = tanAcc.count * 4 * sizeof(float);
-                if (tanOffset + requiredTanBytes <= model.buffers[tanBuf.buffer].data.size())
+                if (tanOffset + requiredTanBytes <= model.buffers[static_cast<size_t>(tanBuf.buffer)].data.size())
                 {
                     tangentData = reinterpret_cast<const float*>(
-                        &model.buffers[tanBuf.buffer].data[tanOffset]);
+                        &model.buffers[static_cast<size_t>(tanBuf.buffer)].data[tanOffset]);
                     hasTangentAttribute = true;
                 }
             }
@@ -1801,7 +1809,7 @@ private:
             int vertexCount = static_cast<int>(posAcc.count);
             uint32_t baseIdx = static_cast<uint32_t>(outMesh.vertices.size());
 
-            outMesh.vertices.reserve(outMesh.vertices.size() + vertexCount);
+            outMesh.vertices.reserve(outMesh.vertices.size() + static_cast<size_t>(vertexCount));
             for (int i = 0; i < vertexCount; ++i)
             {
                 Vertex v{};
@@ -1815,9 +1823,9 @@ private:
 
             if (primitive.indices >= 0)
             {
-                const auto& idxAcc = model.accessors[primitive.indices];
-                const auto& idxBuf = model.bufferViews[idxAcc.bufferView];
-                const auto& buf = model.buffers[idxBuf.buffer];
+                const auto& idxAcc = model.accessors[static_cast<size_t>(primitive.indices)];
+                const auto& idxBuf = model.bufferViews[static_cast<size_t>(idxAcc.bufferView)];
+                const auto& buf = model.buffers[static_cast<size_t>(idxBuf.buffer)];
                 size_t idxOffset = idxBuf.byteOffset + idxAcc.byteOffset;
 
                 if (idxAcc.count % 3 != 0)
@@ -1886,9 +1894,9 @@ private:
             {
                 for (int i = 0; i < vertexCount; i += 3)
                 {
-                    outMesh.indices.push_back(baseIdx + i);
-                    outMesh.indices.push_back(baseIdx + i + 1);
-                    outMesh.indices.push_back(baseIdx + i + 2);
+                    outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(i));
+                    outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(i + 1));
+                    outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(i + 2));
                 }
             }
         }
@@ -1948,9 +1956,10 @@ private:
         {
             if (!primitive.attributes.count("POSITION")) continue;
 
-            const auto& posAcc = model.accessors[primitive.attributes.at("POSITION")];
-            const auto& posBuf = model.bufferViews[posAcc.bufferView];
-            size_t posDataSize = model.buffers[posBuf.buffer].data.size();
+            size_t posAccIdx = static_cast<size_t>(primitive.attributes.at("POSITION"));
+            const auto& posAcc = model.accessors[posAccIdx];
+            const auto& posBuf = model.bufferViews[static_cast<size_t>(posAcc.bufferView)];
+            size_t posDataSize = model.buffers[static_cast<size_t>(posBuf.buffer)].data.size();
             size_t posOffset = posBuf.byteOffset + posAcc.byteOffset;
             size_t requiredPosBytes = posAcc.count * 3 * sizeof(float);
             if (posOffset + requiredPosBytes > posDataSize)
@@ -1959,36 +1968,39 @@ private:
                 return false;
             }
             const float* posData = reinterpret_cast<const float*>(
-                &model.buffers[posBuf.buffer].data[posOffset]);
+                &model.buffers[static_cast<size_t>(posBuf.buffer)].data[posOffset]);
 
             const float* normData = nullptr;
             if (primitive.attributes.count("NORMAL") > 0)
             {
-                const auto& normAcc = model.accessors[primitive.attributes.at("NORMAL")];
-                const auto& normBuf = model.bufferViews[normAcc.bufferView];
+                size_t normAccIdx = static_cast<size_t>(primitive.attributes.at("NORMAL"));
+                const auto& normAcc = model.accessors[normAccIdx];
+                const auto& normBuf = model.bufferViews[static_cast<size_t>(normAcc.bufferView)];
                 size_t normOff = normBuf.byteOffset + normAcc.byteOffset;
-                if (normOff + normAcc.count * 3 * sizeof(float) <= model.buffers[normBuf.buffer].data.size())
-                    normData = reinterpret_cast<const float*>(&model.buffers[normBuf.buffer].data[normOff]);
+                if (normOff + normAcc.count * 3 * sizeof(float) <= model.buffers[static_cast<size_t>(normBuf.buffer)].data.size())
+                    normData = reinterpret_cast<const float*>(&model.buffers[static_cast<size_t>(normBuf.buffer)].data[normOff]);
             }
 
             const float* uvData = nullptr;
             if (primitive.attributes.count("TEXCOORD_0") > 0)
             {
-                const auto& uvAcc = model.accessors[primitive.attributes.at("TEXCOORD_0")];
-                const auto& uvBuf = model.bufferViews[uvAcc.bufferView];
+                size_t uvAccIdx = static_cast<size_t>(primitive.attributes.at("TEXCOORD_0"));
+                const auto& uvAcc = model.accessors[uvAccIdx];
+                const auto& uvBuf = model.bufferViews[static_cast<size_t>(uvAcc.bufferView)];
                 size_t uvOff = uvBuf.byteOffset + uvAcc.byteOffset;
-                if (uvOff + uvAcc.count * 2 * sizeof(float) <= model.buffers[uvBuf.buffer].data.size())
-                    uvData = reinterpret_cast<const float*>(&model.buffers[uvBuf.buffer].data[uvOff]);
+                if (uvOff + uvAcc.count * 2 * sizeof(float) <= model.buffers[static_cast<size_t>(uvBuf.buffer)].data.size())
+                    uvData = reinterpret_cast<const float*>(&model.buffers[static_cast<size_t>(uvBuf.buffer)].data[uvOff]);
             }
 
             const float* weightData = nullptr;
             if (primitive.attributes.count("WEIGHTS_0") > 0)
             {
-                const auto& wAcc = model.accessors[primitive.attributes.at("WEIGHTS_0")];
-                const auto& wBuf = model.bufferViews[wAcc.bufferView];
+                size_t wAccIdx = static_cast<size_t>(primitive.attributes.at("WEIGHTS_0"));
+                const auto& wAcc = model.accessors[wAccIdx];
+                const auto& wBuf = model.bufferViews[static_cast<size_t>(wAcc.bufferView)];
                 size_t wOffset = wBuf.byteOffset + wAcc.byteOffset;
                 size_t requiredWBytes = wAcc.count * 4 * sizeof(float);
-                if (wOffset + requiredWBytes > model.buffers[wBuf.buffer].data.size())
+                if (wOffset + requiredWBytes > model.buffers[static_cast<size_t>(wBuf.buffer)].data.size())
                 {
                     KE_LOG_WARN("glTF WEIGHTS_0 buffer out of bounds, ignoring weights");
                     weightData = nullptr;
@@ -1996,7 +2008,7 @@ private:
                 else
                 {
                     weightData = reinterpret_cast<const float*>(
-                        &model.buffers[wBuf.buffer].data[wOffset]);
+                        &model.buffers[static_cast<size_t>(wBuf.buffer)].data[wOffset]);
                 }
             }
 
@@ -2005,14 +2017,15 @@ private:
             int jointComponentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT;
             if (primitive.attributes.count("JOINTS_0") > 0)
             {
-                const auto& jAcc = model.accessors[primitive.attributes.at("JOINTS_0")];
-                const auto& jBuf = model.bufferViews[jAcc.bufferView];
+                size_t jAccIdx = static_cast<size_t>(primitive.attributes.at("JOINTS_0"));
+                const auto& jAcc = model.accessors[jAccIdx];
+                const auto& jBuf = model.bufferViews[static_cast<size_t>(jAcc.bufferView)];
                 jointComponentType = jAcc.componentType;
                 size_t jOffset = jBuf.byteOffset + jAcc.byteOffset;
                 if (jointComponentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
                 {
                     size_t requiredJBytes = jAcc.count * 4 * sizeof(uint16_t);
-                    if (jOffset + requiredJBytes > model.buffers[jBuf.buffer].data.size())
+                    if (jOffset + requiredJBytes > model.buffers[static_cast<size_t>(jBuf.buffer)].data.size())
                     {
                         KE_LOG_WARN("glTF JOINTS_0 buffer out of bounds, ignoring joints");
                         jointData = nullptr;
@@ -2020,13 +2033,13 @@ private:
                     else
                     {
                         jointData = reinterpret_cast<const uint16_t*>(
-                            &model.buffers[jBuf.buffer].data[jOffset]);
+                            &model.buffers[static_cast<size_t>(jBuf.buffer)].data[jOffset]);
                     }
                 }
                 else
                 {
                     size_t requiredJBytes = jAcc.count * 4 * sizeof(uint8_t);
-                    if (jOffset + requiredJBytes > model.buffers[jBuf.buffer].data.size())
+                    if (jOffset + requiredJBytes > model.buffers[static_cast<size_t>(jBuf.buffer)].data.size())
                     {
                         KE_LOG_WARN("glTF JOINTS_0 buffer out of bounds, ignoring joints");
                         jointData8 = nullptr;
@@ -2034,7 +2047,7 @@ private:
                     else
                     {
                         jointData8 = reinterpret_cast<const uint8_t*>(
-                            &model.buffers[jBuf.buffer].data[jOffset]);
+                            &model.buffers[static_cast<size_t>(jBuf.buffer)].data[jOffset]);
                     }
                 }
             }
@@ -2056,9 +2069,9 @@ private:
 
             if (primitive.indices >= 0)
             {
-                const auto& idxAcc = model.accessors[primitive.indices];
-                const auto& idxBuf = model.bufferViews[idxAcc.bufferView];
-                const auto& buf = model.buffers[idxBuf.buffer];
+                const auto& idxAcc = model.accessors[static_cast<size_t>(primitive.indices)];
+                const auto& idxBuf = model.bufferViews[static_cast<size_t>(idxAcc.bufferView)];
+                const auto& buf = model.buffers[static_cast<size_t>(idxBuf.buffer)];
                 size_t idxOffset = idxBuf.byteOffset + idxAcc.byteOffset;
 
                 if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
@@ -2073,9 +2086,9 @@ private:
                     for (int t = 0; t < triCount; ++t)
                     {
                         int i = t * 3;
-                        outMesh.indices.push_back(baseIdx + idx16[i]);
-                        outMesh.indices.push_back(baseIdx + idx16[i + 1]);
-                        outMesh.indices.push_back(baseIdx + idx16[i + 2]);
+                        outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(idx16[i]));
+                        outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(idx16[i + 1]));
+                        outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(idx16[i + 2]));
                     }
                 }
                 else if (idxAcc.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
@@ -2117,9 +2130,9 @@ private:
             {
                 for (int i = 0; i < vertexCount; i += 3)
                 {
-                    outMesh.indices.push_back(baseIdx + i);
-                    outMesh.indices.push_back(baseIdx + i + 1);
-                    outMesh.indices.push_back(baseIdx + i + 2);
+                    outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(i));
+                    outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(i + 1));
+                    outMesh.indices.push_back(baseIdx + static_cast<uint32_t>(i + 2));
                 }
             }
         }

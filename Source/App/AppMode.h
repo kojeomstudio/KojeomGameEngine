@@ -404,7 +404,7 @@ public:
                     totalBrightness += (r * 0.299 + g * 0.587 + b * 0.114);
                     sampleCount++;
                 }
-                double avgBrightness = (sampleCount > 0) ? (totalBrightness / sampleCount) : 0.0;
+                double avgBrightness = (sampleCount > 0) ? (totalBrightness / static_cast<double>(sampleCount)) : 0.0;
                 if (allBlack)
                 {
                     result.warnings.push_back("Screenshot appears to be completely black");

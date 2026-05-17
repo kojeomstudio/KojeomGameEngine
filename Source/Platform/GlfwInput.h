@@ -19,7 +19,7 @@ public:
         return m_state;
     }
 
-    void OnKeyEvent(int key, int scancode, int action, int mods) override
+    void OnKeyEvent(int key, [[maybe_unused]] int scancode, int action, [[maybe_unused]] int mods) override
     {
         if (key < 0 || key >= 512) return;
         if (action == GLFW_PRESS)
@@ -42,7 +42,7 @@ public:
         m_state.mouseY = ypos;
     }
 
-    void OnMouseButtonEvent(int button, int action, int mods) override
+    void OnMouseButtonEvent(int button, int action, [[maybe_unused]] int mods) override
     {
         if (button < 0 || button > 2) return;
         if (action == GLFW_PRESS)

@@ -113,7 +113,7 @@ public:
             }
             else
             {
-                m_globalMatrices[i] = m_globalMatrices[bone.parentIndex] * localMat;
+                m_globalMatrices[i] = m_globalMatrices[static_cast<size_t>(bone.parentIndex)] * localMat;
             }
         }
 

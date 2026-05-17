@@ -71,6 +71,8 @@ struct RenderScene
         staticDrawCommands.clear();
         skinnedDrawCommands.clear();
         terrainDrawCommands.clear();
+        light = LightData{};
+        camera = CameraData{};
     }
 
     size_t TotalDrawCommands() const

@@ -66,11 +66,11 @@ public:
         glBindVertexArray(mesh.vao);
 
         glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
+        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
             vertices.data(), GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t),
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size() * sizeof(uint32_t)),
             indices.data(), GL_STATIC_DRAW);
 
         int strideBytes = vertexStride * static_cast<int>(sizeof(float));
@@ -139,11 +139,11 @@ public:
         glBindVertexArray(mesh.vao);
 
         glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
+        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
             vertices.data(), GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t),
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size() * sizeof(uint32_t)),
             indices.data(), GL_STATIC_DRAW);
 
         int stride = 18 * static_cast<int>(sizeof(float));
@@ -230,7 +230,7 @@ public:
         if (it != m_meshCache.end() && it->second.vao)
         {
             glBindVertexArray(it->second.vao);
-            glDrawElements(GL_TRIANGLES, it->second.indexCount, GL_UNSIGNED_INT, nullptr);
+            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(it->second.indexCount), GL_UNSIGNED_INT, nullptr);
             glBindVertexArray(0);
         }
     }
@@ -240,7 +240,7 @@ public:
         if (mesh.vao)
         {
             glBindVertexArray(mesh.vao);
-            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indexCount), GL_UNSIGNED_INT, nullptr);
             glBindVertexArray(0);
         }
     }
